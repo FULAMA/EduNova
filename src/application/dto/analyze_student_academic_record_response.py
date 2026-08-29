@@ -1,6 +1,8 @@
 ﻿from dataclasses import dataclass
 from uuid import UUID
 
+from src.domain.value_objects.subject_result import SubjectResult
+
 
 @dataclass(frozen=True)
 class AnalyzeStudentAcademicRecordResponse:
@@ -10,3 +12,4 @@ class AnalyzeStudentAcademicRecordResponse:
     failed_subjects: int
     credits_obtained: float
     total_credits: float
+    subject_results: tuple[SubjectResult, ...]

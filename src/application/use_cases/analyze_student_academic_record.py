@@ -39,4 +39,5 @@ class AnalyzeStudentAcademicRecord:
             failed_subjects=record.failed_subjects,
             credits_obtained=record.credits_obtained,
             total_credits=record.total_credits,
+            subject_results=record.subject_results,
         )
