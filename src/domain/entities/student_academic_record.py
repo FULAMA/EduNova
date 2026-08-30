@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
 from uuid import UUID
 
 from src.domain.value_objects.subject_result import SubjectResult
@@ -40,3 +40,37 @@ class StudentAcademicRecord:
                 "Les crédits obtenus ne peuvent pas dépasser "
                 "le total des crédits."
             )
+
+    def with_subject_result(
+        self,
+        subject_result: SubjectResult,
+    ) -> "StudentAcademicRecord":
+        new_subject_results = self.subject_results + (subject_result,)
+
+        total_coefficients = sum(
+            result.coefficient
+            for result in new_subject_results
+        )
+
+        weighted_sum = sum(
+            result.average * result.coefficient
+            for result in new_subject_results
+        )
+
+        general_average = weighted_sum / total_coefficients
+
+        failed_subjects = sum(
+            1
+            for result in new_subject_results
+            if result.average < 10
+        )
+
+        return StudentAcademicRecord(
+            student_id=self.student_id,
+            academic_period_id=self.academic_period_id,
+            subject_results=new_subject_results,
+            general_average=general_average,
+            failed_subjects=failed_subjects,
+            credits_obtained=self.credits_obtained,
+            total_credits=self.total_credits,
+        )
