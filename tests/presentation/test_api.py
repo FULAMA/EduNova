@@ -9,6 +9,7 @@ from src.application.use_cases.analyze_student_academic_record import (
     AnalyzeStudentAcademicRecord,
 )
 from src.domain.entities.student_academic_record import StudentAcademicRecord
+from src.domain.value_objects.subject_result import SubjectResult
 from src.presentation.api.app import app
 from src.presentation.api.dependencies import get_use_case
 
@@ -116,3 +117,56 @@ def test_academic_record_returns_existing_record():
     finally:
         app.dependency_overrides.clear()
 
+def test_academic_record_returns_subject_results():
+    repository = FakeAcademicRecordRepository()
+
+    student_id = uuid4()
+    academic_period_id = uuid4()
+    subject_id = uuid4()
+
+    subject_result = SubjectResult(
+        subject_id=subject_id,
+        average=16.5,
+        coefficient=3,
+    )
+
+    record = StudentAcademicRecord(
+        student_id=student_id,
+        academic_period_id=academic_period_id,
+        subject_results=(subject_result,),
+        general_average=16.5,
+        failed_subjects=0,
+        credits_obtained=30,
+        total_credits=30,
+    )
+
+    repository.save(record)
+
+    use_case = AnalyzeStudentAcademicRecord(repository)
+
+    app.dependency_overrides[get_use_case] = lambda: use_case
+
+    try:
+        response = client.get(
+            f"/academic-records/{student_id}/{academic_period_id}"
+        )
+
+        assert response.status_code == 200
+
+        assert response.json() == {
+            "student_id": str(student_id),
+            "academic_period_id": str(academic_period_id),
+            "general_average": 16.5,
+            "failed_subjects": 0,
+            "credits_obtained": 30,
+            "total_credits": 30,
+            "subject_results": [
+                {
+                    "subject_id": str(subject_id),
+                    "average": 16.5,
+                    "coefficient": 3,
+                }
+            ],
+        }
+    finally:
+        app.dependency_overrides.clear()

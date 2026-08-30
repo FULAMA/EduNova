@@ -1,7 +1,11 @@
-﻿from src.presentation.api.dependencies.academic_record import (
-    get_analyze_student_academic_record_use_case,
+﻿from src.application.use_cases.analyze_student_academic_record import (
+    AnalyzeStudentAcademicRecord,
 )
+from src.presentation.api.container import ApplicationContainer
 
 
-def get_use_case():
-    return get_analyze_student_academic_record_use_case()
+container = ApplicationContainer()
+
+
+def get_use_case() -> AnalyzeStudentAcademicRecord:
+    return container.analyze_student_academic_record()

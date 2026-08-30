@@ -48,6 +48,15 @@ def get_academic_record(
             detail=str(exc),
         ) from exc
 
+    subject_results = [
+        SubjectResultResponse(
+            subject_id=result.subject_id,
+            average=result.average,
+            coefficient=result.coefficient,
+        )
+        for result in response.subject_results
+    ]
+
     return AcademicRecordResponse(
         student_id=response.student_id,
         academic_period_id=response.academic_period_id,
@@ -55,12 +64,5 @@ def get_academic_record(
         failed_subjects=response.failed_subjects,
         credits_obtained=response.credits_obtained,
         total_credits=response.total_credits,
-        subject_results=[
-            SubjectResultResponse(
-                subject_id=result.subject_id,
-                average=result.average,
-                coefficient=result.coefficient,
-            )
-            for result in response.subject_results
-        ],
+        subject_results=subject_results,
     )
