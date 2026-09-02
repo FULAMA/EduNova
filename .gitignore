@@ -1,24 +1,39 @@
-﻿__pycache__/
+﻿# Python
+__pycache__/
 *.py[cod]
 
+# Tests
 .pytest_cache/
+.pytest_temp/
 .coverage
 htmlcov/
 
+# Environments
 .venv/
 venv/
 env/
 
+# Environment variables
 .env
 .env.*
+!.env.example
 
+# Databases
 *.db
 *.sqlite
 *.sqlite3
 
+# IDE
 .vscode/
 .idea/
 
+# Build
 dist/
 build/
 *.egg-info/
+
+# Temporary files
+*.tmp
+*.temp
+temp_*.txt
+*.bak

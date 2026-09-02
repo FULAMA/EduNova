@@ -1,0 +1,53 @@
+﻿from uuid import UUID
+
+from src.application.interfaces.user_repository import (
+    UserRepository,
+)
+from src.application.services.two_factor_service import (
+    TwoFactorService,
+)
+
+
+class VerifyTwoFactor:
+
+    def __init__(
+        self,
+        user_repository: UserRepository,
+        two_factor_service: TwoFactorService,
+    ):
+        self._user_repository = user_repository
+        self._two_factor_service = two_factor_service
+
+    def execute(
+        self,
+        user_id: UUID,
+        code: str,
+    ) -> bool:
+
+        user = self._user_repository.find_by_id(user_id)
+
+        if user is None:
+            raise ValueError(
+                "Utilisateur introuvable."
+            )
+
+        if not user.two_factor_secret:
+            raise ValueError(
+                "Le 2FA n est pas configure."
+            )
+
+        is_valid = self._two_factor_service.verify_code(
+            secret=user.two_factor_secret,
+            code=code,
+        )
+
+        if not is_valid:
+            raise ValueError(
+                "Code 2FA invalide."
+            )
+
+        user.two_factor_enabled = True
+
+        self._user_repository.save(user)
+
+        return True
