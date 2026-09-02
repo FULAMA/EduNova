@@ -1,4 +1,5 @@
-﻿from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.application.use_cases.add_subject_result import AddSubjectResult
 from src.application.use_cases.analyze_academic_risk import AnalyzeAcademicRisk
@@ -71,6 +72,35 @@ def create_app(
         description="API REST du systeme academique EduNova",
         version="1.0.0",
     )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(container._settings.cors_allowed_origins),
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
+
+    @app.middleware("http")
+    async def add_security_headers(
+        request: Request,
+        call_next,
+    ):
+        response = await call_next(request)
+
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Permissions-Policy"] = (
+            "geolocation=(), microphone=(), camera=()"
+        )
+
+        if container._settings.environment == "production":
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
+
+        return response
 
     app.dependency_overrides[
         get_application_container

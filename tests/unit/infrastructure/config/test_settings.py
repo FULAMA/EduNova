@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 
 from src.infrastructure.config.settings import Settings
 
@@ -55,6 +55,10 @@ def test_environment_variables_are_used(monkeypatch):
         "EDUNOVA_DATABASE_PATH",
         "production.db",
     )
+    monkeypatch.setenv(
+        "EDUNOVA_CORS_ALLOWED_ORIGINS",
+        "https://edunova.example.com,https://admin.edunova.example.com",
+    )
 
     settings = Settings.from_environment()
 
@@ -63,3 +67,7 @@ def test_environment_variables_are_used(monkeypatch):
     assert settings.access_token_expire_minutes == 30
     assert settings.refresh_token_expire_days == 14
     assert settings.database_path == "production.db"
+    assert settings.cors_allowed_origins == (
+        "https://edunova.example.com",
+        "https://admin.edunova.example.com",
+    )

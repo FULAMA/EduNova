@@ -9,6 +9,7 @@ class Settings:
     access_token_expire_minutes: int
     refresh_token_expire_days: int
     database_path: str
+    cors_allowed_origins: tuple[str, ...]
 
     @classmethod
     def from_environment(cls) -> "Settings":
@@ -22,8 +23,6 @@ class Settings:
             "",
         ).strip()
 
-        # En développement et en test uniquement, nous conservons
-        # une valeur par défaut non destinée à la production.
         if not jwt_secret:
             if environment in {"development", "test"}:
                 jwt_secret = (
@@ -53,7 +52,29 @@ class Settings:
         database_path = os.getenv(
             "EDUNOVA_DATABASE_PATH",
             "edunova.db",
-        )
+        ).strip()
+
+        cors_raw = os.getenv(
+            "EDUNOVA_CORS_ALLOWED_ORIGINS",
+            "",
+        ).strip()
+
+        if cors_raw:
+            cors_allowed_origins = tuple(
+                origin.strip()
+                for origin in cors_raw.split(",")
+                if origin.strip()
+            )
+        elif environment in {"development", "test"}:
+            cors_allowed_origins = (
+                "http://localhost:3000",
+                "http://localhost:5173",
+            )
+        else:
+            raise ValueError(
+                "EDUNOVA_CORS_ALLOWED_ORIGINS doit etre defini "
+                "en environnement de production."
+            )
 
         if access_token_expire_minutes <= 0:
             raise ValueError(
@@ -65,9 +86,19 @@ class Settings:
                 "La duree du token refresh doit etre positive."
             )
 
-        if not database_path.strip():
+        if not database_path:
             raise ValueError(
                 "Le chemin de la base de donnees ne peut pas etre vide."
+            )
+
+        if not cors_allowed_origins:
+            raise ValueError(
+                "Au moins une origine CORS doit etre configuree."
+            )
+
+        if environment == "production" and "*" in cors_allowed_origins:
+            raise ValueError(
+                "L origine CORS '*' est interdite en production."
             )
 
         return cls(
@@ -76,4 +107,5 @@ class Settings:
             access_token_expire_minutes=access_token_expire_minutes,
             refresh_token_expire_days=refresh_token_expire_days,
             database_path=database_path,
+            cors_allowed_origins=cors_allowed_origins,
         )
