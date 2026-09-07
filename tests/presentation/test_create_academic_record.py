@@ -3,6 +3,7 @@
 from fastapi.testclient import TestClient
 
 from src.presentation.api.app import create_app
+from tests.auth_helpers import authenticate_as
 
 
 class FakeCreateAcademicRecord:
@@ -20,6 +21,7 @@ def test_create_academic_record_route_uses_injected_use_case():
         create_academic_record_use_case=fake_use_case
     )
 
+    authenticate_as(app)
     client = TestClient(app)
 
     response = client.post(

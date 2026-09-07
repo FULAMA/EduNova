@@ -35,7 +35,16 @@ def create_test_environment():
 
     app = create_app(container)
 
-    return TestClient(app), user, secret
+    client = TestClient(app)
+
+    access_token = container.jwt_service().create_access_token(
+        user_id=user.id,
+        role=user.role,
+    )
+
+    client.headers["Authorization"] = f"Bearer {access_token}"
+
+    return client, user, secret
 
 
 def test_verify_two_factor_http_success():

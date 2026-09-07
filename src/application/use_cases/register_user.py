@@ -7,6 +7,7 @@ from src.application.services.password_hasher_service import (
     PasswordHasherService,
 )
 from src.domain.entities.user import User
+from src.domain.value_objects.role import normalize_role
 
 
 class RegisterUser:
@@ -40,6 +41,10 @@ class RegisterUser:
             raise ValueError(
                 "Le role ne peut pas etre vide."
             )
+
+        role = normalize_role(role)
+
+        email = email.strip().lower()
 
         existing_user = self._user_repository.find_by_email(
             email

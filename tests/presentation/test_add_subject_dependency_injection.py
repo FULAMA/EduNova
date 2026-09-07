@@ -3,6 +3,7 @@
 from fastapi.testclient import TestClient
 
 from src.presentation.api.app import create_app
+from tests.auth_helpers import authenticate_as
 
 
 class FakeAddSubjectResult:
@@ -29,6 +30,7 @@ def test_add_subject_result_route_uses_injected_use_case():
         add_subject_result_use_case=fake_use_case
     )
 
+    authenticate_as(app)
     client = TestClient(app)
 
     response = client.post(

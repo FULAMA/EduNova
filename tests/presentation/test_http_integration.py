@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
+from tests.auth_helpers import authenticate_as
 
 
 def test_get_academic_record_through_http():
@@ -15,6 +16,7 @@ def test_get_academic_record_through_http():
     )
 
     app = create_app(container)
+    authenticate_as(app)
     client = TestClient(app)
 
     response = client.get(

@@ -3,6 +3,7 @@
 from fastapi.testclient import TestClient
 
 from src.presentation.api.app import create_app
+from tests.auth_helpers import authenticate_as
 
 
 class FakeAssignSubjectToClass:
@@ -38,6 +39,7 @@ def test_assign_subject_to_class_route_uses_injected_use_case():
         assign_subject_to_class_use_case=fake_use_case,
     )
 
+    authenticate_as(app)
     client = TestClient(app)
 
     response = client.post(
@@ -64,6 +66,7 @@ def test_assign_subject_to_class_rejects_invalid_coefficient():
     subject_id = uuid4()
 
     app = create_app()
+    authenticate_as(app)
     client = TestClient(app)
 
     response = client.post(

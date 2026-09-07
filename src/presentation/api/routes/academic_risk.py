@@ -9,9 +9,11 @@ from src.application.dto.analyze_academic_risk_response import (
 from src.application.use_cases.analyze_academic_risk import (
     AnalyzeAcademicRisk,
 )
+from src.domain.value_objects import role as roles
 from src.presentation.api.dependencies import (
     get_analyze_academic_risk_use_case,
 )
+from src.presentation.api.dependencies.auth import require_role
 from src.presentation.api.schemas.analyze_academic_risk_request import (
     AnalyzeAcademicRiskRequestSchema,
 )
@@ -23,6 +25,9 @@ from src.presentation.api.schemas.analyze_academic_risk_response import (
 router = APIRouter(
     prefix="/academic-risk",
     tags=["Academic Risk"],
+    dependencies=[
+        Depends(require_role(roles.ADMIN, roles.TEACHER)),
+    ],
 )
 
 

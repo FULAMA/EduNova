@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
+from tests.auth_helpers import authenticate_as
 
 
 def test_academic_record_full_http_workflow():
@@ -17,6 +18,7 @@ def test_academic_record_full_http_workflow():
     )
 
     app = create_app(container)
+    authenticate_as(app)
     client = TestClient(app)
 
     # 1. Création du dossier académique

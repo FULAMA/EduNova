@@ -1,5 +1,6 @@
 ﻿from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 
 from src.application.interfaces.student_academic_record_repository import (
@@ -12,9 +13,17 @@ from src.domain.entities.student_academic_record import StudentAcademicRecord
 from src.domain.value_objects.subject_result import SubjectResult
 from src.presentation.api.app import app
 from src.presentation.api.dependencies import get_analyze_student_academic_record_use_case
+from tests.auth_helpers import authenticate_as
 
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def authenticated_admin():
+    # Les tests vident les overrides, l authentification est donc
+    # reappliquee avant chaque test.
+    authenticate_as(app)
 
 
 class FakeAcademicRecordRepository(StudentAcademicRecordRepository):

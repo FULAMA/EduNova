@@ -1,6 +1,7 @@
 ﻿from fastapi.testclient import TestClient
 
 from src.presentation.api.app import create_app
+from tests.auth_helpers import authenticate_as
 
 
 class FakeAnalyzeAcademicRisk:
@@ -25,6 +26,7 @@ def test_analyze_academic_risk_route_uses_injected_use_case():
         analyze_academic_risk_use_case=FakeAnalyzeAcademicRisk(),
     )
 
+    authenticate_as(app)
     client = TestClient(app)
 
     response = client.post(
@@ -47,6 +49,7 @@ def test_analyze_academic_risk_route_uses_injected_use_case():
 
 def test_analyze_academic_risk_rejects_invalid_average():
     app = create_app()
+    authenticate_as(app)
     client = TestClient(app)
 
     response = client.post(

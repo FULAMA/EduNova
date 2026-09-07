@@ -68,6 +68,7 @@ from src.infrastructure.repositories.sqlite_subject_repository import (
 from src.infrastructure.repositories.sqlite_user_repository import (
     SQLiteUserRepository,
 )
+from src.presentation.api.security.rate_limiter import RateLimiter
 
 
 class ApplicationContainer:
@@ -86,6 +87,26 @@ class ApplicationContainer:
         self._refresh_token_repository_instance = (
             SQLiteRefreshTokenRepository(self._database)
         )
+
+        self._auth_rate_limiter = RateLimiter(
+            max_attempts=self._settings.auth_rate_limit_attempts,
+            window_seconds=(
+                self._settings.auth_rate_limit_window_seconds
+            ),
+        )
+
+    @property
+    def settings(self) -> Settings:
+        return self._settings
+
+    def auth_rate_limiter(self) -> RateLimiter:
+        return self._auth_rate_limiter
+
+    def jwt_service(self) -> JwtService:
+        return self._jwt_service()
+
+    def user_repository(self) -> SQLiteUserRepository:
+        return self._user_repository()
 
     def _jwt_service(self) -> JwtService:
         return JwtService(

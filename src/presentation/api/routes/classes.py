@@ -2,9 +2,11 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from src.domain.value_objects import role as roles
 from src.presentation.api.dependencies import (
     get_assign_subject_to_class_use_case,
 )
+from src.presentation.api.dependencies.auth import require_role
 from src.presentation.api.schemas.assign_subject_to_class import (
     AssignSubjectToClassRequestSchema,
 )
@@ -16,6 +18,7 @@ from src.presentation.api.schemas.assign_subject_to_class_response import (
 router = APIRouter(
     prefix="/classes",
     tags=["Classes"],
+    dependencies=[Depends(require_role(roles.ADMIN))],
 )
 
 
