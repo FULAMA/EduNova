@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from src.domain.value_objects.academic_risk import RiskLevel
 from src.presentation.api.app import create_app
+from tests.auth_helpers import authenticate_as
 
 
 class FakeAnalyzeAcademicRisk:
@@ -66,6 +67,7 @@ def test_analyze_academic_risk_returns_result():
         )
     )
 
+    authenticate_as(app)
     client = TestClient(app)
 
     response = client.post(
@@ -91,6 +93,7 @@ def test_analyze_academic_risk_returns_result():
 
 def test_analyze_academic_risk_rejects_invalid_attendance_rate():
     app = create_app()
+    authenticate_as(app)
     client = TestClient(app)
 
     response = client.post(
@@ -107,6 +110,7 @@ def test_analyze_academic_risk_rejects_invalid_attendance_rate():
 
 def test_analyze_academic_risk_rejects_negative_absences():
     app = create_app()
+    authenticate_as(app)
     client = TestClient(app)
 
     response = client.post(
@@ -131,6 +135,7 @@ def test_assign_subject_route_maps_duplicate_to_conflict():
         )
     )
 
+    authenticate_as(app)
     client = TestClient(app)
 
     response = client.post(
@@ -157,6 +162,7 @@ def test_assign_subject_route_maps_missing_class_to_not_found():
         )
     )
 
+    authenticate_as(app)
     client = TestClient(app)
 
     response = client.post(
@@ -183,6 +189,7 @@ def test_assign_subject_route_maps_unknown_business_error_to_bad_request():
         )
     )
 
+    authenticate_as(app)
     client = TestClient(app)
 
     response = client.post(

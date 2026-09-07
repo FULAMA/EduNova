@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from src.domain.value_objects.academic_risk import RiskLevel
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
+from tests.auth_helpers import authenticate_as
 
 
 def create_test_client():
@@ -11,6 +12,8 @@ def create_test_client():
     )
 
     app = create_app(container)
+
+    authenticate_as(app)
 
     return TestClient(app)
 

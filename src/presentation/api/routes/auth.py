@@ -10,9 +10,12 @@ from src.application.use_cases.verify_login_two_factor import VerifyLoginTwoFact
 from src.application.use_cases.verify_two_factor import VerifyTwoFactor
 
 from src.domain.entities.user import User
+from src.domain.value_objects import role as roles
 
 from src.presentation.api.dependencies.auth import (
+    enforce_auth_rate_limit,
     get_current_user,
+    get_optional_current_user,
     require_role,
 )
 
@@ -56,16 +59,23 @@ router = APIRouter()
     "/auth/register",
     response_model=RegisterUserResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(enforce_auth_rate_limit)],
 )
 def register_user(
     request: RegisterUserRequest,
     use_case: RegisterUser = Depends(get_register_user_use_case),
+    current_user: User | None = Depends(get_optional_current_user),
 ):
+    requested_role = _resolve_requested_role(
+        request.role,
+        current_user,
+    )
+
     try:
         user = use_case.execute(
             email=request.email,
             password=request.password,
-            role=request.role,
+            role=requested_role,
         )
 
         return RegisterUserResponse(
@@ -92,9 +102,46 @@ def register_user(
         )
 
 
+def _resolve_requested_role(
+    requested_role: str | None,
+    current_user: User | None,
+) -> str:
+    """Seul un ADMIN authentifie peut creer un compte privilegie."""
+
+    if requested_role is None:
+        return roles.STUDENT
+
+    try:
+        normalized_role = roles.normalize_role(requested_role)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    if normalized_role in roles.SELF_SERVICE_ROLES:
+        return normalized_role
+
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentification requise pour ce role.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if current_user.role != roles.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acces interdit.",
+        )
+
+    return normalized_role
+
+
 @router.post(
     "/auth/login",
     response_model=LoginUserResponse,
+    dependencies=[Depends(enforce_auth_rate_limit)],
 )
 def login_user(
     request: LoginUserRequest,
@@ -133,6 +180,7 @@ def login_user(
 @router.post(
     "/auth/refresh",
     response_model=LoginUserResponse,
+    dependencies=[Depends(enforce_auth_rate_limit)],
 )
 def refresh_access_token(
     request: RefreshTokenRequest,
@@ -163,6 +211,7 @@ def refresh_access_token(
 @router.post(
     "/auth/2fa/setup/{user_id}",
     response_model=EnableTwoFactorResponse,
+    dependencies=[Depends(enforce_auth_rate_limit)],
 )
 def enable_two_factor(
     user_id: UUID,
@@ -193,12 +242,20 @@ def enable_two_factor(
 @router.post(
     "/auth/2fa/verify/{user_id}",
     response_model=VerifyTwoFactorResponse,
+    dependencies=[Depends(enforce_auth_rate_limit)],
 )
 def verify_two_factor(
     user_id: UUID,
     request: VerifyTwoFactorRequest,
     use_case: VerifyTwoFactor = Depends(get_verify_two_factor_use_case),
+    current_user: User = Depends(get_current_user),
 ):
+    if current_user.id != user_id and current_user.role != roles.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acces interdit.",
+        )
+
     try:
         verified = use_case.execute(
             user_id=user_id,
@@ -225,6 +282,7 @@ def verify_two_factor(
 @router.post(
     "/auth/2fa/login",
     response_model=VerifyLoginTwoFactorResponse,
+    dependencies=[Depends(enforce_auth_rate_limit)],
 )
 def verify_login_two_factor(
     request: VerifyLoginTwoFactorRequest,

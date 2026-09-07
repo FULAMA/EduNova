@@ -12,10 +12,12 @@ from src.application.use_cases.add_subject_result import AddSubjectResult
 from src.application.use_cases.analyze_student_academic_record import (
     AnalyzeStudentAcademicRecord,
 )
+from src.domain.value_objects import role as roles
 from src.presentation.api.dependencies import (
     get_add_subject_result_use_case,
     get_analyze_student_academic_record_use_case,
 )
+from src.presentation.api.dependencies.auth import require_role
 from src.presentation.api.schemas.academic_record import (
     AcademicRecordResponse,
     SubjectResultResponse,
@@ -31,6 +33,9 @@ from src.presentation.api.schemas.add_subject_result_request import (
 router = APIRouter(
     prefix="/academic-records",
     tags=["Academic Records"],
+    dependencies=[
+        Depends(require_role(roles.ADMIN, roles.TEACHER)),
+    ],
 )
 
 

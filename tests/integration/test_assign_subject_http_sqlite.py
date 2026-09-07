@@ -2,6 +2,8 @@
 
 from fastapi.testclient import TestClient
 
+from tests.auth_helpers import authenticate_as
+
 from src.domain.entities.academic_class import AcademicClass
 from src.domain.entities.academic_option import AcademicOption
 from src.domain.entities.class_option import ClassOption
@@ -73,6 +75,8 @@ def create_test_environment():
     class_option_repository.save(class_option)
 
     app = create_app(container)
+
+    authenticate_as(app)
 
     return (
         TestClient(app),

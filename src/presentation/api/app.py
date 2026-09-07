@@ -1,4 +1,8 @@
-﻿from fastapi import FastAPI
+﻿import logging
+
+from fastapi import FastAPI, Request, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from src.application.use_cases.add_subject_result import AddSubjectResult
 from src.application.use_cases.analyze_academic_risk import AnalyzeAcademicRisk
@@ -46,6 +50,10 @@ from src.presentation.api.routes.academic_risk import (
 )
 from src.presentation.api.routes.auth import router as auth_router
 from src.presentation.api.routes.classes import router as classes_router
+from src.presentation.api.security.headers import SecurityHeadersMiddleware
+
+
+logger = logging.getLogger(__name__)
 
 
 def create_app(
@@ -66,11 +74,49 @@ def create_app(
     if container is None:
         container = ApplicationContainer()
 
+    settings = container.settings
+
+    docs_enabled = settings.docs_enabled
+
     app = FastAPI(
         title="EduNova API",
         description="API REST du systeme academique EduNova",
         version="1.0.0",
+        docs_url="/docs" if docs_enabled else None,
+        redoc_url="/redoc" if docs_enabled else None,
+        openapi_url="/openapi.json" if docs_enabled else None,
     )
+
+    app.add_middleware(
+        SecurityHeadersMiddleware,
+        enable_hsts=settings.is_production,
+    )
+
+    if settings.cors_allowed_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=list(settings.cors_allowed_origins),
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+            allow_headers=["Authorization", "Content-Type"],
+        )
+
+    @app.exception_handler(Exception)
+    async def handle_unexpected_error(
+        request: Request,
+        exc: Exception,
+    ) -> JSONResponse:
+        # Les details d une erreur interne ne doivent jamais fuiter
+        # vers le client.
+        logger.exception(
+            "Erreur inattendue sur %s",
+            request.url.path,
+        )
+
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Erreur interne."},
+        )
 
     app.dependency_overrides[
         get_application_container
