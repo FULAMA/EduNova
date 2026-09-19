@@ -1,4 +1,4 @@
-﻿from uuid import UUID
+from uuid import UUID
 
 from src.application.interfaces.student_academic_record_repository import (
     StudentAcademicRecordRepository,
@@ -15,12 +15,13 @@ class InMemoryStudentAcademicRecordRepository(
 
     def __init__(self):
         self._records: dict[
-            tuple[UUID, UUID],
+            tuple[UUID, UUID, UUID],
             dict,
         ] = {}
 
     def save(self, record: StudentAcademicRecord) -> None:
         key = (
+            record.tenant_id,
             record.student_id,
             record.academic_period_id,
         )
@@ -30,10 +31,14 @@ class InMemoryStudentAcademicRecordRepository(
     def find_by_student(
         self,
         student_id: UUID,
+        tenant_id: UUID,
     ) -> StudentAcademicRecord | None:
 
         for data in self._records.values():
-            if data["student_id"] == str(student_id):
+            if (
+                data["tenant_id"] == str(tenant_id)
+                and data["student_id"] == str(student_id)
+            ):
                 return StudentAcademicRecordMapper.to_domain(data)
 
         return None
@@ -42,9 +47,11 @@ class InMemoryStudentAcademicRecordRepository(
         self,
         student_id: UUID,
         academic_period_id: UUID,
+        tenant_id: UUID,
     ) -> StudentAcademicRecord | None:
 
         key = (
+            tenant_id,
             student_id,
             academic_period_id,
         )

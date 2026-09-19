@@ -1,4 +1,4 @@
-﻿from uuid import uuid4
+from uuid import uuid4
 
 from src.application.dto.analyze_student_academic_record_request import (
     AnalyzeStudentAcademicRecordRequest,
@@ -14,11 +14,13 @@ from src.infrastructure.repositories.in_memory_student_academic_record_repositor
 
 
 def create_record(
+    tenant_id=None,
     student_id=None,
     academic_period_id=None,
     average=14.0,
 ):
     return StudentAcademicRecord(
+        tenant_id=tenant_id or uuid4(),
         student_id=student_id or uuid4(),
         academic_period_id=academic_period_id or uuid4(),
         subject_results=(
@@ -37,11 +39,14 @@ def create_record(
 
 def test_use_case_can_analyze_existing_student_record():
     repository = InMemoryStudentAcademicRecordRepository()
+    use_case = AnalyzeStudentAcademicRecord(repository)
 
+    tenant_id = uuid4()
     student_id = uuid4()
     period_id = uuid4()
 
     record = create_record(
+        tenant_id=tenant_id,
         student_id=student_id,
         academic_period_id=period_id,
         average=14.0,
@@ -49,9 +54,8 @@ def test_use_case_can_analyze_existing_student_record():
 
     repository.save(record)
 
-    use_case = AnalyzeStudentAcademicRecord(repository)
-
     request = AnalyzeStudentAcademicRecordRequest(
+        tenant_id=tenant_id,
         student_id=student_id,
         academic_period_id=period_id,
     )
@@ -69,24 +73,27 @@ def test_use_case_raises_error_when_record_does_not_exist():
     use_case = AnalyzeStudentAcademicRecord(repository)
 
     request = AnalyzeStudentAcademicRecordRequest(
+        tenant_id=uuid4(),
         student_id=uuid4(),
         academic_period_id=uuid4(),
     )
 
     try:
         use_case.execute(request)
-        assert False, "Une exception était attendue."
+        assert False, "Une exception etait attendue."
     except ValueError as error:
-        assert "dossier académique" in str(error).lower()
+        assert "dossier academique" in str(error).lower()
 
 
 def test_use_case_uses_the_requested_student_and_period():
     repository = InMemoryStudentAcademicRecordRepository()
 
+    tenant_id = uuid4()
     student_id = uuid4()
     period_id = uuid4()
 
     record = create_record(
+        tenant_id=tenant_id,
         student_id=student_id,
         academic_period_id=period_id,
     )
@@ -96,6 +103,7 @@ def test_use_case_uses_the_requested_student_and_period():
     use_case = AnalyzeStudentAcademicRecord(repository)
 
     request = AnalyzeStudentAcademicRecordRequest(
+        tenant_id=tenant_id,
         student_id=student_id,
         academic_period_id=period_id,
     )
@@ -109,9 +117,11 @@ def test_use_case_uses_the_requested_student_and_period():
 def test_use_case_does_not_return_record_from_another_period():
     repository = InMemoryStudentAcademicRecordRepository()
 
+    tenant_id = uuid4()
     student_id = uuid4()
 
     record = create_record(
+        tenant_id=tenant_id,
         student_id=student_id,
         academic_period_id=uuid4(),
     )
@@ -121,12 +131,44 @@ def test_use_case_does_not_return_record_from_another_period():
     use_case = AnalyzeStudentAcademicRecord(repository)
 
     request = AnalyzeStudentAcademicRecordRequest(
+        tenant_id=tenant_id,
         student_id=student_id,
         academic_period_id=uuid4(),
     )
 
     try:
         use_case.execute(request)
-        assert False, "Une exception était attendue."
+        assert False, "Une exception etait attendue."
+    except ValueError:
+        pass
+
+
+def test_use_case_does_not_return_record_from_another_tenant():
+    repository = InMemoryStudentAcademicRecordRepository()
+
+    tenant_a = uuid4()
+    tenant_b = uuid4()
+    student_id = uuid4()
+    period_id = uuid4()
+
+    record = create_record(
+        tenant_id=tenant_a,
+        student_id=student_id,
+        academic_period_id=period_id,
+    )
+
+    repository.save(record)
+
+    use_case = AnalyzeStudentAcademicRecord(repository)
+
+    request = AnalyzeStudentAcademicRecordRequest(
+        tenant_id=tenant_b,
+        student_id=student_id,
+        academic_period_id=period_id,
+    )
+
+    try:
+        use_case.execute(request)
+        assert False, "Une exception etait attendue."
     except ValueError:
         pass

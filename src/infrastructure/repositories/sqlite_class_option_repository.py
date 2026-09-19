@@ -1,4 +1,4 @@
-﻿from uuid import UUID
+from uuid import UUID
 
 from src.application.interfaces.class_option_repository import (
     ClassOptionRepository,
@@ -18,14 +18,16 @@ class SQLiteClassOptionRepository(ClassOptionRepository):
                 """
                 INSERT INTO class_options (
                     id,
+                    tenant_id,
                     academic_class_id,
                     academic_option_id,
                     active
                 )
-                VALUES (?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?)
                 """,
                 (
                     str(class_option.id),
+                    str(class_option.tenant_id),
                     str(class_option.academic_class_id),
                     str(class_option.academic_option_id),
                     int(class_option.active),
@@ -35,6 +37,7 @@ class SQLiteClassOptionRepository(ClassOptionRepository):
     def find_by_id(
         self,
         class_option_id: UUID,
+        tenant_id: UUID,
     ) -> ClassOption | None:
 
         with self._database.connect() as connection:
@@ -42,13 +45,18 @@ class SQLiteClassOptionRepository(ClassOptionRepository):
                 """
                 SELECT
                     id,
+                    tenant_id,
                     academic_class_id,
                     academic_option_id,
                     active
                 FROM class_options
                 WHERE id = ?
+                  AND tenant_id = ?
                 """,
-                (str(class_option_id),),
+                (
+                    str(class_option_id),
+                    str(tenant_id),
+                ),
             ).fetchone()
 
             if row is None:
@@ -56,12 +64,9 @@ class SQLiteClassOptionRepository(ClassOptionRepository):
 
             return ClassOption(
                 id=UUID(row["id"]),
-                academic_class_id=UUID(
-                    row["academic_class_id"]
-                ),
-                academic_option_id=UUID(
-                    row["academic_option_id"]
-                ),
+                tenant_id=UUID(row["tenant_id"]),
+                academic_class_id=UUID(row["academic_class_id"]),
+                academic_option_id=UUID(row["academic_option_id"]),
                 active=bool(row["active"]),
             )
 
@@ -69,6 +74,7 @@ class SQLiteClassOptionRepository(ClassOptionRepository):
         self,
         academic_class_id: UUID,
         academic_option_id: UUID,
+        tenant_id: UUID,
     ) -> ClassOption | None:
 
         with self._database.connect() as connection:
@@ -76,16 +82,19 @@ class SQLiteClassOptionRepository(ClassOptionRepository):
                 """
                 SELECT
                     id,
+                    tenant_id,
                     academic_class_id,
                     academic_option_id,
                     active
                 FROM class_options
                 WHERE academic_class_id = ?
                   AND academic_option_id = ?
+                  AND tenant_id = ?
                 """,
                 (
                     str(academic_class_id),
                     str(academic_option_id),
+                    str(tenant_id),
                 ),
             ).fetchone()
 
@@ -94,11 +103,8 @@ class SQLiteClassOptionRepository(ClassOptionRepository):
 
             return ClassOption(
                 id=UUID(row["id"]),
-                academic_class_id=UUID(
-                    row["academic_class_id"]
-                ),
-                academic_option_id=UUID(
-                    row["academic_option_id"]
-                ),
+                tenant_id=UUID(row["tenant_id"]),
+                academic_class_id=UUID(row["academic_class_id"]),
+                academic_option_id=UUID(row["academic_option_id"]),
                 active=bool(row["active"]),
             )

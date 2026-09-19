@@ -17,6 +17,7 @@ class FakeAcademicRecordRepository:
 
     def save(self, record):
         key = (
+            record.tenant_id,
             record.student_id,
             record.academic_period_id,
         )
@@ -26,14 +27,16 @@ class FakeAcademicRecordRepository:
         self,
         student_id,
         academic_period_id,
+        tenant_id,
     ):
         return self.records.get(
-            (student_id, academic_period_id)
+            (tenant_id, student_id, academic_period_id)
         )
 
 
 def create_record():
     return StudentAcademicRecord(
+        tenant_id=uuid4(),
         student_id=uuid4(),
         academic_period_id=uuid4(),
         subject_results=(),
@@ -55,6 +58,7 @@ def test_add_subject_result_updates_record():
 
     response = use_case.execute(
         AddSubjectResultRequest(
+            tenant_id=record.tenant_id,
             student_id=record.student_id,
             academic_period_id=record.academic_period_id,
             subject_id=subject_id,
@@ -66,6 +70,7 @@ def test_add_subject_result_updates_record():
     updated_record = repository.find_by_student_and_period(
         record.student_id,
         record.academic_period_id,
+        record.tenant_id,
     )
 
     assert response.subject_id == subject_id
@@ -87,6 +92,7 @@ def test_add_subject_result_counts_failed_subject():
 
     use_case.execute(
         AddSubjectResultRequest(
+            tenant_id=record.tenant_id,
             student_id=record.student_id,
             academic_period_id=record.academic_period_id,
             subject_id=uuid4(),
@@ -98,6 +104,7 @@ def test_add_subject_result_counts_failed_subject():
     updated_record = repository.find_by_student_and_period(
         record.student_id,
         record.academic_period_id,
+        record.tenant_id,
     )
 
     assert updated_record.failed_subjects == 1
@@ -110,6 +117,7 @@ def test_add_subject_result_requires_existing_record():
     with pytest.raises(ValueError, match="Aucun dossier académique"):
         use_case.execute(
             AddSubjectResultRequest(
+                tenant_id=uuid4(),
                 student_id=uuid4(),
                 academic_period_id=uuid4(),
                 subject_id=uuid4(),
@@ -128,6 +136,7 @@ def test_add_subject_result_preserves_original_record():
 
     use_case.execute(
         AddSubjectResultRequest(
+            tenant_id=record.tenant_id,
             student_id=record.student_id,
             academic_period_id=record.academic_period_id,
             subject_id=uuid4(),
@@ -153,6 +162,7 @@ def test_add_subject_result_rejects_invalid_average():
     ):
         use_case.execute(
             AddSubjectResultRequest(
+                tenant_id=record.tenant_id,
                 student_id=record.student_id,
                 academic_period_id=record.academic_period_id,
                 subject_id=uuid4(),
@@ -175,6 +185,7 @@ def test_add_subject_result_rejects_invalid_coefficient():
     ):
         use_case.execute(
             AddSubjectResultRequest(
+                tenant_id=record.tenant_id,
                 student_id=record.student_id,
                 academic_period_id=record.academic_period_id,
                 subject_id=uuid4(),

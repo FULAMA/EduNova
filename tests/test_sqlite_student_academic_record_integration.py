@@ -8,7 +8,6 @@ from src.infrastructure.repositories.sqlite_student_academic_record_repository i
     SQLiteStudentAcademicRecordRepository,
 )
 
-
 TEST_DATABASE_DIRECTORY = (
     Path(__file__).parent / "databases"
 )
@@ -16,6 +15,7 @@ TEST_DATABASE_DIRECTORY = (
 
 def create_record() -> StudentAcademicRecord:
     return StudentAcademicRecord(
+        tenant_id=uuid4(),
         student_id=uuid4(),
         academic_period_id=uuid4(),
         subject_results=(
@@ -54,16 +54,50 @@ def create_repository() -> SQLiteStudentAcademicRecordRepository:
     return SQLiteStudentAcademicRecordRepository(database)
 
 
+def create_student(
+    repository: SQLiteStudentAcademicRecordRepository,
+    record: StudentAcademicRecord,
+) -> None:
+    database = repository._database
+
+    with database.connect() as connection:
+        connection.execute(
+            """
+            INSERT INTO students (
+                id,
+                tenant_id,
+                first_name,
+                last_name,
+                email,
+                phone,
+                active
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(record.student_id),
+                str(record.tenant_id),
+                "Test",
+                "Student",
+                None,
+                None,
+                1,
+            ),
+        )
+
+
 def test_sql_repository_can_save_and_reload_record():
     repository = create_repository()
-
     record = create_record()
+
+    create_student(repository, record)
 
     repository.save(record)
 
     result = repository.find_by_student_and_period(
         record.student_id,
         record.academic_period_id,
+        record.tenant_id,
     )
 
     assert result == record
@@ -72,21 +106,23 @@ def test_sql_repository_can_save_and_reload_record():
 def test_sql_repository_returns_none_for_unknown_student():
     repository = create_repository()
 
-    result = repository.find_by_student(uuid4())
+    result = repository.find_by_student(uuid4(), uuid4())
 
     assert result is None
 
 
 def test_sql_repository_returns_none_for_unknown_period():
     repository = create_repository()
-
     record = create_record()
+
+    create_student(repository, record)
 
     repository.save(record)
 
     result = repository.find_by_student_and_period(
         record.student_id,
         uuid4(),
+        record.tenant_id,
     )
 
     assert result is None
@@ -94,18 +130,19 @@ def test_sql_repository_returns_none_for_unknown_period():
 
 def test_sql_repository_preserves_subject_results():
     repository = create_repository()
-
     record = create_record()
+
+    create_student(repository, record)
 
     repository.save(record)
 
     result = repository.find_by_student_and_period(
         record.student_id,
         record.academic_period_id,
+        record.tenant_id,
     )
 
     assert result is not None
-
     assert len(result.subject_results) == 2
 
     assert (
@@ -141,12 +178,14 @@ def test_sql_repository_preserves_subject_results():
 
 def test_sql_repository_replaces_existing_record():
     repository = create_repository()
-
     record = create_record()
+
+    create_student(repository, record)
 
     repository.save(record)
 
     updated = StudentAcademicRecord(
+        tenant_id=record.tenant_id,
         student_id=record.student_id,
         academic_period_id=record.academic_period_id,
         subject_results=(
@@ -167,6 +206,7 @@ def test_sql_repository_replaces_existing_record():
     result = repository.find_by_student_and_period(
         record.student_id,
         record.academic_period_id,
+        record.tenant_id,
     )
 
     assert result == updated

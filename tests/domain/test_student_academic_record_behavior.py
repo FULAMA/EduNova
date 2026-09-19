@@ -6,6 +6,7 @@ from src.domain.value_objects.subject_result import SubjectResult
 
 def create_record():
     return StudentAcademicRecord(
+        tenant_id=uuid4(),
         student_id=uuid4(),
         academic_period_id=uuid4(),
         subject_results=(),
@@ -95,3 +96,5 @@ def test_add_subject_result_does_not_mutate_original_record():
     assert record.failed_subjects == 0
 
     assert updated_record is not record
+
+

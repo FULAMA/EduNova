@@ -1,4 +1,4 @@
-﻿from src.application.dto.add_subject_result_request import (
+from src.application.dto.add_subject_result_request import (
     AddSubjectResultRequest,
 )
 from src.application.interfaces.student_academic_record_repository import (
@@ -22,6 +22,7 @@ class AddSubjectResult:
         record = self._repository.find_by_student_and_period(
             request.student_id,
             request.academic_period_id,
+            request.tenant_id,
         )
 
         if record is None:

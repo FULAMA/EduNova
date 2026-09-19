@@ -1,4 +1,5 @@
-﻿from uuid import uuid4
+﻿from tests.support.tenant import TEST_TENANT_ID
+from uuid import uuid4
 
 from src.domain.entities.subject import Subject
 from src.infrastructure.persistence.database import SQLiteDatabase
@@ -18,11 +19,12 @@ def test_subject_can_be_saved_and_found_by_id():
         name="Mathématiques",
         code="MATH",
         coefficient=3,
+        tenant_id=TEST_TENANT_ID,
     )
 
     repository.save(subject)
 
-    result = repository.find_by_id(subject.id)
+    result = repository.find_by_id(subject.id, TEST_TENANT_ID)
 
     assert result == subject
 
@@ -33,7 +35,7 @@ def test_subject_returns_none_when_not_found():
 
     repository = SQLiteSubjectRepository(database)
 
-    result = repository.find_by_id(uuid4())
+    result = repository.find_by_id(uuid4(), TEST_TENANT_ID)
 
     assert result is None
 
@@ -49,6 +51,7 @@ def test_subject_code_must_be_unique():
         name="Mathématiques",
         code="MATH",
         coefficient=3,
+        tenant_id=TEST_TENANT_ID,
     )
 
     second = Subject(
@@ -56,6 +59,7 @@ def test_subject_code_must_be_unique():
         name="Mathématique avancée",
         code="MATH",
         coefficient=4,
+        tenant_id=TEST_TENANT_ID,
     )
 
     repository.save(first)
@@ -68,3 +72,4 @@ def test_subject_code_must_be_unique():
         raise AssertionError(
             "Deux matières ne doivent pas partager le même code."
         )
+

@@ -1,4 +1,4 @@
-﻿from src.application.dto.analyze_student_academic_record_request import (
+from src.application.dto.analyze_student_academic_record_request import (
     AnalyzeStudentAcademicRecordRequest,
 )
 from src.application.dto.analyze_student_academic_record_response import (
@@ -24,12 +24,13 @@ class AnalyzeStudentAcademicRecord:
         record = self._repository.find_by_student_and_period(
             request.student_id,
             request.academic_period_id,
+            request.tenant_id,
         )
 
         if record is None:
             raise ValueError(
-                "Aucun dossier académique trouvé pour "
-                "cet étudiant et cette période."
+                "Aucun dossier academique trouve pour "
+                "cet etudiant et cette periode."
             )
 
         return AnalyzeStudentAcademicRecordResponse(

@@ -9,6 +9,7 @@ from src.infrastructure.persistence.student_academic_record_mapper import (
 
 def create_record():
     return StudentAcademicRecord(
+        tenant_id=uuid4(),
         student_id=uuid4(),
         academic_period_id=uuid4(),
         subject_results=(
@@ -31,6 +32,7 @@ def test_mapper_converts_domain_entity_to_dict():
     data = StudentAcademicRecordMapper.to_dict(record)
 
     assert data["student_id"] == str(record.student_id)
+    assert data["tenant_id"] == str(record.tenant_id)
     assert data["academic_period_id"] == str(record.academic_period_id)
     assert data["general_average"] == 15.0
     assert data["failed_subjects"] == 1

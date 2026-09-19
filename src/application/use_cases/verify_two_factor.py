@@ -1,5 +1,8 @@
-﻿from uuid import UUID
+from uuid import UUID
 
+from src.application.interfaces.membership_repository import (
+    MembershipRepository,
+)
 from src.application.interfaces.user_repository import (
     UserRepository,
 )
@@ -13,16 +16,31 @@ class VerifyTwoFactor:
     def __init__(
         self,
         user_repository: UserRepository,
+        membership_repository: MembershipRepository,
         two_factor_service: TwoFactorService,
     ):
         self._user_repository = user_repository
+        self._membership_repository = membership_repository
         self._two_factor_service = two_factor_service
 
     def execute(
         self,
         user_id: UUID,
+        tenant_id: UUID,
         code: str,
     ) -> bool:
+
+        membership = (
+            self._membership_repository.find_by_user_and_tenant(
+                user_id,
+                tenant_id,
+            )
+        )
+
+        if membership is None or not membership.active:
+            raise ValueError(
+                "Utilisateur introuvable."
+            )
 
         user = self._user_repository.find_by_id(user_id)
 

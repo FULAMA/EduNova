@@ -1,10 +1,12 @@
-﻿from dataclasses import dataclass
+from dataclasses import dataclass
 from uuid import UUID
 
 from src.application.interfaces.user_repository import (
     UserRepository,
 )
-from src.application.services.jwt_service import JwtService
+from src.application.interfaces.membership_repository import MembershipRepository
+from src.application.interfaces.tenant_repository import TenantRepository
+from src.application.interfaces.jwt_service import JwtService
 from src.application.services.two_factor_service import (
     TwoFactorService,
 )
@@ -21,10 +23,14 @@ class VerifyLoginTwoFactor:
     def __init__(
         self,
         user_repository: UserRepository,
+        membership_repository: MembershipRepository,
+        tenant_repository: TenantRepository,
         two_factor_service: TwoFactorService,
         jwt_service: JwtService,
     ):
         self._user_repository = user_repository
+        self._membership_repository = membership_repository
+        self._tenant_repository = tenant_repository
         self._two_factor_service = two_factor_service
         self._jwt_service = jwt_service
 
@@ -44,14 +50,16 @@ class VerifyLoginTwoFactor:
             )
 
         user_id = payload.get("sub")
+        tenant_id = payload.get("tenant_id")
 
-        if not user_id:
+        if not user_id or not tenant_id:
             raise ValueError(
                 "Le token 2FA ne contient pas d utilisateur."
             )
 
         try:
             user_uuid = UUID(user_id)
+            tenant_uuid = UUID(tenant_id)
         except (ValueError, TypeError) as exc:
             raise ValueError(
                 "L identifiant utilisateur est invalide."
@@ -70,6 +78,11 @@ class VerifyLoginTwoFactor:
             raise ValueError(
                 "Le compte est desactive."
             )
+
+        tenant = self._tenant_repository.find_by_id(tenant_uuid)
+        membership = self._membership_repository.find_by_user_and_tenant(user.id, tenant_uuid)
+        if tenant is None or not tenant.active or membership is None or not membership.active:
+            raise ValueError("Acces tenant refuse.")
 
         if not user.two_factor_enabled:
             raise ValueError(
@@ -91,14 +104,17 @@ class VerifyLoginTwoFactor:
 
         access_token = self._jwt_service.create_access_token(
             user_id=user.id,
-            role=user.role,
+            role=membership.role,
+            tenant_id=tenant_uuid,
         )
 
         refresh_token = self._jwt_service.create_refresh_token(
             user_id=user.id,
+            tenant_id=tenant_uuid,
         )
 
         return VerifyLoginTwoFactorResponse(
             access_token=access_token,
             refresh_token=refresh_token,
         )
+

@@ -1,4 +1,5 @@
-﻿import sqlite3
+﻿from tests.support.tenant import TEST_TENANT_ID
+import sqlite3
 from uuid import uuid4
 
 import pytest
@@ -34,6 +35,7 @@ def test_sqlite_rejects_duplicate_common_subject_for_same_class():
     academic_class = AcademicClass(
         id=uuid4(),
         name="6e Informatique",
+        tenant_id=TEST_TENANT_ID,
     )
 
     subject = Subject(
@@ -41,6 +43,7 @@ def test_sqlite_rejects_duplicate_common_subject_for_same_class():
         name="Algorithmique",
         code="ALGO",
         coefficient=3,
+        tenant_id=TEST_TENANT_ID,
     )
 
     class_repository.save(academic_class)
@@ -52,6 +55,7 @@ def test_sqlite_rejects_duplicate_common_subject_for_same_class():
         subject_id=subject.id,
         coefficient=3,
         academic_option_id=None,
+        tenant_id=TEST_TENANT_ID,
     )
 
     second = ClassSubject(
@@ -60,6 +64,7 @@ def test_sqlite_rejects_duplicate_common_subject_for_same_class():
         subject_id=subject.id,
         coefficient=3,
         academic_option_id=None,
+        tenant_id=TEST_TENANT_ID,
     )
 
     class_subject_repository.save(first)

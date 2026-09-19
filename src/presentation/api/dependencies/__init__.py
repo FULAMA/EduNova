@@ -1,4 +1,4 @@
-﻿from src.application.use_cases.add_subject_result import AddSubjectResult
+from src.application.use_cases.add_subject_result import AddSubjectResult
 from src.application.use_cases.analyze_academic_risk import (
     AnalyzeAcademicRisk,
 )
@@ -29,53 +29,82 @@ from src.application.use_cases.verify_login_two_factor import (
 from src.application.use_cases.verify_two_factor import (
     VerifyTwoFactor,
 )
+from src.application.interfaces.user_repository import UserRepository
+from src.application.interfaces.tenant_repository import TenantRepository
+from src.application.interfaces.membership_repository import MembershipRepository
 from src.presentation.api.container import ApplicationContainer
 
 
-container = ApplicationContainer()
+_container: ApplicationContainer | None = None
+
+
+def get_container() -> ApplicationContainer:
+    global _container
+
+    if _container is None:
+        _container = ApplicationContainer()
+
+    return _container
+
+
+def get_jwt_service():
+    return get_container()._jwt_service()
+
+def get_user_repository() -> UserRepository:
+    return get_container()._user_repository()
+
+
+def get_tenant_repository() -> TenantRepository:
+    return get_container()._tenant_repository()
+
+
+def get_membership_repository() -> MembershipRepository:
+    return get_container()._membership_repository()
 
 
 def get_analyze_student_academic_record_use_case(
 ) -> AnalyzeStudentAcademicRecord:
-    return container.analyze_student_academic_record()
+    return get_container().analyze_student_academic_record()
 
 
 def get_add_subject_result_use_case() -> AddSubjectResult:
-    return container.add_subject_result()
+    return get_container().add_subject_result()
 
 
 def get_create_academic_record_use_case() -> CreateAcademicRecord:
-    return container.create_academic_record()
+    return get_container().create_academic_record()
 
 
 def get_assign_subject_to_class_use_case() -> AssignSubjectToClass:
-    return container.assign_subject_to_class()
+    return get_container().assign_subject_to_class()
 
 
 def get_analyze_academic_risk_use_case() -> AnalyzeAcademicRisk:
-    return container.analyze_academic_risk()
+    return get_container().analyze_academic_risk()
 
 
 def get_enable_two_factor_use_case() -> EnableTwoFactor:
-    return container.enable_two_factor()
-
-
-def get_verify_two_factor_use_case() -> VerifyTwoFactor:
-    return container.verify_two_factor()
-
-
-def get_register_user_use_case() -> RegisterUser:
-    return container.register_user()
+    return get_container().enable_two_factor()
 
 
 def get_login_user_use_case() -> LoginUser:
-    return container.login_user()
-
-
-def get_verify_login_two_factor_use_case(
-) -> VerifyLoginTwoFactor:
-    return container.verify_login_two_factor()
+    return get_container().login_user()
 
 
 def get_refresh_access_token_use_case() -> RefreshAccessToken:
-    return container.refresh_access_token()
+    return get_container().refresh_access_token()
+
+
+def get_register_user_use_case() -> RegisterUser:
+    return get_container().register_user()
+
+
+def get_verify_login_two_factor_use_case() -> VerifyLoginTwoFactor:
+    return get_container().verify_login_two_factor()
+
+
+def get_verify_two_factor_use_case() -> VerifyTwoFactor:
+    return get_container().verify_two_factor()
+
+
+

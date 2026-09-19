@@ -81,3 +81,17 @@ def test_cors_rejects_unconfigured_origin():
 
     assert response.status_code == 200
     assert "access-control-allow-origin" not in response.headers
+def test_api_documentation_is_disabled_in_production():
+    client = build_client("production")
+
+    assert client.get("/docs").status_code == 404
+    assert client.get("/redoc").status_code == 404
+    assert client.get("/openapi.json").status_code == 404
+
+
+def test_api_documentation_is_available_in_test():
+    client = build_client()
+
+    assert client.get("/docs").status_code == 200
+    assert client.get("/redoc").status_code == 200
+    assert client.get("/openapi.json").status_code == 200

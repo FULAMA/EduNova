@@ -1,12 +1,11 @@
-﻿from dataclasses import dataclass
+from dataclasses import dataclass
 from uuid import UUID
 
-from src.application.interfaces.user_repository import (
-    UserRepository,
+from src.application.interfaces.membership_repository import (
+    MembershipRepository,
 )
-from src.application.services.two_factor_service import (
-    TwoFactorService,
-)
+from src.application.interfaces.user_repository import UserRepository
+from src.application.services.two_factor_service import TwoFactorService
 
 
 @dataclass(frozen=True)
@@ -20,22 +19,33 @@ class EnableTwoFactor:
     def __init__(
         self,
         user_repository: UserRepository,
+        membership_repository: MembershipRepository,
         two_factor_service: TwoFactorService,
     ):
         self._user_repository = user_repository
+        self._membership_repository = membership_repository
         self._two_factor_service = two_factor_service
 
     def execute(
         self,
         user_id: UUID,
+        tenant_id: UUID,
     ) -> EnableTwoFactorResponse:
+
+        membership = (
+            self._membership_repository.find_by_user_and_tenant(
+                user_id,
+                tenant_id,
+            )
+        )
+
+        if membership is None or not membership.active:
+            raise ValueError("Utilisateur introuvable.")
 
         user = self._user_repository.find_by_id(user_id)
 
         if user is None:
-            raise ValueError(
-                "Utilisateur introuvable."
-            )
+            raise ValueError("Utilisateur introuvable.")
 
         secret = self._two_factor_service.generate_secret()
 

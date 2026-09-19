@@ -1,4 +1,4 @@
-﻿from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod
 from uuid import UUID
 
 from src.domain.entities.subject import Subject
@@ -8,11 +8,12 @@ class SubjectRepository(ABC):
 
     @abstractmethod
     def save(self, subject: Subject) -> None:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def find_by_id(
         self,
         subject_id: UUID,
+        tenant_id: UUID,
     ) -> Subject | None:
-        pass
+        raise NotImplementedError

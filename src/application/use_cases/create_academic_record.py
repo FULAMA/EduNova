@@ -1,4 +1,4 @@
-﻿from src.application.dto.create_academic_record_request import (
+from src.application.dto.create_academic_record_request import (
     CreateAcademicRecordRequest,
 )
 from src.application.dto.create_academic_record_response import (
@@ -25,6 +25,7 @@ class CreateAcademicRecord:
         existing_record = self._repository.find_by_student_and_period(
             request.student_id,
             request.academic_period_id,
+            request.tenant_id,
         )
 
         if existing_record is not None:
@@ -33,6 +34,7 @@ class CreateAcademicRecord:
             )
 
         record = StudentAcademicRecord(
+            tenant_id=request.tenant_id,
             student_id=request.student_id,
             academic_period_id=request.academic_period_id,
             subject_results=(),

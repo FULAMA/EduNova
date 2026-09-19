@@ -1,4 +1,4 @@
-﻿from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient
 
 from src.presentation.api.app import create_app
 
@@ -13,15 +13,15 @@ class FakeAnalyzeAcademicRisk:
                 "level": "HIGH",
                 "score": 90,
                 "reasons": (
-                    "Moyenne générale particulièrement faible.",
-                    "Taux d'assiduité critique.",
+                    "Moyenne gÃ©nÃ©rale particuliÃ¨rement faible.",
+                    "Taux d'assiduitÃ© critique.",
                 ),
             },
         )()
 
 
 def test_analyze_academic_risk_route_uses_injected_use_case():
-    app = create_app(
+    app = create_app(database_path=":memory:",
         analyze_academic_risk_use_case=FakeAnalyzeAcademicRisk(),
     )
 

@@ -1,4 +1,5 @@
-﻿from uuid import uuid4
+﻿from tests.support.tenant import TEST_TENANT_ID
+from uuid import uuid4
 
 from src.domain.entities.academic_class import AcademicClass
 from src.domain.entities.class_subject import ClassSubject
@@ -26,6 +27,7 @@ def test_class_subject_can_be_saved_and_found_by_id():
     academic_class = AcademicClass(
         id=uuid4(),
         name="6e Scientifique",
+        tenant_id=TEST_TENANT_ID,
     )
 
     subject = Subject(
@@ -33,6 +35,7 @@ def test_class_subject_can_be_saved_and_found_by_id():
         name="Mathématiques",
         code="MATH",
         coefficient=3,
+        tenant_id=TEST_TENANT_ID,
     )
 
     class_repository.save(academic_class)
@@ -43,11 +46,15 @@ def test_class_subject_can_be_saved_and_found_by_id():
         academic_class_id=academic_class.id,
         subject_id=subject.id,
         coefficient=4,
+        tenant_id=TEST_TENANT_ID,
     )
 
     repository.save(class_subject)
 
-    result = repository.find_by_id(class_subject.id)
+    result = repository.find_by_id(
+        class_subject.id,
+        TEST_TENANT_ID,
+    )
 
     assert result == class_subject
 
@@ -58,7 +65,10 @@ def test_class_subject_returns_none_when_not_found():
 
     repository = SQLiteClassSubjectRepository(database)
 
-    result = repository.find_by_id(uuid4())
+    result = repository.find_by_id(
+        uuid4(),
+        TEST_TENANT_ID,
+    )
 
     assert result is None
 
@@ -74,6 +84,7 @@ def test_class_subjects_can_be_found_by_class():
     academic_class = AcademicClass(
         id=uuid4(),
         name="6e Scientifique",
+        tenant_id=TEST_TENANT_ID,
     )
 
     subject_one = Subject(
@@ -81,6 +92,7 @@ def test_class_subjects_can_be_found_by_class():
         name="Mathématiques",
         code="MATH",
         coefficient=3,
+        tenant_id=TEST_TENANT_ID,
     )
 
     subject_two = Subject(
@@ -88,6 +100,7 @@ def test_class_subjects_can_be_found_by_class():
         name="Physique",
         code="PHY",
         coefficient=2,
+        tenant_id=TEST_TENANT_ID,
     )
 
     class_repository.save(academic_class)
@@ -99,6 +112,7 @@ def test_class_subjects_can_be_found_by_class():
         academic_class_id=academic_class.id,
         subject_id=subject_one.id,
         coefficient=4,
+        tenant_id=TEST_TENANT_ID,
     )
 
     class_subject_two = ClassSubject(
@@ -106,12 +120,16 @@ def test_class_subjects_can_be_found_by_class():
         academic_class_id=academic_class.id,
         subject_id=subject_two.id,
         coefficient=3,
+        tenant_id=TEST_TENANT_ID,
     )
 
     repository.save(class_subject_one)
     repository.save(class_subject_two)
 
-    result = repository.find_by_class(academic_class.id)
+    result = repository.find_by_class(
+        academic_class.id,
+        TEST_TENANT_ID,
+    )
 
     assert result == [
         class_subject_one,
@@ -130,6 +148,7 @@ def test_class_subjects_can_be_found_by_class_and_option():
     academic_class = AcademicClass(
         id=uuid4(),
         name="6e Scientifique",
+        tenant_id=TEST_TENANT_ID,
     )
 
     subject = Subject(
@@ -137,6 +156,7 @@ def test_class_subjects_can_be_found_by_class_and_option():
         name="Mathématiques",
         code="MATH",
         coefficient=3,
+        tenant_id=TEST_TENANT_ID,
     )
 
     academic_option_id = uuid4()
@@ -150,15 +170,17 @@ def test_class_subjects_can_be_found_by_class_and_option():
             id,
             name,
             code,
-            active
+            active,
+            tenant_id
         )
-        VALUES (?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?)
         """,
         (
             str(academic_option_id),
             "Mathématiques",
             "MATH",
             1,
+            str(TEST_TENANT_ID),
         ),
     )
 
@@ -168,6 +190,7 @@ def test_class_subjects_can_be_found_by_class_and_option():
         subject_id=subject.id,
         coefficient=4,
         academic_option_id=academic_option_id,
+        tenant_id=TEST_TENANT_ID,
     )
 
     repository.save(class_subject)
@@ -175,6 +198,7 @@ def test_class_subjects_can_be_found_by_class_and_option():
     result = repository.find_by_class_and_option(
         academic_class.id,
         academic_option_id,
+        TEST_TENANT_ID,
     )
 
     assert result == [class_subject]

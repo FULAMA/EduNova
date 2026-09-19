@@ -37,3 +37,17 @@ build/
 *.temp
 temp_*.txt
 *.bak
+
+# EduNova temporary / backup files
+*.current-backup
+*.backup
+*.broken
+*.encoding-backup
+
+# EduNova temporary / backup files
+*.current-backup
+*.backup
+*.broken
+*.encoding-backup
+
+.pytest-temp/

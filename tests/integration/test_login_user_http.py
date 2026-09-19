@@ -11,6 +11,7 @@ from src.infrastructure.repositories.sqlite_user_repository import (
 )
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
+from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
 def create_test_environment(
@@ -44,6 +45,7 @@ def create_test_environment(
     )
 
     repository.save(user)
+    seed_membership(container, user.id)
 
     app = create_app(container)
 
@@ -58,6 +60,7 @@ def test_login_without_2fa_returns_tokens():
         json={
             "email": user.email,
             "password": "EduNova@2026",
+            "tenant_id": str(TEST_TENANT_ID),
         },
     )
 
@@ -82,6 +85,7 @@ def test_login_with_2fa_requires_second_factor():
         json={
             "email": user.email,
             "password": "EduNova@2026",
+            "tenant_id": str(TEST_TENANT_ID),
         },
     )
 
@@ -104,6 +108,7 @@ def test_login_rejects_wrong_password():
         json={
             "email": user.email,
             "password": "WrongPassword@2026",
+            "tenant_id": str(TEST_TENANT_ID),
         },
     )
 
@@ -120,6 +125,7 @@ def test_login_rejects_inactive_user():
         json={
             "email": user.email,
             "password": "EduNova@2026",
+            "tenant_id": str(TEST_TENANT_ID),
         },
     )
 

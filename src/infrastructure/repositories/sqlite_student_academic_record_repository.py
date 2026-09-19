@@ -22,16 +22,18 @@ class SQLiteStudentAcademicRecordRepository(
                 INSERT OR REPLACE INTO student_academic_records (
                     student_id,
                     academic_period_id,
+                    tenant_id,
                     general_average,
                     failed_subjects,
                     credits_obtained,
                     total_credits
                 )
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(record.student_id),
                     str(record.academic_period_id),
+                    str(record.tenant_id),
                     record.general_average,
                     record.failed_subjects,
                     record.credits_obtained,
@@ -44,10 +46,12 @@ class SQLiteStudentAcademicRecordRepository(
                 DELETE FROM subject_results
                 WHERE student_id = ?
                   AND academic_period_id = ?
+                  AND tenant_id = ?
                 """,
                 (
                     str(record.student_id),
                     str(record.academic_period_id),
+                    str(record.tenant_id),
                 ),
             )
 
@@ -56,17 +60,19 @@ class SQLiteStudentAcademicRecordRepository(
                 INSERT INTO subject_results (
                     student_id,
                     academic_period_id,
+                    tenant_id,
                     subject_id,
                     average,
                     coefficient,
                     position
                 )
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     (
                         str(record.student_id),
                         str(record.academic_period_id),
+                        str(record.tenant_id),
                         str(result.subject_id),
                         result.average,
                         result.coefficient,
@@ -81,6 +87,7 @@ class SQLiteStudentAcademicRecordRepository(
     def find_by_student(
         self,
         student_id: UUID,
+        tenant_id: UUID,
     ) -> StudentAcademicRecord | None:
 
         with self._database.connect() as connection:
@@ -89,10 +96,14 @@ class SQLiteStudentAcademicRecordRepository(
                 SELECT *
                 FROM student_academic_records
                 WHERE student_id = ?
+                  AND tenant_id = ?
                 ORDER BY academic_period_id
                 LIMIT 1
                 """,
-                (str(student_id),),
+                (
+                    str(student_id),
+                    str(tenant_id),
+                ),
             ).fetchone()
 
             if row is None:
@@ -104,6 +115,7 @@ class SQLiteStudentAcademicRecordRepository(
         self,
         student_id: UUID,
         academic_period_id: UUID,
+        tenant_id: UUID,
     ) -> StudentAcademicRecord | None:
 
         with self._database.connect() as connection:
@@ -113,10 +125,12 @@ class SQLiteStudentAcademicRecordRepository(
                 FROM student_academic_records
                 WHERE student_id = ?
                   AND academic_period_id = ?
+                  AND tenant_id = ?
                 """,
                 (
                     str(student_id),
                     str(academic_period_id),
+                    str(tenant_id),
                 ),
             ).fetchone()
 
@@ -140,11 +154,13 @@ class SQLiteStudentAcademicRecordRepository(
             FROM subject_results
             WHERE student_id = ?
               AND academic_period_id = ?
+              AND tenant_id = ?
             ORDER BY position
             """,
             (
                 row["student_id"],
                 row["academic_period_id"],
+                row["tenant_id"],
             ),
         ).fetchall()
 
@@ -158,6 +174,7 @@ class SQLiteStudentAcademicRecordRepository(
         )
 
         return StudentAcademicRecord(
+            tenant_id=UUID(row["tenant_id"]),
             student_id=UUID(row["student_id"]),
             academic_period_id=UUID(row["academic_period_id"]),
             subject_results=subject_results,
@@ -166,3 +183,7 @@ class SQLiteStudentAcademicRecordRepository(
             credits_obtained=row["credits_obtained"],
             total_credits=row["total_credits"],
         )
+
+
+
+

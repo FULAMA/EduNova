@@ -1,9 +1,9 @@
-﻿import pyotp
+import pyotp
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from src.application.services.jwt_service import JwtService
+from src.infrastructure.security.jwt_service import JwtService
 from src.application.services.password_hasher_service import (
     PasswordHasherService,
 )
@@ -13,6 +13,7 @@ from src.infrastructure.repositories.sqlite_user_repository import (
 )
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
+from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
 JWT_SECRET = (
@@ -48,6 +49,13 @@ def create_test_environment():
 
     repository.save(user)
 
+    seed_membership(
+        container,
+        user.id,
+        tenant_id=TEST_TENANT_ID,
+        role=user.role,
+    )
+
     app = create_app(container)
 
     client = TestClient(app)
@@ -63,7 +71,8 @@ def test_verify_login_two_factor_http_success():
     )
 
     pending_token = jwt_service.create_two_factor_token(
-        user_id=user.id
+        user_id=user.id,
+        tenant_id=TEST_TENANT_ID,
     )
 
     code = pyotp.TOTP(secret).now()
@@ -93,7 +102,8 @@ def test_verify_login_two_factor_http_rejects_invalid_code():
     )
 
     pending_token = jwt_service.create_two_factor_token(
-        user_id=user.id
+        user_id=user.id,
+        tenant_id=TEST_TENANT_ID,
     )
 
     response = client.post(
@@ -117,6 +127,7 @@ def test_verify_login_two_factor_http_rejects_non_pending_token():
     access_token = jwt_service.create_access_token(
         user_id=user.id,
         role=user.role,
+        tenant_id=TEST_TENANT_ID,
     )
 
     response = client.post(
@@ -138,7 +149,8 @@ def test_verify_login_two_factor_http_rejects_unknown_user():
     )
 
     pending_token = jwt_service.create_two_factor_token(
-        user_id=uuid4()
+        user_id=uuid4(),
+        tenant_id=TEST_TENANT_ID,
     )
 
     code = pyotp.random_base32()
@@ -152,3 +164,4 @@ def test_verify_login_two_factor_http_rejects_unknown_user():
     )
 
     assert response.status_code == 404
+

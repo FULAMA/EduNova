@@ -1,4 +1,4 @@
-﻿from uuid import UUID
+from uuid import UUID
 
 from src.application.interfaces.class_subject_repository import (
     ClassSubjectRepository,
@@ -18,16 +18,18 @@ class SQLiteClassSubjectRepository(ClassSubjectRepository):
                 """
                 INSERT INTO class_subjects (
                     id,
+                    tenant_id,
                     academic_class_id,
                     subject_id,
                     coefficient,
                     academic_option_id,
                     active
                 )
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(class_subject.id),
+                    str(class_subject.tenant_id),
                     str(class_subject.academic_class_id),
                     str(class_subject.subject_id),
                     class_subject.coefficient,
@@ -43,6 +45,7 @@ class SQLiteClassSubjectRepository(ClassSubjectRepository):
     def find_by_id(
         self,
         class_subject_id: UUID,
+        tenant_id: UUID,
     ) -> ClassSubject | None:
 
         with self._database.connect() as connection:
@@ -50,6 +53,7 @@ class SQLiteClassSubjectRepository(ClassSubjectRepository):
                 """
                 SELECT
                     id,
+                    tenant_id,
                     academic_class_id,
                     subject_id,
                     coefficient,
@@ -57,8 +61,12 @@ class SQLiteClassSubjectRepository(ClassSubjectRepository):
                     active
                 FROM class_subjects
                 WHERE id = ?
+                  AND tenant_id = ?
                 """,
-                (str(class_subject_id),),
+                (
+                    str(class_subject_id),
+                    str(tenant_id),
+                ),
             ).fetchone()
 
             if row is None:
@@ -69,6 +77,7 @@ class SQLiteClassSubjectRepository(ClassSubjectRepository):
     def find_by_class(
         self,
         academic_class_id: UUID,
+        tenant_id: UUID,
     ) -> list[ClassSubject]:
 
         with self._database.connect() as connection:
@@ -76,6 +85,7 @@ class SQLiteClassSubjectRepository(ClassSubjectRepository):
                 """
                 SELECT
                     id,
+                    tenant_id,
                     academic_class_id,
                     subject_id,
                     coefficient,
@@ -83,9 +93,13 @@ class SQLiteClassSubjectRepository(ClassSubjectRepository):
                     active
                 FROM class_subjects
                 WHERE academic_class_id = ?
+                  AND tenant_id = ?
                 ORDER BY rowid
                 """,
-                (str(academic_class_id),),
+                (
+                    str(academic_class_id),
+                    str(tenant_id),
+                ),
             ).fetchall()
 
             return [
@@ -97,6 +111,7 @@ class SQLiteClassSubjectRepository(ClassSubjectRepository):
         self,
         academic_class_id: UUID,
         academic_option_id: UUID | None,
+        tenant_id: UUID,
     ) -> list[ClassSubject]:
 
         with self._database.connect() as connection:
@@ -106,6 +121,7 @@ class SQLiteClassSubjectRepository(ClassSubjectRepository):
                     """
                     SELECT
                         id,
+                        tenant_id,
                         academic_class_id,
                         subject_id,
                         coefficient,
@@ -113,11 +129,13 @@ class SQLiteClassSubjectRepository(ClassSubjectRepository):
                         active
                     FROM class_subjects
                     WHERE academic_class_id = ?
+                      AND tenant_id = ?
                       AND academic_option_id IS NULL
                     ORDER BY rowid
                     """,
                     (
                         str(academic_class_id),
+                        str(tenant_id),
                     ),
                 ).fetchall()
 
@@ -126,6 +144,7 @@ class SQLiteClassSubjectRepository(ClassSubjectRepository):
                     """
                     SELECT
                         id,
+                        tenant_id,
                         academic_class_id,
                         subject_id,
                         coefficient,
@@ -133,11 +152,13 @@ class SQLiteClassSubjectRepository(ClassSubjectRepository):
                         active
                     FROM class_subjects
                     WHERE academic_class_id = ?
+                      AND tenant_id = ?
                       AND academic_option_id = ?
                     ORDER BY rowid
                     """,
                     (
                         str(academic_class_id),
+                        str(tenant_id),
                         str(academic_option_id),
                     ),
                 ).fetchall()
@@ -151,12 +172,9 @@ class SQLiteClassSubjectRepository(ClassSubjectRepository):
     def _to_domain(row) -> ClassSubject:
         return ClassSubject(
             id=UUID(row["id"]),
-            academic_class_id=UUID(
-                row["academic_class_id"]
-            ),
-            subject_id=UUID(
-                row["subject_id"]
-            ),
+            tenant_id=UUID(row["tenant_id"]),
+            academic_class_id=UUID(row["academic_class_id"]),
+            subject_id=UUID(row["subject_id"]),
             coefficient=row["coefficient"],
             academic_option_id=(
                 UUID(row["academic_option_id"])

@@ -1,4 +1,4 @@
-﻿from uuid import UUID
+from uuid import UUID
 
 from src.application.interfaces.academic_option_repository import (
     AcademicOptionRepository,
@@ -18,14 +18,16 @@ class SQLiteAcademicOptionRepository(AcademicOptionRepository):
                 """
                 INSERT INTO academic_options (
                     id,
+                    tenant_id,
                     name,
                     code,
                     active
                 )
-                VALUES (?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?)
                 """,
                 (
                     str(academic_option.id),
+                    str(academic_option.tenant_id),
                     academic_option.name,
                     academic_option.code,
                     int(academic_option.active),
@@ -35,6 +37,7 @@ class SQLiteAcademicOptionRepository(AcademicOptionRepository):
     def find_by_id(
         self,
         academic_option_id: UUID,
+        tenant_id: UUID,
     ) -> AcademicOption | None:
 
         with self._database.connect() as connection:
@@ -42,13 +45,18 @@ class SQLiteAcademicOptionRepository(AcademicOptionRepository):
                 """
                 SELECT
                     id,
+                    tenant_id,
                     name,
                     code,
                     active
                 FROM academic_options
                 WHERE id = ?
+                  AND tenant_id = ?
                 """,
-                (str(academic_option_id),),
+                (
+                    str(academic_option_id),
+                    str(tenant_id),
+                ),
             ).fetchone()
 
             if row is None:
@@ -56,6 +64,7 @@ class SQLiteAcademicOptionRepository(AcademicOptionRepository):
 
             return AcademicOption(
                 id=UUID(row["id"]),
+                tenant_id=UUID(row["tenant_id"]),
                 name=row["name"],
                 code=row["code"],
                 active=bool(row["active"]),

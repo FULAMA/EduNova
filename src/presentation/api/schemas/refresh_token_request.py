@@ -1,5 +1,7 @@
-﻿from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class RefreshTokenRequest(BaseModel):
-    refresh_token: str
+    model_config = ConfigDict(extra="forbid")
+
+    refresh_token: str = Field(min_length=1)

@@ -1,10 +1,10 @@
-﻿from uuid import uuid4
+from uuid import uuid4
 
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 from pyotp import random_base32
 
-from src.application.services.jwt_service import JwtService
+from src.infrastructure.security.jwt_service import JwtService
 from src.application.services.password_hasher_service import (
     PasswordHasherService,
 )
@@ -13,7 +13,13 @@ from src.infrastructure.repositories.sqlite_user_repository import (
     SQLiteUserRepository,
 )
 from src.presentation.api.dependencies.auth import get_current_user
+from src.presentation.api.dependencies import (
+    get_jwt_service,
+    get_user_repository,
+)
 from src.presentation.api.container import ApplicationContainer
+from tests.support.tenant import TEST_TENANT_ID, seed_membership
+from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
 JWT_SECRET = (
@@ -45,19 +51,17 @@ def create_test_environment(is_active: bool = True):
 
     repository.save(user)
 
-    app = FastAPI()
-
-    app.dependency_overrides[
-        lambda: container
-    ] = lambda: container
-
-    from src.presentation.api.dependencies.auth import (
-        get_application_container,
+    seed_membership(
+        container,
+        user.id,
+        tenant_id=TEST_TENANT_ID,
+        role=user.role,
     )
 
-    app.dependency_overrides[
-        get_application_container
-    ] = lambda: container
+    app = FastAPI()
+
+    app.dependency_overrides[get_jwt_service] = container._jwt_service
+    app.dependency_overrides[get_user_repository] = lambda: repository
 
     @app.get("/protected")
     def protected_route(
@@ -81,6 +85,7 @@ def test_current_user_accepts_valid_access_token():
     token = jwt_service.create_access_token(
         user_id=user.id,
         role=user.role,
+        tenant_id=TEST_TENANT_ID,
     )
 
     response = client.get(
@@ -127,7 +132,8 @@ def test_current_user_rejects_refresh_token():
     )
 
     token = jwt_service.create_refresh_token(
-        user_id=user.id
+        user_id=user.id,
+        tenant_id=TEST_TENANT_ID
     )
 
     response = client.get(
@@ -148,7 +154,8 @@ def test_current_user_rejects_two_factor_pending_token():
     )
 
     token = jwt_service.create_two_factor_token(
-        user_id=user.id
+        user_id=user.id,
+        tenant_id=TEST_TENANT_ID
     )
 
     response = client.get(
@@ -171,6 +178,7 @@ def test_current_user_rejects_unknown_user():
     token = jwt_service.create_access_token(
         user_id=uuid4(),
         role="ADMIN",
+        tenant_id=TEST_TENANT_ID,
     )
 
     response = client.get(
@@ -195,6 +203,7 @@ def test_current_user_rejects_inactive_user():
     token = jwt_service.create_access_token(
         user_id=user.id,
         role=user.role,
+        tenant_id=TEST_TENANT_ID,
     )
 
     response = client.get(
@@ -205,3 +214,12 @@ def test_current_user_rejects_inactive_user():
     )
 
     assert response.status_code == 401
+
+
+
+
+
+
+
+
+

@@ -1,4 +1,5 @@
-﻿from uuid import uuid4
+﻿from tests.support.tenant import TEST_TENANT_ID
+from uuid import uuid4
 
 from src.domain.entities.academic_class import AcademicClass
 from src.domain.entities.academic_option import AcademicOption
@@ -26,12 +27,14 @@ def test_class_option_can_be_saved_and_found_by_id():
     academic_class = AcademicClass(
         id=uuid4(),
         name="6e Scientifique",
+        tenant_id=TEST_TENANT_ID,
     )
 
     academic_option = AcademicOption(
         id=uuid4(),
         name="Mathématiques",
         code="MATH",
+        tenant_id=TEST_TENANT_ID,
     )
 
     class_repository.save(academic_class)
@@ -41,11 +44,12 @@ def test_class_option_can_be_saved_and_found_by_id():
         id=uuid4(),
         academic_class_id=academic_class.id,
         academic_option_id=academic_option.id,
+        tenant_id=TEST_TENANT_ID,
     )
 
     repository.save(class_option)
 
-    result = repository.find_by_id(class_option.id)
+    result = repository.find_by_id(class_option.id, TEST_TENANT_ID)
 
     assert result == class_option
 
@@ -56,7 +60,7 @@ def test_class_option_returns_none_when_not_found():
 
     repository = SQLiteClassOptionRepository(database)
 
-    result = repository.find_by_id(uuid4())
+    result = repository.find_by_id(uuid4(), TEST_TENANT_ID)
 
     assert result is None
 
@@ -72,12 +76,14 @@ def test_class_option_can_be_found_by_class_and_option():
     academic_class = AcademicClass(
         id=uuid4(),
         name="6e Scientifique",
+        tenant_id=TEST_TENANT_ID,
     )
 
     academic_option = AcademicOption(
         id=uuid4(),
         name="Mathématiques",
         code="MATH",
+        tenant_id=TEST_TENANT_ID,
     )
 
     class_repository.save(academic_class)
@@ -87,6 +93,7 @@ def test_class_option_can_be_found_by_class_and_option():
         id=uuid4(),
         academic_class_id=academic_class.id,
         academic_option_id=academic_option.id,
+        tenant_id=TEST_TENANT_ID,
     )
 
     repository.save(class_option)
@@ -94,6 +101,7 @@ def test_class_option_can_be_found_by_class_and_option():
     result = repository.find_by_class_and_option(
         academic_class.id,
         academic_option.id,
+        TEST_TENANT_ID,
     )
 
     assert result == class_option
@@ -108,6 +116,7 @@ def test_class_option_returns_none_for_unknown_class_and_option():
     result = repository.find_by_class_and_option(
         uuid4(),
         uuid4(),
+        TEST_TENANT_ID,
     )
 
     assert result is None
@@ -124,12 +133,14 @@ def test_class_option_pair_must_be_unique():
     academic_class = AcademicClass(
         id=uuid4(),
         name="6e Scientifique",
+        tenant_id=TEST_TENANT_ID,
     )
 
     academic_option = AcademicOption(
         id=uuid4(),
         name="Mathématiques",
         code="MATH",
+        tenant_id=TEST_TENANT_ID,
     )
 
     class_repository.save(academic_class)
@@ -139,12 +150,14 @@ def test_class_option_pair_must_be_unique():
         id=uuid4(),
         academic_class_id=academic_class.id,
         academic_option_id=academic_option.id,
+        tenant_id=TEST_TENANT_ID,
     )
 
     second = ClassOption(
         id=uuid4(),
         academic_class_id=academic_class.id,
         academic_option_id=academic_option.id,
+        tenant_id=TEST_TENANT_ID,
     )
 
     repository.save(first)

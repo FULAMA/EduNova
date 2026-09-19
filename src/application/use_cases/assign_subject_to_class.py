@@ -1,4 +1,4 @@
-﻿from uuid import UUID, uuid4
+from uuid import UUID, uuid4
 
 from src.application.interfaces.academic_class_repository import (
     AcademicClassRepository,
@@ -9,9 +9,7 @@ from src.application.interfaces.class_option_repository import (
 from src.application.interfaces.class_subject_repository import (
     ClassSubjectRepository,
 )
-from src.application.interfaces.subject_repository import (
-    SubjectRepository,
-)
+from src.application.interfaces.subject_repository import SubjectRepository
 from src.domain.entities.class_subject import ClassSubject
 
 
@@ -31,6 +29,7 @@ class AssignSubjectToClass:
 
     def execute(
         self,
+        tenant_id: UUID,
         academic_class_id: UUID,
         subject_id: UUID,
         coefficient: float,
@@ -38,31 +37,30 @@ class AssignSubjectToClass:
     ) -> ClassSubject:
 
         academic_class = self.academic_class_repository.find_by_id(
-            academic_class_id
+            academic_class_id,
+            tenant_id,
         )
 
         if academic_class is None:
-            raise ValueError(
-                "La classe académique n'existe pas"
-            )
+            raise ValueError("La classe académique n'existe pas")
 
-        subject = self.subject_repository.find_by_id(subject_id)
+        subject = self.subject_repository.find_by_id(
+            subject_id,
+            tenant_id,
+        )
 
         if subject is None:
-            raise ValueError(
-                "La matière n'existe pas"
-            )
+            raise ValueError("La matière n'existe pas")
 
         if coefficient <= 0:
-            raise ValueError(
-                "Le coefficient doit être supérieur à zéro"
-            )
+            raise ValueError("Le coefficient doit être supérieur à zéro")
 
         if academic_option_id is not None:
             class_option = (
                 self.class_option_repository.find_by_class_and_option(
                     academic_class_id,
                     academic_option_id,
+                    tenant_id,
                 )
             )
 
@@ -75,6 +73,7 @@ class AssignSubjectToClass:
             self.class_subject_repository.find_by_class_and_option(
                 academic_class_id,
                 academic_option_id,
+                tenant_id,
             )
         )
 
@@ -86,6 +85,7 @@ class AssignSubjectToClass:
 
         class_subject = ClassSubject(
             id=uuid4(),
+            tenant_id=tenant_id,
             academic_class_id=academic_class_id,
             subject_id=subject_id,
             coefficient=coefficient,

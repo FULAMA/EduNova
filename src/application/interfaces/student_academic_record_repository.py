@@ -15,8 +15,9 @@ class StudentAcademicRecordRepository(ABC):
     def find_by_student(
         self,
         student_id: UUID,
+        tenant_id: UUID,
     ) -> StudentAcademicRecord | None:
-        """Retourne le dossier académique d'un étudiant."""
+        """Retourne le dossier académique d'un étudiant dans un tenant."""
         raise NotImplementedError
 
     @abstractmethod
@@ -24,6 +25,7 @@ class StudentAcademicRecordRepository(ABC):
         self,
         student_id: UUID,
         academic_period_id: UUID,
+        tenant_id: UUID,
     ) -> StudentAcademicRecord | None:
-        """Retourne le dossier d'un étudiant pour une période donnée."""
+        """Retourne le dossier d'un étudiant pour une période dans un tenant."""
         raise NotImplementedError

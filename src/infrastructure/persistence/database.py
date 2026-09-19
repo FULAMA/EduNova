@@ -1,6 +1,8 @@
 import sqlite3
 from pathlib import Path
 
+from src.infrastructure.persistence.migrations.runner import MigrationRunner
+
 
 class SQLiteDatabase:
     def __init__(self, database_path: str | Path):
@@ -149,6 +151,20 @@ class SQLiteDatabase:
                 )
                 """
             )
+
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS students (
+                    id TEXT PRIMARY KEY,
+                    first_name TEXT NOT NULL,
+                    last_name TEXT NOT NULL,
+                    email TEXT,
+                    phone TEXT,
+                    active INTEGER NOT NULL
+                )
+                """
+            )
+
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS student_academic_records (
@@ -195,3 +211,9 @@ class SQLiteDatabase:
                 )
                 """
             )
+
+            runner = MigrationRunner(connection)
+            runner.discover(
+                "src.infrastructure.persistence.migrations.versions"
+            )
+            runner.run()

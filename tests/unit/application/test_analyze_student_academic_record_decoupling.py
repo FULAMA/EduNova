@@ -14,6 +14,7 @@ from src.application.use_cases.analyze_student_academic_record import (
 )
 from src.domain.entities.student_academic_record import StudentAcademicRecord
 from src.domain.value_objects.subject_result import SubjectResult
+from tests.support.tenant import TEST_TENANT_ID
 
 
 class FakeStudentAcademicRecordRepository(StudentAcademicRecordRepository):
@@ -33,9 +34,11 @@ class FakeStudentAcademicRecordRepository(StudentAcademicRecordRepository):
         self,
         student_id,
         academic_period_id,
+        tenant_id,
     ):
         if (
             self.record
+            and self.record.tenant_id == tenant_id
             and self.record.student_id == student_id
             and self.record.academic_period_id == academic_period_id
         ):
@@ -46,6 +49,7 @@ class FakeStudentAcademicRecordRepository(StudentAcademicRecordRepository):
 
 def create_record():
     return StudentAcademicRecord(
+        tenant_id=TEST_TENANT_ID,
         student_id=uuid4(),
         academic_period_id=uuid4(),
         subject_results=(
@@ -70,6 +74,7 @@ def test_use_case_depends_only_on_repository_interface():
     use_case = AnalyzeStudentAcademicRecord(repository)
 
     request = AnalyzeStudentAcademicRecordRequest(
+        tenant_id=record.tenant_id,
         student_id=record.student_id,
         academic_period_id=record.academic_period_id,
     )
@@ -94,6 +99,7 @@ def test_fake_repository_proves_infrastructure_is_not_required():
     use_case = AnalyzeStudentAcademicRecord(repository)
 
     request = AnalyzeStudentAcademicRecordRequest(
+        tenant_id=record.tenant_id,
         student_id=record.student_id,
         academic_period_id=record.academic_period_id,
     )

@@ -9,6 +9,7 @@ from src.domain.entities.student_academic_record import (
 def test_student_academic_record_can_be_created():
 
     record = StudentAcademicRecord(
+        tenant_id=uuid4(),
         student_id=uuid4(),
         academic_period_id=uuid4(),
         subject_results=(),
@@ -27,6 +28,7 @@ def test_average_cannot_be_negative():
 
     with pytest.raises(ValueError):
         StudentAcademicRecord(
+            tenant_id=uuid4(),
             student_id=uuid4(),
             academic_period_id=uuid4(),
             subject_results=(),
@@ -41,6 +43,7 @@ def test_average_cannot_exceed_20():
 
     with pytest.raises(ValueError):
         StudentAcademicRecord(
+            tenant_id=uuid4(),
             student_id=uuid4(),
             academic_period_id=uuid4(),
             subject_results=(),
@@ -55,6 +58,7 @@ def test_obtained_credits_cannot_exceed_total_credits():
 
     with pytest.raises(ValueError):
         StudentAcademicRecord(
+            tenant_id=uuid4(),
             student_id=uuid4(),
             academic_period_id=uuid4(),
             subject_results=(),

@@ -26,6 +26,8 @@ from src.presentation.api.schemas.add_subject_result import (
 from src.presentation.api.schemas.add_subject_result_request import (
     AddSubjectResultRequestSchema,
 )
+from src.application.context.tenant_context import TenantContext
+from src.presentation.api.dependencies.auth import get_tenant_context
 
 
 router = APIRouter(
@@ -41,10 +43,14 @@ router = APIRouter(
 def get_academic_record(
     student_id: UUID,
     academic_period_id: UUID,
-    use_case: AnalyzeStudentAcademicRecord = Depends(get_analyze_student_academic_record_use_case),
+    use_case: AnalyzeStudentAcademicRecord = Depends(
+        get_analyze_student_academic_record_use_case
+    ),
+    tenant_context: TenantContext = Depends(get_tenant_context),
 ) -> AcademicRecordResponse:
 
     request = AnalyzeStudentAcademicRecordRequest(
+        tenant_id=tenant_context.tenant_id,
         student_id=student_id,
         academic_period_id=academic_period_id,
     )
@@ -89,9 +95,11 @@ def add_subject_result(
     use_case: AddSubjectResult = Depends(
         get_add_subject_result_use_case
     ),
+    tenant_context: TenantContext = Depends(get_tenant_context),
 ) -> AddSubjectResultResponse:
 
     request = AddSubjectResultRequest(
+        tenant_id=tenant_context.tenant_id,
         student_id=student_id,
         academic_period_id=academic_period_id,
         subject_id=data.subject_id,
@@ -127,6 +135,8 @@ from src.presentation.api.schemas.create_academic_record_request import (
 from src.presentation.api.schemas.create_academic_record import (
     CreateAcademicRecordResponse,
 )
+from src.application.context.tenant_context import TenantContext
+from src.presentation.api.dependencies.auth import get_tenant_context
 
 @router.post(
     "",
@@ -138,9 +148,11 @@ def create_academic_record(
     use_case: CreateAcademicRecord = Depends(
         get_create_academic_record_use_case
     ),
+    tenant_context: TenantContext = Depends(get_tenant_context),
 ) -> CreateAcademicRecordResponse:
 
     request = CreateAcademicRecordRequest(
+        tenant_id=tenant_context.tenant_id,
         student_id=data.student_id,
         academic_period_id=data.academic_period_id,
         total_credits=data.total_credits,

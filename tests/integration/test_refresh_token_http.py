@@ -1,11 +1,12 @@
-﻿from uuid import uuid4
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from src.application.services.jwt_service import JwtService
+from src.infrastructure.security.jwt_service import JwtService
 from src.domain.entities.user import User
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
+from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
 JWT_SECRET = (
@@ -28,23 +29,24 @@ def create_test_environment(is_active: bool = True):
     )
 
     container._user_repository().save(user)
+    seed_membership(container, user.id)
 
     app = create_app(container)
 
     return TestClient(app), container, user
 
 
-def create_refresh_token(user):
+def create_refresh_token(user, tenant_id=TEST_TENANT_ID):
     jwt_service = JwtService(
         secret_key=JWT_SECRET
     )
 
     return jwt_service.create_refresh_token(
-        user_id=user.id
+        user_id=user.id, tenant_id=tenant_id
     )
 
 
-def create_access_token(user):
+def create_access_token(user, tenant_id=TEST_TENANT_ID):
     jwt_service = JwtService(
         secret_key=JWT_SECRET
     )
@@ -52,6 +54,7 @@ def create_access_token(user):
     return jwt_service.create_access_token(
         user_id=user.id,
         role=user.role,
+        tenant_id=tenant_id,
     )
 
 
@@ -180,3 +183,4 @@ def test_refresh_requires_refresh_token():
     )
 
     assert response.status_code == 422
+

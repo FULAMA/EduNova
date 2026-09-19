@@ -14,5 +14,6 @@ class AcademicClassRepository(ABC):
     def find_by_id(
         self,
         academic_class_id: UUID,
+        tenant_id: UUID,
     ) -> AcademicClass | None:
         pass

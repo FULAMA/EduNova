@@ -1,4 +1,4 @@
-﻿from uuid import UUID
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -13,6 +13,7 @@ from src.domain.entities.user import User
 
 from src.presentation.api.dependencies.auth import (
     get_current_user,
+    get_tenant_context,
     require_role,
 )
 
@@ -104,6 +105,7 @@ def login_user(
         result = use_case.execute(
             email=request.email,
             password=request.password,
+            tenant_id=request.tenant_id,
         )
 
         return LoginUserResponse(
@@ -168,9 +170,13 @@ def enable_two_factor(
     user_id: UUID,
     use_case: EnableTwoFactor = Depends(get_enable_two_factor_use_case),
     current_user=Depends(require_role("ADMIN")),
+    tenant_context=Depends(get_tenant_context),
 ):
     try:
-        result = use_case.execute(user_id=user_id)
+        result = use_case.execute(
+            user_id=user_id,
+            tenant_id=tenant_context.tenant_id,
+        )
 
         return EnableTwoFactorResponse(
             secret=result.secret,
@@ -198,10 +204,13 @@ def verify_two_factor(
     user_id: UUID,
     request: VerifyTwoFactorRequest,
     use_case: VerifyTwoFactor = Depends(get_verify_two_factor_use_case),
+    current_user=Depends(require_role("ADMIN")),
+    tenant_context=Depends(get_tenant_context),
 ):
     try:
         verified = use_case.execute(
             user_id=user_id,
+            tenant_id=tenant_context.tenant_id,
             code=request.code,
         )
 
@@ -271,3 +280,11 @@ def get_me(
         is_active=current_user.is_active,
         two_factor_enabled=current_user.two_factor_enabled,
     )
+
+
+
+
+
+
+
+

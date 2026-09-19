@@ -86,3 +86,53 @@ def test_empty_secret_is_rejected():
             email="admin@edunova.com",
             secret="",
         )
+
+
+def test_generate_provisioning_uri_rejects_empty_email():
+    service = TwoFactorService()
+
+    secret = service.generate_secret()
+
+    with pytest.raises(ValueError, match="L email ne peut pas etre vide"):
+        service.generate_provisioning_uri(
+            email="",
+            secret=secret,
+        )
+
+
+def test_verify_code_rejects_empty_secret():
+    service = TwoFactorService()
+
+    with pytest.raises(
+        ValueError,
+        match="Le secret 2FA ne peut pas etre vide",
+    ):
+        service.verify_code(
+            secret="",
+            code="123456",
+        )
+
+
+def test_generate_provisioning_uri_rejects_empty_email():
+    service = TwoFactorService()
+
+    secret = service.generate_secret()
+
+    with pytest.raises(ValueError, match="L email ne peut pas etre vide"):
+        service.generate_provisioning_uri(
+            email="",
+            secret=secret,
+        )
+
+
+def test_verify_code_rejects_empty_secret():
+    service = TwoFactorService()
+
+    with pytest.raises(
+        ValueError,
+        match="Le secret 2FA ne peut pas etre vide",
+    ):
+        service.verify_code(
+            secret="",
+            code="123456",
+        )

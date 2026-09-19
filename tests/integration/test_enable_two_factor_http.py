@@ -2,13 +2,14 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from src.application.services.jwt_service import JwtService
+from src.infrastructure.security.jwt_service import JwtService
 from src.domain.entities.user import User
 from src.infrastructure.repositories.sqlite_user_repository import (
     SQLiteUserRepository,
 )
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
+from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
 JWT_SECRET = (
@@ -35,6 +36,13 @@ def create_test_environment():
 
     user_repository.save(user)
 
+    seed_membership(
+        container,
+        user.id,
+        tenant_id=TEST_TENANT_ID,
+        role="ADMIN",
+    )
+
     app = create_app(container)
 
     return TestClient(app), user
@@ -48,6 +56,7 @@ def create_admin_token(user: User) -> str:
     return jwt_service.create_access_token(
         user_id=user.id,
         role=user.role,
+        tenant_id=TEST_TENANT_ID,
     )
 
 
@@ -86,3 +95,4 @@ def test_enable_two_factor_http_unknown_user():
     )
 
     assert response.status_code == 404
+

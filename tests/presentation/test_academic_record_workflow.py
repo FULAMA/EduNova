@@ -1,9 +1,15 @@
-ï»¿from uuid import uuid4
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
+from src.infrastructure.security.jwt_service import JwtService
+from src.domain.entities.user import User
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
+from tests.support.tenant import TEST_TENANT_ID, seed_membership
+
+
+JWT_SECRET = "edunova-development-secret-key-32-bytes-minimum-change-in-production"
 
 
 def test_academic_record_full_http_workflow():
@@ -19,7 +25,65 @@ def test_academic_record_full_http_workflow():
     app = create_app(container)
     client = TestClient(app)
 
-    # 1. CrÃ©ation du dossier acadÃ©mique
+    # Utilisateur authentifié
+    user = User(
+        id=uuid4(),
+        email="admin@edunova.com",
+        password_hash="hashed-password",
+        role="ADMIN",
+    )
+
+    container._user_repository().save(user)
+
+    # Membership active dans le tenant de test
+    seed_membership(
+        container,
+        user.id,
+        tenant_id=TEST_TENANT_ID,
+        role="ADMIN",
+    )
+
+    # Étudiant appartenant au même tenant
+    with container._database.connect() as connection:
+        connection.execute(
+            """
+            INSERT INTO students (
+                id,
+                tenant_id,
+                first_name,
+                last_name,
+                email,
+                phone,
+                active
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(student_id),
+                str(TEST_TENANT_ID),
+                "Test",
+                "Student",
+                None,
+                None,
+                1,
+            ),
+        )
+
+    # JWT contenant le tenant actif
+    jwt_service = JwtService(secret_key=JWT_SECRET)
+
+    token = jwt_service.create_access_token(
+        user_id=user.id,
+        role="ADMIN",
+        tenant_id=TEST_TENANT_ID,
+    )
+
+    client.headers.update(
+        {
+            "Authorization": f"Bearer {token}",
+        }
+    )
+
+    # 1. Création du dossier académique
     response = client.post(
         "/academic-records",
         json={
@@ -31,7 +95,7 @@ def test_academic_record_full_http_workflow():
 
     assert response.status_code == 201
 
-    # 2. Ajout de MathÃ©matiques : 16 Ã— coefficient 3
+    # 2. Ajout de Mathématiques : 16 × coefficient 3
     response = client.post(
         f"/academic-records/{student_id}/{academic_period_id}/subjects",
         json={
@@ -43,7 +107,7 @@ def test_academic_record_full_http_workflow():
 
     assert response.status_code == 201
 
-    # 3. Ajout de Physique : 12 Ã— coefficient 2
+    # 3. Ajout de Physique : 12 × coefficient 2
     response = client.post(
         f"/academic-records/{student_id}/{academic_period_id}/subjects",
         json={
@@ -67,7 +131,7 @@ def test_academic_record_full_http_workflow():
     assert data["student_id"] == str(student_id)
     assert data["academic_period_id"] == str(academic_period_id)
 
-    # (16 Ã— 3 + 12 Ã— 2) / (3 + 2) = 14.4
+    # (16 × 3 + 12 × 2) / (3 + 2) = 14.4
     assert data["general_average"] == 14.4
 
     assert data["failed_subjects"] == 0
@@ -86,3 +150,4 @@ def test_academic_record_full_http_workflow():
         "average": 12,
         "coefficient": 2,
     }
+

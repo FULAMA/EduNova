@@ -1,4 +1,6 @@
-﻿from src.domain.entities.student_academic_record import StudentAcademicRecord
+from uuid import UUID
+
+from src.domain.entities.student_academic_record import StudentAcademicRecord
 from src.domain.value_objects.subject_result import SubjectResult
 
 
@@ -7,6 +9,7 @@ class StudentAcademicRecordMapper:
     @staticmethod
     def to_dict(record: StudentAcademicRecord) -> dict:
         return {
+            "tenant_id": str(record.tenant_id),
             "student_id": str(record.student_id),
             "academic_period_id": str(record.academic_period_id),
             "subject_results": [
@@ -25,8 +28,6 @@ class StudentAcademicRecordMapper:
 
     @staticmethod
     def to_domain(data: dict) -> StudentAcademicRecord:
-        from uuid import UUID
-
         subject_results = tuple(
             SubjectResult(
                 subject_id=UUID(result["subject_id"]),
@@ -37,6 +38,7 @@ class StudentAcademicRecordMapper:
         )
 
         return StudentAcademicRecord(
+            tenant_id=UUID(data["tenant_id"]),
             student_id=UUID(data["student_id"]),
             academic_period_id=UUID(data["academic_period_id"]),
             subject_results=subject_results,

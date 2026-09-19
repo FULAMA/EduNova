@@ -1,4 +1,5 @@
-﻿from uuid import uuid4
+﻿from tests.support.tenant import TEST_TENANT_ID
+from uuid import uuid4
 
 from src.domain.entities.class_subject import ClassSubject
 
@@ -43,6 +44,7 @@ def test_save_and_find_by_id():
         academic_class_id=uuid4(),
         subject_id=uuid4(),
         coefficient=3,
+        tenant_id=TEST_TENANT_ID,
     )
 
     repository.save(class_subject)
@@ -61,6 +63,7 @@ def test_find_by_class_returns_only_subjects_of_class():
         academic_class_id=class_id,
         subject_id=uuid4(),
         coefficient=3,
+        tenant_id=TEST_TENANT_ID,
     )
 
     subject_2 = ClassSubject(
@@ -68,6 +71,7 @@ def test_find_by_class_returns_only_subjects_of_class():
         academic_class_id=class_id,
         subject_id=uuid4(),
         coefficient=2,
+        tenant_id=TEST_TENANT_ID,
     )
 
     other_subject = ClassSubject(
@@ -75,6 +79,7 @@ def test_find_by_class_returns_only_subjects_of_class():
         academic_class_id=other_class_id,
         subject_id=uuid4(),
         coefficient=4,
+        tenant_id=TEST_TENANT_ID,
     )
 
     repository.save(subject_1)
@@ -99,6 +104,7 @@ def test_find_by_class_and_option_returns_only_option_subjects():
         subject_id=uuid4(),
         coefficient=4,
         academic_option_id=option_info_id,
+        tenant_id=TEST_TENANT_ID,
     )
 
     math_subject = ClassSubject(
@@ -107,6 +113,7 @@ def test_find_by_class_and_option_returns_only_option_subjects():
         subject_id=uuid4(),
         coefficient=3,
         academic_option_id=option_math_id,
+        tenant_id=TEST_TENANT_ID,
     )
 
     common_subject = ClassSubject(
@@ -114,6 +121,7 @@ def test_find_by_class_and_option_returns_only_option_subjects():
         academic_class_id=class_id,
         subject_id=uuid4(),
         coefficient=2,
+        tenant_id=TEST_TENANT_ID,
     )
 
     repository.save(info_subject)
@@ -126,3 +134,4 @@ def test_find_by_class_and_option_returns_only_option_subjects():
     )
 
     assert result == [info_subject]
+

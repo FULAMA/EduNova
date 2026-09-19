@@ -1,6 +1,6 @@
-﻿from pathlib import Path
+from pathlib import Path
 
-from src.application.services.jwt_service import JwtService
+from src.infrastructure.security.jwt_service import JwtService
 from src.application.services.password_hasher_service import (
     PasswordHasherService,
 )
@@ -68,6 +68,8 @@ from src.infrastructure.repositories.sqlite_subject_repository import (
 from src.infrastructure.repositories.sqlite_user_repository import (
     SQLiteUserRepository,
 )
+from src.infrastructure.repositories.sqlite_membership_repository import SQLiteMembershipRepository
+from src.infrastructure.repositories.sqlite_tenant_repository import SQLiteTenantRepository
 
 
 class ApplicationContainer:
@@ -80,7 +82,9 @@ class ApplicationContainer:
     ):
         self._settings = settings or Settings.from_environment()
 
-        self._database = database or SQLiteDatabase(database_path)
+        self._database = database or SQLiteDatabase(
+            settings.database_path if settings is not None else database_path
+        )
         self._database.initialize()
 
         self._refresh_token_repository_instance = (
@@ -152,6 +156,12 @@ class ApplicationContainer:
     ) -> SQLiteRefreshTokenRepository:
         return self._refresh_token_repository_instance
 
+    def _membership_repository(self) -> SQLiteMembershipRepository:
+        return SQLiteMembershipRepository(self._database)
+
+    def _tenant_repository(self) -> SQLiteTenantRepository:
+        return SQLiteTenantRepository(self._database)
+
     def analyze_student_academic_record(
         self,
     ) -> AnalyzeStudentAcademicRecord:
@@ -195,6 +205,7 @@ class ApplicationContainer:
     ) -> EnableTwoFactor:
         return EnableTwoFactor(
             user_repository=self._user_repository(),
+            membership_repository=self._membership_repository(),
             two_factor_service=TwoFactorService(),
         )
 
@@ -203,6 +214,7 @@ class ApplicationContainer:
     ) -> VerifyTwoFactor:
         return VerifyTwoFactor(
             user_repository=self._user_repository(),
+            membership_repository=self._membership_repository(),
             two_factor_service=TwoFactorService(),
         )
 
@@ -219,6 +231,8 @@ class ApplicationContainer:
     ) -> LoginUser:
         return LoginUser(
             user_repository=self._user_repository(),
+            membership_repository=self._membership_repository(),
+            tenant_repository=self._tenant_repository(),
             password_hasher=PasswordHasherService(),
             two_factor_service=TwoFactorService(),
             jwt_service=self._jwt_service(),
@@ -229,6 +243,8 @@ class ApplicationContainer:
     ) -> VerifyLoginTwoFactor:
         return VerifyLoginTwoFactor(
             user_repository=self._user_repository(),
+            membership_repository=self._membership_repository(),
+            tenant_repository=self._tenant_repository(),
             two_factor_service=TwoFactorService(),
             jwt_service=self._jwt_service(),
         )
@@ -238,6 +254,13 @@ class ApplicationContainer:
     ) -> RefreshAccessToken:
         return RefreshAccessToken(
             user_repository=self._user_repository(),
+            membership_repository=self._membership_repository(),
+            tenant_repository=self._tenant_repository(),
             refresh_token_repository=self._refresh_token_repository(),
             jwt_service=self._jwt_service(),
         )
+
+
+
+
+

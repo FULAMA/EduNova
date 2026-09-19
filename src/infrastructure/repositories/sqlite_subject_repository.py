@@ -16,15 +16,17 @@ class SQLiteSubjectRepository(SubjectRepository):
                 """
                 INSERT INTO subjects (
                     id,
+                    tenant_id,
                     name,
                     code,
                     coefficient,
                     active
                 )
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(subject.id),
+                    str(subject.tenant_id),
                     subject.name,
                     subject.code,
                     subject.coefficient,
@@ -35,6 +37,7 @@ class SQLiteSubjectRepository(SubjectRepository):
     def find_by_id(
         self,
         subject_id: UUID,
+        tenant_id: UUID,
     ) -> Subject | None:
 
         with self._database.connect() as connection:
@@ -42,14 +45,16 @@ class SQLiteSubjectRepository(SubjectRepository):
                 """
                 SELECT
                     id,
+                    tenant_id,
                     name,
                     code,
                     coefficient,
                     active
                 FROM subjects
                 WHERE id = ?
+                AND tenant_id = ?
                 """,
-                (str(subject_id),),
+                (str(subject_id), str(tenant_id)),
             ).fetchone()
 
             if row is None:
@@ -57,6 +62,7 @@ class SQLiteSubjectRepository(SubjectRepository):
 
             return Subject(
                 id=UUID(row["id"]),
+                tenant_id=UUID(row["tenant_id"]),
                 name=row["name"],
                 code=row["code"],
                 coefficient=row["coefficient"],

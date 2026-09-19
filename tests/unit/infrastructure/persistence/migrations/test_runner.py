@@ -251,9 +251,69 @@ def test_runner_records_applied_at_for_migration():
     assert row["version"] == "001"
     assert row["applied_at"]
 
+def create_legacy_schema(connection: sqlite3.Connection) -> None:
+    connection.executescript("""
+        CREATE TABLE academic_classes (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL
+        );
+
+        CREATE TABLE subjects (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            code TEXT NOT NULL UNIQUE,
+            coefficient REAL NOT NULL,
+            active INTEGER NOT NULL
+        );
+
+        CREATE TABLE academic_options (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            code TEXT NOT NULL UNIQUE,
+            active INTEGER NOT NULL
+        );
+
+        CREATE TABLE class_options (
+            id TEXT PRIMARY KEY,
+            academic_class_id TEXT NOT NULL,
+            academic_option_id TEXT NOT NULL,
+            active INTEGER NOT NULL
+        );
+
+        CREATE TABLE class_subjects (
+            id TEXT PRIMARY KEY,
+            academic_class_id TEXT NOT NULL,
+            subject_id TEXT NOT NULL,
+            coefficient REAL NOT NULL,
+            academic_option_id TEXT,
+            active INTEGER NOT NULL
+        );
+
+        CREATE TABLE students (
+            id TEXT PRIMARY KEY,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            email TEXT,
+            phone TEXT,
+            active INTEGER NOT NULL
+        );
+
+        CREATE TABLE student_academic_records (
+            student_id TEXT NOT NULL,
+            academic_period_id TEXT NOT NULL,
+            general_average REAL NOT NULL,
+            failed_subjects INTEGER NOT NULL,
+            credits_obtained REAL NOT NULL,
+            total_credits REAL NOT NULL,
+            PRIMARY KEY (student_id, academic_period_id)
+        );
+    """)
+
 def test_runner_discovers_migrations_from_versions_package():
     connection = sqlite3.connect(":memory:")
     connection.row_factory = sqlite3.Row
+
+    create_legacy_schema(connection)
 
     runner = MigrationRunner(connection)
 
@@ -295,9 +355,69 @@ def test_runner_records_applied_at_for_migration():
     assert row is not None
     assert row["version"] == "001"
     assert row["applied_at"]
+def create_legacy_schema(connection: sqlite3.Connection) -> None:
+    connection.executescript("""
+        CREATE TABLE academic_classes (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL
+        );
+
+        CREATE TABLE subjects (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            code TEXT NOT NULL UNIQUE,
+            coefficient REAL NOT NULL,
+            active INTEGER NOT NULL
+        );
+
+        CREATE TABLE academic_options (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            code TEXT NOT NULL UNIQUE,
+            active INTEGER NOT NULL
+        );
+
+        CREATE TABLE class_options (
+            id TEXT PRIMARY KEY,
+            academic_class_id TEXT NOT NULL,
+            academic_option_id TEXT NOT NULL,
+            active INTEGER NOT NULL
+        );
+
+        CREATE TABLE class_subjects (
+            id TEXT PRIMARY KEY,
+            academic_class_id TEXT NOT NULL,
+            subject_id TEXT NOT NULL,
+            coefficient REAL NOT NULL,
+            academic_option_id TEXT,
+            active INTEGER NOT NULL
+        );
+
+        CREATE TABLE students (
+            id TEXT PRIMARY KEY,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            email TEXT,
+            phone TEXT,
+            active INTEGER NOT NULL
+        );
+
+        CREATE TABLE student_academic_records (
+            student_id TEXT NOT NULL,
+            academic_period_id TEXT NOT NULL,
+            general_average REAL NOT NULL,
+            failed_subjects INTEGER NOT NULL,
+            credits_obtained REAL NOT NULL,
+            total_credits REAL NOT NULL,
+            PRIMARY KEY (student_id, academic_period_id)
+        );
+    """)
+
 def test_runner_discovers_migrations_from_versions_package():
     connection = sqlite3.connect(":memory:")
     connection.row_factory = sqlite3.Row
+
+    create_legacy_schema(connection)
 
     runner = MigrationRunner(connection)
 
@@ -326,3 +446,4 @@ def test_runner_ignores_modules_without_migration_contract():
     )
 
     assert "001" in runner._migrations
+

@@ -1,11 +1,13 @@
-﻿from uuid import uuid4
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
+from src.infrastructure.security.jwt_service import JwtService
 from src.domain.entities.academic_class import AcademicClass
 from src.domain.entities.academic_option import AcademicOption
 from src.domain.entities.class_option import ClassOption
 from src.domain.entities.subject import Subject
+from src.domain.entities.user import User
 from src.infrastructure.repositories.sqlite_academic_class_repository import (
     SQLiteAcademicClassRepository,
 )
@@ -20,6 +22,13 @@ from src.infrastructure.repositories.sqlite_subject_repository import (
 )
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
+from tests.support.tenant import TEST_TENANT_ID, seed_membership
+
+
+JWT_SECRET = (
+    "edunova-development-secret-key-"
+    "32-bytes-minimum-change-in-production"
+)
 
 
 def create_test_environment():
@@ -45,11 +54,13 @@ def create_test_environment():
 
     academic_class = AcademicClass(
         id=uuid4(),
+        tenant_id=TEST_TENANT_ID,
         name="6e Informatique",
     )
 
     subject = Subject(
         id=uuid4(),
+        tenant_id=TEST_TENANT_ID,
         name="Algorithmique",
         code="ALGO",
         coefficient=3,
@@ -57,12 +68,14 @@ def create_test_environment():
 
     option = AcademicOption(
         id=uuid4(),
+        tenant_id=TEST_TENANT_ID,
         name="Informatique",
         code="INFO",
     )
 
     class_option = ClassOption(
         id=uuid4(),
+        tenant_id=TEST_TENANT_ID,
         academic_class_id=academic_class.id,
         academic_option_id=option.id,
     )
@@ -72,10 +85,43 @@ def create_test_environment():
     academic_option_repository.save(option)
     class_option_repository.save(class_option)
 
+    user = User(
+        id=uuid4(),
+        email="admin@edunova.com",
+        password_hash="hashed-password",
+        role="ADMIN",
+    )
+
+    container._user_repository().save(user)
+
+    seed_membership(
+        container,
+        user.id,
+        tenant_id=TEST_TENANT_ID,
+        role="ADMIN",
+    )
+
+    jwt_service = JwtService(
+        secret_key=JWT_SECRET
+    )
+
+    token = jwt_service.create_access_token(
+        user_id=user.id,
+        role="ADMIN",
+        tenant_id=TEST_TENANT_ID,
+    )
+
     app = create_app(container)
+    client = TestClient(app)
+
+    client.headers.update(
+        {
+            "Authorization": f"Bearer {token}"
+        }
+    )
 
     return (
-        TestClient(app),
+        client,
         academic_class,
         subject,
         option,
@@ -166,3 +212,4 @@ def test_assign_subject_with_option_http_sqlite_success():
     )
 
     assert data["coefficient"] == 3
+

@@ -22,9 +22,6 @@ from src.application.use_cases.verify_login_two_factor import (
 from src.application.use_cases.verify_two_factor import VerifyTwoFactor
 
 from src.presentation.api.container import ApplicationContainer
-from src.presentation.api.dependencies.auth import (
-    get_application_container,
-)
 from src.presentation.api.dependencies import (
     get_add_subject_result_use_case,
     get_analyze_academic_risk_use_case,
@@ -32,6 +29,10 @@ from src.presentation.api.dependencies import (
     get_assign_subject_to_class_use_case,
     get_create_academic_record_use_case,
     get_enable_two_factor_use_case,
+    get_jwt_service,
+    get_membership_repository,
+    get_tenant_repository,
+    get_user_repository,
     get_login_user_use_case,
     get_refresh_access_token_use_case,
     get_register_user_use_case,
@@ -51,6 +52,7 @@ from src.presentation.api.routes.classes import router as classes_router
 
 def create_app(
     container: ApplicationContainer | None = None,
+    database_path: str = ":memory:",
     analyze_student_academic_record_use_case: AnalyzeStudentAcademicRecord | None = None,
     add_subject_result_use_case: AddSubjectResult | None = None,
     create_academic_record_use_case: CreateAcademicRecord | None = None,
@@ -65,13 +67,21 @@ def create_app(
 ) -> FastAPI:
 
     if container is None:
-        container = ApplicationContainer()
+        container = ApplicationContainer(database_path=database_path)
 
     app = FastAPI(
         title="EduNova API",
         description="API REST du systeme academique EduNova",
         version="1.0.0",
+        docs_url=None if container._settings.environment == "production" else "/docs",
+        redoc_url=None if container._settings.environment == "production" else "/redoc",
+        openapi_url=None if container._settings.environment == "production" else "/openapi.json",
     )
+
+    app.dependency_overrides[get_jwt_service] = container._jwt_service
+    app.dependency_overrides[get_user_repository] = container._user_repository
+    app.dependency_overrides[get_tenant_repository] = container._tenant_repository
+    app.dependency_overrides[get_membership_repository] = container._membership_repository
 
     app.add_middleware(
         CORSMiddleware,
@@ -101,11 +111,6 @@ def create_app(
             )
 
         return response
-
-    app.dependency_overrides[
-        get_application_container
-    ] = lambda: container
-
     @app.get("/health")
     def health_check() -> dict[str, str]:
         return {
@@ -220,4 +225,12 @@ def create_app(
     return app
 
 
-app = create_app()
+
+
+
+
+
+
+
+
+

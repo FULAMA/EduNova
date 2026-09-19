@@ -6,6 +6,7 @@ from src.domain.value_objects.subject_result import SubjectResult
 
 @dataclass(frozen=True)
 class StudentAcademicRecord:
+    tenant_id: UUID
     student_id: UUID
     academic_period_id: UUID
     subject_results: tuple[SubjectResult, ...]
@@ -15,6 +16,9 @@ class StudentAcademicRecord:
     total_credits: float
 
     def __post_init__(self):
+        if self.tenant_id is None:
+            raise ValueError("Le tenant est obligatoire.")
+
         if not 0 <= self.general_average <= 20:
             raise ValueError(
                 "La moyenne générale doit être comprise entre 0 et 20."
@@ -66,6 +70,7 @@ class StudentAcademicRecord:
         )
 
         return StudentAcademicRecord(
+            tenant_id=self.tenant_id,
             student_id=self.student_id,
             academic_period_id=self.academic_period_id,
             subject_results=new_subject_results,

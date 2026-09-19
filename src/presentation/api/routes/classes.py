@@ -11,6 +11,8 @@ from src.presentation.api.schemas.assign_subject_to_class import (
 from src.presentation.api.schemas.assign_subject_to_class_response import (
     AssignSubjectToClassResponseSchema,
 )
+from src.presentation.api.dependencies.auth import get_tenant_context
+from src.application.context.tenant_context import TenantContext
 
 
 router = APIRouter(
@@ -28,10 +30,12 @@ def assign_subject_to_class(
     class_id: UUID,
     data: AssignSubjectToClassRequestSchema,
     use_case=Depends(get_assign_subject_to_class_use_case),
+    tenant_context: TenantContext = Depends(get_tenant_context),
 ) -> AssignSubjectToClassResponseSchema:
 
     try:
         result = use_case.execute(
+            tenant_id=tenant_context.tenant_id,
             academic_class_id=class_id,
             subject_id=data.subject_id,
             coefficient=data.coefficient,

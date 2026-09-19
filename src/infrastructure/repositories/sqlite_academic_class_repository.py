@@ -18,12 +18,14 @@ class SQLiteAcademicClassRepository(AcademicClassRepository):
                 """
                 INSERT INTO academic_classes (
                     id,
+                    tenant_id,
                     name
                 )
-                VALUES (?, ?)
+                VALUES (?, ?, ?)
                 """,
                 (
                     str(academic_class.id),
+                    str(academic_class.tenant_id),
                     academic_class.name,
                 ),
             )
@@ -31,6 +33,7 @@ class SQLiteAcademicClassRepository(AcademicClassRepository):
     def find_by_id(
         self,
         academic_class_id: UUID,
+        tenant_id: UUID,
     ) -> AcademicClass | None:
 
         with self._database.connect() as connection:
@@ -38,11 +41,16 @@ class SQLiteAcademicClassRepository(AcademicClassRepository):
                 """
                 SELECT
                     id,
+                    tenant_id,
                     name
                 FROM academic_classes
                 WHERE id = ?
+                AND tenant_id = ?
                 """,
-                (str(academic_class_id),),
+                (
+                    str(academic_class_id),
+                    str(tenant_id),
+                ),
             ).fetchone()
 
             if row is None:
@@ -50,5 +58,6 @@ class SQLiteAcademicClassRepository(AcademicClassRepository):
 
             return AcademicClass(
                 id=UUID(row["id"]),
+                tenant_id=UUID(row["tenant_id"]),
                 name=row["name"],
             )
