@@ -1,11 +1,10 @@
 import pytest
 from uuid import uuid4
 
-from src.domain.entities.user import User
-from src.domain.entities.tenant import Tenant
-from src.domain.entities.membership import Membership
+from src.identity.domain.entities.user import User
+from src.tenancy.domain.entities.membership import Membership
 from src.presentation.api.dependencies.auth import require_role
-from src.application.context.tenant_context import TenantContext
+from src.shared.application.context.tenant_context import TenantContext
 
 
 class FakeMembershipRepository:
@@ -119,5 +118,6 @@ def test_require_role_accepts_multiple_roles():
         tenant_context=tenant_context,
         membership_repository=membership_repository,
     ) == user
+
 
 

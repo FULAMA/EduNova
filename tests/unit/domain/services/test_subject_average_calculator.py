@@ -1,14 +1,14 @@
-import pytest
+﻿import pytest
 from datetime import date
 from uuid import uuid4
 
-from src.domain.entities.assessment import Assessment
-from src.domain.entities.grade import Grade
-from src.domain.services.subject_average_calculator import (
+from src.academic.domain.entities.assessment import Assessment
+from src.academic.domain.entities.grade import Grade
+from src.academic.domain.services.subject_average_calculator import (
     SubjectAverageCalculator,
 )
-from src.domain.value_objects.coefficient import Coefficient
-from src.domain.value_objects.score import Score
+from src.academic.domain.value_objects.coefficient import Coefficient
+from src.academic.domain.value_objects.score import Score
 
 
 def create_grade(

@@ -4,7 +4,7 @@ import pyotp
 from fastapi.testclient import TestClient
 
 from src.infrastructure.security.jwt_service import JwtService
-from src.domain.entities.user import User
+from src.identity.domain.entities.user import User
 from src.infrastructure.repositories.sqlite_user_repository import (
     SQLiteUserRepository,
 )

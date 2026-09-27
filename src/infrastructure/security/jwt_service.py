@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 import jwt
 
-from src.application.interfaces.jwt_service import JwtService as JwtServiceInterface
+from src.identity.application.interfaces.jwt_service import JwtService as JwtServiceInterface
 
 
 class JwtService(JwtServiceInterface):

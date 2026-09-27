@@ -2,7 +2,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from src.domain.entities.membership import Membership
+from src.tenancy.domain.entities.membership import Membership
 
 
 def test_membership_can_be_created():

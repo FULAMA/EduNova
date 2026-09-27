@@ -1,9 +1,9 @@
 from uuid import UUID
 
-from src.application.interfaces.academic_option_repository import (
+from src.academic.application.interfaces.academic_option_repository import (
     AcademicOptionRepository,
 )
-from src.domain.entities.academic_option import AcademicOption
+from src.academic.domain.entities.academic_option import AcademicOption
 from src.infrastructure.persistence.database import SQLiteDatabase
 
 

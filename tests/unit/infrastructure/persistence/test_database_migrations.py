@@ -1,5 +1,4 @@
-﻿import sqlite3
-
+﻿
 from src.infrastructure.persistence.database import SQLiteDatabase
 
 

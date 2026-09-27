@@ -2,13 +2,12 @@ from uuid import uuid4
 
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
-from pyotp import random_base32
 
 from src.infrastructure.security.jwt_service import JwtService
-from src.application.services.password_hasher_service import (
-    PasswordHasherService,
+from src.identity.infrastructure.security.argon2_password_hasher import (
+    Argon2PasswordHasher,
 )
-from src.domain.entities.user import User
+from src.identity.domain.entities.user import User
 from src.infrastructure.repositories.sqlite_user_repository import (
     SQLiteUserRepository,
 )
@@ -18,7 +17,6 @@ from src.presentation.api.dependencies import (
     get_user_repository,
 )
 from src.presentation.api.container import ApplicationContainer
-from tests.support.tenant import TEST_TENANT_ID, seed_membership
 from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
@@ -37,7 +35,7 @@ def create_test_environment(is_active: bool = True):
         container._database
     )
 
-    password_hasher = PasswordHasherService()
+    password_hasher = Argon2PasswordHasher()
 
     user = User(
         id=uuid4(),

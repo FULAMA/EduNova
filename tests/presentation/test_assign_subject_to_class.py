@@ -1,12 +1,11 @@
-from uuid import uuid4
+﻿from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
 from src.infrastructure.security.jwt_service import JwtService
-from src.domain.entities.class_subject import ClassSubject
-from src.domain.entities.user import User
+from src.academic.domain.entities.class_subject import ClassSubject
+from src.identity.domain.entities.user import User
 from src.presentation.api.app import create_app
-from src.presentation.api.container import ApplicationContainer
 from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
@@ -17,33 +16,24 @@ class FakeAssignSubjectToClass:
     def __init__(self):
         self.called_with = None
 
-    def execute(
-        self,
-        tenant_id,
-        academic_class_id,
-        subject_id,
-        coefficient,
-        academic_option_id=None,
-    ):
+    def execute(self, request):
         self.called_with = {
-            "tenant_id": tenant_id,
-            "academic_class_id": academic_class_id,
-            "subject_id": subject_id,
-            "coefficient": coefficient,
-            "academic_option_id": academic_option_id,
+            "tenant_id": request.tenant_id,
+            "academic_class_id": request.academic_class_id,
+            "subject_id": request.subject_id,
+            "coefficient": request.coefficient,
+            "academic_option_id": request.academic_option_id,
         }
 
         return ClassSubject(
             id=uuid4(),
-            tenant_id=tenant_id,
-            academic_class_id=academic_class_id,
-            subject_id=subject_id,
-            coefficient=coefficient,
-            academic_option_id=academic_option_id,
+            tenant_id=request.tenant_id,
+            academic_class_id=request.academic_class_id,
+            subject_id=request.subject_id,
+            coefficient=request.coefficient,
+            academic_option_id=request.academic_option_id,
         )
-
-
-def authenticated_client(app, container):
+def authenticated_client(app, application_container):
     user = User(
         id=uuid4(),
         email="assign-subject@edunova.com",
@@ -51,10 +41,10 @@ def authenticated_client(app, container):
         role="ADMIN",
     )
 
-    container._user_repository().save(user)
+    application_container._user_repository().save(user)
 
     seed_membership(
-        container,
+        application_container,
         user.id,
         tenant_id=TEST_TENANT_ID,
         role="ADMIN",
@@ -76,20 +66,18 @@ def authenticated_client(app, container):
     return client
 
 
-def test_assign_subject_to_class_route_uses_injected_use_case():
+def test_assign_subject_to_class_route_uses_injected_use_case(application_container):
     class_id = uuid4()
     subject_id = uuid4()
 
     fake_use_case = FakeAssignSubjectToClass()
 
-    container = ApplicationContainer(database_path=":memory:")
-
     app = create_app(
-        container,
+        application_container,
         assign_subject_to_class_use_case=fake_use_case,
     )
 
-    client = authenticated_client(app, container)
+    client = authenticated_client(app, application_container)
 
     response = client.post(
         f"/classes/{class_id}/subjects",
@@ -106,11 +94,10 @@ def test_assign_subject_to_class_route_uses_injected_use_case():
     assert fake_use_case.called_with["coefficient"] == 4
 
 
-def test_assign_subject_to_class_rejects_invalid_coefficient():
-    container = ApplicationContainer(database_path=":memory:")
-    app = create_app(container)
+def test_assign_subject_to_class_rejects_invalid_coefficient(application_container):
+    app = create_app(application_container)
 
-    client = authenticated_client(app, container)
+    client = authenticated_client(app, application_container)
 
     response = client.post(
         f"/classes/{uuid4()}/subjects",
@@ -121,4 +108,5 @@ def test_assign_subject_to_class_rejects_invalid_coefficient():
     )
 
     assert response.status_code == 422
+
 

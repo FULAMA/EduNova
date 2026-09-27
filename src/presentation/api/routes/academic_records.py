@@ -1,15 +1,15 @@
-﻿from uuid import UUID
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from src.application.dto.add_subject_result_request import (
+from src.academic.application.dto.add_subject_result_request import (
     AddSubjectResultRequest,
 )
-from src.application.dto.analyze_student_academic_record_request import (
+from src.academic.application.dto.analyze_student_academic_record_request import (
     AnalyzeStudentAcademicRecordRequest,
 )
-from src.application.use_cases.add_subject_result import AddSubjectResult
-from src.application.use_cases.analyze_student_academic_record import (
+from src.academic.application.use_cases.add_subject_result import AddSubjectResult
+from src.academic.application.use_cases.analyze_student_academic_record import (
     AnalyzeStudentAcademicRecord,
 )
 from src.presentation.api.dependencies import (
@@ -26,8 +26,23 @@ from src.presentation.api.schemas.add_subject_result import (
 from src.presentation.api.schemas.add_subject_result_request import (
     AddSubjectResultRequestSchema,
 )
-from src.application.context.tenant_context import TenantContext
+from src.shared.application.context.tenant_context import TenantContext
 from src.presentation.api.dependencies.auth import get_tenant_context
+from src.academic.application.dto.create_academic_record_request import (
+    CreateAcademicRecordRequest,
+)
+from src.academic.application.use_cases.create_academic_record import (
+    CreateAcademicRecord,
+)
+from src.presentation.api.dependencies import (
+    get_create_academic_record_use_case,
+)
+from src.presentation.api.schemas.create_academic_record_request import (
+    CreateAcademicRecordRequestSchema,
+)
+from src.presentation.api.schemas.create_academic_record import (
+    CreateAcademicRecordResponse,
+)
 
 
 router = APIRouter(
@@ -120,24 +135,6 @@ def add_subject_result(
         average=result.average,
         coefficient=result.coefficient,
     )
-from src.application.dto.create_academic_record_request import (
-    CreateAcademicRecordRequest,
-)
-from src.application.use_cases.create_academic_record import (
-    CreateAcademicRecord,
-)
-from src.presentation.api.dependencies import (
-    get_create_academic_record_use_case,
-)
-from src.presentation.api.schemas.create_academic_record_request import (
-    CreateAcademicRecordRequestSchema,
-)
-from src.presentation.api.schemas.create_academic_record import (
-    CreateAcademicRecordResponse,
-)
-from src.application.context.tenant_context import TenantContext
-from src.presentation.api.dependencies.auth import get_tenant_context
-
 @router.post(
     "",
     response_model=CreateAcademicRecordResponse,

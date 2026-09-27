@@ -119,38 +119,3 @@ def test_migration_002_refuses_legacy_rows_without_tenant():
     assert row["id"] == "class-1"
     assert row["name"] == "6e Scientifique"
 
-def test_migration_002_refuses_legacy_rows_without_tenant():
-    connection = sqlite3.connect(":memory:")
-    connection.row_factory = sqlite3.Row
-
-    create_legacy_academic_classes_table(connection)
-
-    connection.execute("""
-        INSERT INTO academic_classes (
-            id,
-            name
-        )
-        VALUES (?, ?)
-    """, (
-        "class-1",
-        "6e Scientifique",
-    ))
-
-    runner = MigrationRunner(connection)
-    runner.register_module(migration_002_academic_classes_tenant)
-
-    with pytest.raises(
-        RuntimeError,
-        match="n'ont pas de tenant_id",
-    ):
-        runner.run()
-
-    row = connection.execute("""
-        SELECT id, name
-        FROM academic_classes
-        WHERE id = ?
-    """, ("class-1",)).fetchone()
-
-    assert row is not None
-    assert row["id"] == "class-1"
-    assert row["name"] == "6e Scientifique"

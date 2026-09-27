@@ -1,9 +1,9 @@
-﻿from uuid import UUID
+from uuid import UUID
 
-from src.application.interfaces.user_repository import (
+from src.identity.application.interfaces.user_repository import (
     UserRepository,
 )
-from src.domain.entities.user import User
+from src.identity.domain.entities.user import User
 from src.infrastructure.persistence.database import SQLiteDatabase
 
 

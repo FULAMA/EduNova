@@ -1,9 +1,9 @@
 from uuid import UUID
 
-from src.application.interfaces.student_academic_record_repository import (
+from src.academic.application.interfaces.student_academic_record_repository import (
     StudentAcademicRecordRepository,
 )
-from src.domain.entities.student_academic_record import StudentAcademicRecord
+from src.academic.domain.entities.student_academic_record import StudentAcademicRecord
 from src.infrastructure.persistence.student_academic_record_mapper import (
     StudentAcademicRecordMapper,
 )

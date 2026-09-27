@@ -1,6 +1,6 @@
-﻿from datetime import datetime, timezone
+from datetime import datetime, timezone
 
-from src.application.interfaces.refresh_token_repository import (
+from src.identity.application.interfaces.refresh_token_repository import (
     RefreshTokenRepository,
 )
 from src.infrastructure.persistence.database import SQLiteDatabase

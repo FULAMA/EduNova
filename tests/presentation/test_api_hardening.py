@@ -1,12 +1,11 @@
-from uuid import uuid4
+﻿from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
 from src.infrastructure.security.jwt_service import JwtService
-from src.domain.entities.user import User
-from src.domain.value_objects.academic_risk import RiskLevel
+from src.identity.domain.entities.user import User
+from src.academic.domain.value_objects.academic_risk import RiskLevel
 from src.presentation.api.app import create_app
-from src.presentation.api.container import ApplicationContainer
 from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
@@ -37,14 +36,7 @@ class FakeAssignSubjectToClass:
     def __init__(self, error=None):
         self.error = error
 
-    def execute(
-        self,
-        tenant_id,
-        academic_class_id,
-        subject_id,
-        coefficient,
-        academic_option_id=None,
-    ):
+    def execute(self, request):
         if self.error is not None:
             raise ValueError(self.error)
 
@@ -53,16 +45,14 @@ class FakeAssignSubjectToClass:
             (),
             {
                 "id": uuid4(),
-                "academic_class_id": academic_class_id,
-                "subject_id": subject_id,
-                "coefficient": coefficient,
-                "academic_option_id": academic_option_id,
+                "academic_class_id": request.academic_class_id,
+                "subject_id": request.subject_id,
+                "coefficient": request.coefficient,
+                "academic_option_id": request.academic_option_id,
                 "active": True,
             },
         )()
-
-
-def authenticated_client(app, container):
+def authenticated_client(app, application_container):
     user = User(
         id=uuid4(),
         email="hardening-admin@edunova.com",
@@ -70,10 +60,10 @@ def authenticated_client(app, container):
         role="ADMIN",
     )
 
-    container._user_repository().save(user)
+    application_container._user_repository().save(user)
 
     seed_membership(
-        container,
+        application_container,
         user.id,
         tenant_id=TEST_TENANT_ID,
         role="ADMIN",
@@ -95,15 +85,15 @@ def authenticated_client(app, container):
     return client
 
 
-def test_analyze_academic_risk_returns_result():
+def test_analyze_academic_risk_returns_result(application_container):
     app = create_app(
-        database_path=":memory:",
+        application_container,
         analyze_academic_risk_use_case=FakeAnalyzeAcademicRisk(
             level=RiskLevel.HIGH,
             score=90,
             reasons=(
-                "Moyenne générale particulièrement faible.",
-                "Taux d'assiduité critique.",
+                "Moyenne gÃ©nÃ©rale particuliÃ¨rement faible.",
+                "Taux d'assiduitÃ© critique.",
             ),
         ),
     )
@@ -125,14 +115,14 @@ def test_analyze_academic_risk_returns_result():
         "level": "HIGH",
         "score": 90,
         "reasons": [
-            "Moyenne générale particulièrement faible.",
-            "Taux d'assiduité critique.",
+            "Moyenne gÃ©nÃ©rale particuliÃ¨rement faible.",
+            "Taux d'assiduitÃ© critique.",
         ],
     }
 
 
-def test_analyze_academic_risk_rejects_invalid_attendance_rate():
-    app = create_app()
+def test_analyze_academic_risk_rejects_invalid_attendance_rate(application_container):
+    app = create_app(application_container)
     client = TestClient(app)
 
     response = client.post(
@@ -147,8 +137,8 @@ def test_analyze_academic_risk_rejects_invalid_attendance_rate():
     assert response.status_code == 422
 
 
-def test_analyze_academic_risk_rejects_negative_absences():
-    app = create_app()
+def test_analyze_academic_risk_rejects_negative_absences(application_container):
+    app = create_app(application_container)
     client = TestClient(app)
 
     response = client.post(
@@ -163,20 +153,18 @@ def test_analyze_academic_risk_rejects_negative_absences():
     assert response.status_code == 422
 
 
-def test_assign_subject_route_maps_duplicate_to_conflict():
+def test_assign_subject_route_maps_duplicate_to_conflict(application_container):
     class_id = uuid4()
     subject_id = uuid4()
 
-    container = ApplicationContainer(database_path=":memory:")
-
     app = create_app(
-        container,
+        application_container,
         assign_subject_to_class_use_case=FakeAssignSubjectToClass(
             error="La matière est déjà assignée à cette classe",
         ),
     )
 
-    client = authenticated_client(app, container)
+    client = authenticated_client(app, application_container)
 
     response = client.post(
         f"/classes/{class_id}/subjects",
@@ -193,20 +181,18 @@ def test_assign_subject_route_maps_duplicate_to_conflict():
     )
 
 
-def test_assign_subject_route_maps_missing_class_to_not_found():
+def test_assign_subject_route_maps_missing_class_to_not_found(application_container):
     class_id = uuid4()
     subject_id = uuid4()
 
-    container = ApplicationContainer(database_path=":memory:")
-
     app = create_app(
-        container,
+        application_container,
         assign_subject_to_class_use_case=FakeAssignSubjectToClass(
             error="La classe académique n'existe pas",
         ),
     )
 
-    client = authenticated_client(app, container)
+    client = authenticated_client(app, application_container)
 
     response = client.post(
         f"/classes/{class_id}/subjects",
@@ -223,20 +209,18 @@ def test_assign_subject_route_maps_missing_class_to_not_found():
     )
 
 
-def test_assign_subject_route_maps_unknown_business_error_to_bad_request():
+def test_assign_subject_route_maps_unknown_business_error_to_bad_request(application_container):
     class_id = uuid4()
     subject_id = uuid4()
 
-    container = ApplicationContainer(database_path=":memory:")
-
     app = create_app(
-        container,
+        application_container,
         assign_subject_to_class_use_case=FakeAssignSubjectToClass(
             error="Erreur métier inattendue",
         ),
     )
 
-    client = authenticated_client(app, container)
+    client = authenticated_client(app, application_container)
 
     response = client.post(
         f"/classes/{class_id}/subjects",
@@ -248,4 +232,9 @@ def test_assign_subject_route_maps_unknown_business_error_to_bad_request():
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Erreur métier inattendue"
+
+
+
+
+
 

@@ -1,10 +1,11 @@
-﻿# Python
+# Python
 __pycache__/
 *.py[cod]
 
 # Tests
 .pytest_cache/
 .pytest_temp/
+.pytest-temp/
 .coverage
 htmlcov/
 
@@ -37,17 +38,13 @@ build/
 *.temp
 temp_*.txt
 *.bak
-
-# EduNova temporary / backup files
+*.bak-*
 *.current-backup
 *.backup
 *.broken
 *.encoding-backup
 
-# EduNova temporary / backup files
-*.current-backup
-*.backup
-*.broken
-*.encoding-backup
-
-.pytest-temp/
+# Local scripts / generated working files
+fix.py
+refactor.py
+*doctor*

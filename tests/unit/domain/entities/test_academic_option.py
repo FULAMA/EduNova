@@ -1,8 +1,8 @@
-﻿from uuid import uuid4
+from uuid import uuid4
 
 import pytest
 
-from src.domain.entities.academic_option import AcademicOption
+from src.academic.domain.entities.academic_option import AcademicOption
 
 
 TENANT_ID = uuid4()
@@ -61,3 +61,6 @@ def test_academic_option_can_be_deactivated():
     )
 
     assert option.active is False
+
+
+

@@ -1,8 +1,8 @@
 ﻿from pathlib import Path
 from uuid import uuid4
 
-from src.domain.entities.student_academic_record import StudentAcademicRecord
-from src.domain.value_objects.subject_result import SubjectResult
+from src.academic.domain.entities.student_academic_record import StudentAcademicRecord
+from src.academic.domain.value_objects.subject_result import SubjectResult
 from src.infrastructure.persistence.database import SQLiteDatabase
 from src.infrastructure.repositories.sqlite_student_academic_record_repository import (
     SQLiteStudentAcademicRecordRepository,
@@ -210,3 +210,4 @@ def test_sql_repository_replaces_existing_record():
     )
 
     assert result == updated
+

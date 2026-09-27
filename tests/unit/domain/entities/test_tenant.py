@@ -2,7 +2,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from src.domain.entities.tenant import Tenant
+from src.tenancy.domain.entities.tenant import Tenant
 
 
 def test_tenant_can_be_created():

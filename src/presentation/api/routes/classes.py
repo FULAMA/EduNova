@@ -1,4 +1,4 @@
-﻿from uuid import UUID
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -12,7 +12,10 @@ from src.presentation.api.schemas.assign_subject_to_class_response import (
     AssignSubjectToClassResponseSchema,
 )
 from src.presentation.api.dependencies.auth import get_tenant_context
-from src.application.context.tenant_context import TenantContext
+from src.shared.application.context.tenant_context import TenantContext
+from src.academic.application.dto.assign_subject_to_class_request import (
+    AssignSubjectToClassRequest,
+)
 
 
 router = APIRouter(
@@ -35,11 +38,13 @@ def assign_subject_to_class(
 
     try:
         result = use_case.execute(
-            tenant_id=tenant_context.tenant_id,
-            academic_class_id=class_id,
-            subject_id=data.subject_id,
-            coefficient=data.coefficient,
-            academic_option_id=data.academic_option_id,
+            AssignSubjectToClassRequest(
+                tenant_id=tenant_context.tenant_id,
+                academic_class_id=class_id,
+                subject_id=data.subject_id,
+                coefficient=data.coefficient,
+                academic_option_id=data.academic_option_id,
+            )
         )
 
     except ValueError as exc:
@@ -55,9 +60,7 @@ def assign_subject_to_class(
                 detail=message,
             ) from exc
 
-        if (
-            message == "La matière est déjà assignée à cette classe"
-        ):
+        if message == "La matière est déjà assignée à cette classe":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=message,

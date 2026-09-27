@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.domain.entities.academic_class import AcademicClass
+from src.academic.domain.entities.academic_class import AcademicClass
 
 
 TENANT_ID = uuid4()

@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from src.domain.entities.academic_option import AcademicOption
+from src.academic.domain.entities.academic_option import AcademicOption
 from src.infrastructure.persistence.database import SQLiteDatabase
 from src.infrastructure.repositories.sqlite_academic_option_repository import (
     SQLiteAcademicOptionRepository,
@@ -101,3 +101,6 @@ def test_find_unknown_academic_option_returns_none():
         uuid4(),
         tenant_id,
     ) is None
+
+
+

@@ -1,7 +1,7 @@
-﻿from uuid import uuid4
+from uuid import uuid4
 
-from src.domain.entities.student_academic_record import StudentAcademicRecord
-from src.domain.value_objects.subject_result import SubjectResult
+from src.academic.domain.entities.student_academic_record import StudentAcademicRecord
+from src.academic.domain.value_objects.subject_result import SubjectResult
 
 
 def create_record():
@@ -96,5 +96,3 @@ def test_add_subject_result_does_not_mutate_original_record():
     assert record.failed_subjects == 0
 
     assert updated_record is not record
-
-

@@ -1,31 +1,31 @@
-from uuid import uuid4
+﻿from uuid import uuid4
 
-from fastapi.testclient import TestClient
 
-from src.application.interfaces.student_academic_record_repository import (
+from src.academic.application.interfaces.student_academic_record_repository import (
     StudentAcademicRecordRepository,
 )
-from src.application.use_cases.analyze_student_academic_record import (
+from src.academic.application.use_cases.analyze_student_academic_record import (
     AnalyzeStudentAcademicRecord,
 )
-from src.domain.entities.student_academic_record import StudentAcademicRecord
-from src.domain.value_objects.subject_result import SubjectResult
+from src.academic.domain.entities.student_academic_record import StudentAcademicRecord
+from src.academic.domain.value_objects.subject_result import SubjectResult
 from src.infrastructure.security.jwt_service import JwtService
-from src.domain.entities.user import User
-from src.presentation.api.app import create_app
-from src.presentation.api.container import ApplicationContainer
+from src.identity.domain.entities.user import User
 from src.presentation.api.dependencies import get_analyze_student_academic_record_use_case
+from src.academic.application.use_cases.add_subject_result import (
+    AddSubjectResult,
+)
+from src.presentation.api.dependencies import (
+    get_add_subject_result_use_case,
+)
 from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
 JWT_SECRET = "edunova-development-secret-key-32-bytes-minimum-change-in-production"
 
-container = ApplicationContainer(database_path=":memory:")
-app = create_app(container)
-client = TestClient(app)
 
 
-def authenticate_test_client():
+def authenticate_test_client(container, client):
     user = User(
         id=uuid4(),
         email=f"presentation-admin-{uuid4()}@edunova.com",
@@ -97,42 +97,42 @@ class FakeAcademicRecordRepository(StudentAcademicRecordRepository):
             )
         )
 
-def test_health_check():
-    response = client.get("/health")
+def test_health_check(api_client):
+    response = api_client.get("/health")
 
     assert response.status_code == 200
 
 
-def test_unknown_route_returns_404():
-    response = client.get("/does-not-exist")
+def test_unknown_route_returns_404(api_client):
+    response = api_client.get("/does-not-exist")
 
     assert response.status_code == 404
 
 
-def test_academic_record_returns_404_when_record_does_not_exist():
-    authenticate_test_client()
+def test_academic_record_returns_404_when_record_does_not_exist(application_container, api_client):
+    authenticate_test_client(application_container, api_client)
     repository = FakeAcademicRecordRepository()
     use_case = AnalyzeStudentAcademicRecord(repository)
 
-    app.dependency_overrides[get_analyze_student_academic_record_use_case] = lambda: use_case
+    api_client.app.dependency_overrides[get_analyze_student_academic_record_use_case] = lambda: use_case
 
     student_id = uuid4()
     academic_period_id = uuid4()
 
     try:
-        response = client.get(
+        response = api_client.get(
             f"/academic-records/{student_id}/{academic_period_id}"
         )
 
         assert response.status_code == 404
-        assert "Aucun dossier academique trouve pour cet etudiant et cette periode." in response.json()["detail"]
+        assert "Aucun dossier académique trouvé pour cet étudiant et cette période." in response.json()["detail"]
 
     finally:
-        app.dependency_overrides.pop(get_analyze_student_academic_record_use_case, None)
+        api_client.app.dependency_overrides.pop(get_analyze_student_academic_record_use_case, None)
 
 
-def test_academic_record_returns_existing_record():
-    authenticate_test_client()
+def test_academic_record_returns_existing_record(application_container, api_client):
+    authenticate_test_client(application_container, api_client)
     repository = FakeAcademicRecordRepository()
 
     student_id = uuid4()
@@ -153,10 +153,10 @@ def test_academic_record_returns_existing_record():
 
     use_case = AnalyzeStudentAcademicRecord(repository)
 
-    app.dependency_overrides[get_analyze_student_academic_record_use_case] = lambda: use_case
+    api_client.app.dependency_overrides[get_analyze_student_academic_record_use_case] = lambda: use_case
 
     try:
-        response = client.get(
+        response = api_client.get(
             f"/academic-records/{student_id}/{academic_period_id}"
         )
 
@@ -173,10 +173,10 @@ def test_academic_record_returns_existing_record():
         }
 
     finally:
-        app.dependency_overrides.pop(get_analyze_student_academic_record_use_case, None)
+        api_client.app.dependency_overrides.pop(get_analyze_student_academic_record_use_case, None)
 
-def test_academic_record_returns_subject_results():
-    authenticate_test_client()
+def test_academic_record_returns_subject_results(application_container, api_client):
+    authenticate_test_client(application_container, api_client)
     repository = FakeAcademicRecordRepository()
 
     student_id = uuid4()
@@ -204,10 +204,10 @@ def test_academic_record_returns_subject_results():
 
     use_case = AnalyzeStudentAcademicRecord(repository)
 
-    app.dependency_overrides[get_analyze_student_academic_record_use_case] = lambda: use_case
+    api_client.app.dependency_overrides[get_analyze_student_academic_record_use_case] = lambda: use_case
 
     try:
-        response = client.get(
+        response = api_client.get(
             f"/academic-records/{student_id}/{academic_period_id}"
         )
 
@@ -229,11 +229,11 @@ def test_academic_record_returns_subject_results():
             ],
         }
     finally:
-        app.dependency_overrides.pop(get_analyze_student_academic_record_use_case, None)
+        api_client.app.dependency_overrides.pop(get_analyze_student_academic_record_use_case, None)
 
 
-def test_add_subject_result_returns_created_result():
-    authenticate_test_client()
+def test_add_subject_result_returns_created_result(application_container, api_client):
+    authenticate_test_client(application_container, api_client)
     repository = FakeAcademicRecordRepository()
 
     student_id = uuid4()
@@ -255,12 +255,12 @@ def test_add_subject_result_returns_created_result():
 
     use_case = AddSubjectResult(repository)
 
-    app.dependency_overrides[get_add_subject_result_use_case] = (
+    api_client.app.dependency_overrides[get_add_subject_result_use_case] = (
         lambda: use_case
     )
 
     try:
-        response = client.post(
+        response = api_client.post(
             f"/academic-records/{student_id}/{academic_period_id}/subjects",
             json={
                 "subject_id": str(subject_id),
@@ -278,15 +278,15 @@ def test_add_subject_result_returns_created_result():
         }
 
     finally:
-        app.dependency_overrides.pop(get_add_subject_result_use_case, None)
+        api_client.app.dependency_overrides.pop(get_add_subject_result_use_case, None)
 
 
-def test_add_subject_result_returns_404_when_record_does_not_exist():
-    authenticate_test_client()
+def test_add_subject_result_returns_404_when_record_does_not_exist(application_container, api_client):
+    authenticate_test_client(application_container, api_client)
     repository = FakeAcademicRecordRepository()
     use_case = AddSubjectResult(repository)
 
-    app.dependency_overrides[get_add_subject_result_use_case] = (
+    api_client.app.dependency_overrides[get_add_subject_result_use_case] = (
         lambda: use_case
     )
 
@@ -294,7 +294,7 @@ def test_add_subject_result_returns_404_when_record_does_not_exist():
     academic_period_id = uuid4()
 
     try:
-        response = client.post(
+        response = api_client.post(
             f"/academic-records/{student_id}/{academic_period_id}/subjects",
             json={
                 "subject_id": str(uuid4()),
@@ -307,11 +307,11 @@ def test_add_subject_result_returns_404_when_record_does_not_exist():
         assert "Aucun dossier académique trouvé pour cet étudiant et cette période." in response.json()["detail"]
 
     finally:
-        app.dependency_overrides.pop(get_add_subject_result_use_case, None)
+        api_client.app.dependency_overrides.pop(get_add_subject_result_use_case, None)
 
 
-def test_add_subject_result_rejects_invalid_average():
-    authenticate_test_client()
+def test_add_subject_result_rejects_invalid_average(application_container, api_client):
+    authenticate_test_client(application_container, api_client)
     repository = FakeAcademicRecordRepository()
 
     student_id = uuid4()
@@ -332,12 +332,12 @@ def test_add_subject_result_rejects_invalid_average():
 
     use_case = AddSubjectResult(repository)
 
-    app.dependency_overrides[get_add_subject_result_use_case] = (
+    api_client.app.dependency_overrides[get_add_subject_result_use_case] = (
         lambda: use_case
     )
 
     try:
-        response = client.post(
+        response = api_client.post(
             f"/academic-records/{student_id}/{academic_period_id}/subjects",
             json={
                 "subject_id": str(uuid4()),
@@ -349,11 +349,11 @@ def test_add_subject_result_rejects_invalid_average():
         assert response.status_code == 422
 
     finally:
-        app.dependency_overrides.pop(get_add_subject_result_use_case, None)
+        api_client.app.dependency_overrides.pop(get_add_subject_result_use_case, None)
 
 
-def test_add_subject_result_rejects_invalid_coefficient():
-    authenticate_test_client()
+def test_add_subject_result_rejects_invalid_coefficient(application_container, api_client):
+    authenticate_test_client(application_container, api_client)
     repository = FakeAcademicRecordRepository()
 
     student_id = uuid4()
@@ -374,12 +374,12 @@ def test_add_subject_result_rejects_invalid_coefficient():
 
     use_case = AddSubjectResult(repository)
 
-    app.dependency_overrides[get_add_subject_result_use_case] = (
+    api_client.app.dependency_overrides[get_add_subject_result_use_case] = (
         lambda: use_case
     )
 
     try:
-        response = client.post(
+        response = api_client.post(
             f"/academic-records/{student_id}/{academic_period_id}/subjects",
             json={
                 "subject_id": str(uuid4()),
@@ -391,183 +391,7 @@ def test_add_subject_result_rejects_invalid_coefficient():
         assert response.status_code == 422
 
     finally:
-        app.dependency_overrides.pop(get_add_subject_result_use_case, None)
-
-
-def test_add_subject_result_returns_created_result():
-    authenticate_test_client()
-    repository = FakeAcademicRecordRepository()
-
-    student_id = uuid4()
-    academic_period_id = uuid4()
-    subject_id = uuid4()
-
-    record = StudentAcademicRecord(
-        tenant_id=TEST_TENANT_ID,
-        student_id=student_id,
-        academic_period_id=academic_period_id,
-        subject_results=(),
-        general_average=0,
-        failed_subjects=0,
-        credits_obtained=0,
-        total_credits=30,
-    )
-
-    repository.save(record)
-
-    use_case = AddSubjectResult(repository)
-
-    app.dependency_overrides[get_add_subject_result_use_case] = (
-        lambda: use_case
-    )
-
-    try:
-        response = client.post(
-            f"/academic-records/{student_id}/{academic_period_id}/subjects",
-            json={
-                "subject_id": str(subject_id),
-                "average": 16,
-                "coefficient": 3,
-            },
-        )
-
-        assert response.status_code == 201
-
-        assert response.json() == {
-            "subject_id": str(subject_id),
-            "average": 16,
-            "coefficient": 3,
-        }
-
-    finally:
-        app.dependency_overrides.pop(get_add_subject_result_use_case, None)
-
-
-def test_add_subject_result_returns_404_when_record_does_not_exist():
-    authenticate_test_client()
-    repository = FakeAcademicRecordRepository()
-    use_case = AddSubjectResult(repository)
-
-    app.dependency_overrides[get_add_subject_result_use_case] = (
-        lambda: use_case
-    )
-
-    student_id = uuid4()
-    academic_period_id = uuid4()
-
-    try:
-        response = client.post(
-            f"/academic-records/{student_id}/{academic_period_id}/subjects",
-            json={
-                "subject_id": str(uuid4()),
-                "average": 15,
-                "coefficient": 2,
-            },
-        )
-
-        assert response.status_code == 404
-        assert "Aucun dossier académique trouvé pour cet étudiant et cette période." in response.json()["detail"]
-
-    finally:
-        app.dependency_overrides.pop(get_add_subject_result_use_case, None)
-
-
-def test_add_subject_result_rejects_invalid_average():
-    authenticate_test_client()
-    repository = FakeAcademicRecordRepository()
-
-    student_id = uuid4()
-    academic_period_id = uuid4()
-
-    record = StudentAcademicRecord(
-        tenant_id=TEST_TENANT_ID,
-        student_id=student_id,
-        academic_period_id=academic_period_id,
-        subject_results=(),
-        general_average=0,
-        failed_subjects=0,
-        credits_obtained=0,
-        total_credits=30,
-    )
-
-    repository.save(record)
-
-    use_case = AddSubjectResult(repository)
-
-    app.dependency_overrides[get_add_subject_result_use_case] = (
-        lambda: use_case
-    )
-
-    try:
-        response = client.post(
-            f"/academic-records/{student_id}/{academic_period_id}/subjects",
-            json={
-                "subject_id": str(uuid4()),
-                "average": 25,
-                "coefficient": 2,
-            },
-        )
-
-        assert response.status_code == 422
-
-    finally:
-        app.dependency_overrides.pop(get_add_subject_result_use_case, None)
-
-
-def test_add_subject_result_rejects_invalid_coefficient():
-    authenticate_test_client()
-    repository = FakeAcademicRecordRepository()
-
-    student_id = uuid4()
-    academic_period_id = uuid4()
-
-    record = StudentAcademicRecord(
-        tenant_id=TEST_TENANT_ID,
-        student_id=student_id,
-        academic_period_id=academic_period_id,
-        subject_results=(),
-        general_average=0,
-        failed_subjects=0,
-        credits_obtained=0,
-        total_credits=30,
-    )
-
-    repository.save(record)
-
-    use_case = AddSubjectResult(repository)
-
-    app.dependency_overrides[get_add_subject_result_use_case] = (
-        lambda: use_case
-    )
-
-    try:
-        response = client.post(
-            f"/academic-records/{student_id}/{academic_period_id}/subjects",
-            json={
-                "subject_id": str(uuid4()),
-                "average": 15,
-                "coefficient": 0,
-            },
-        )
-
-        assert response.status_code == 422
-
-    finally:
-        app.dependency_overrides.pop(get_add_subject_result_use_case, None)
-
-from src.application.use_cases.add_subject_result import (
-    AddSubjectResult,
-)
-from src.presentation.api.dependencies import (
-    get_add_subject_result_use_case,
-)
-
-
-
-
-
-
-
+        api_client.app.dependency_overrides.pop(get_add_subject_result_use_case, None)
 
 
 

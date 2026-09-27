@@ -3,11 +3,11 @@ from uuid import uuid4
 
 import pytest
 
-from src.domain.entities.attendance import (
+from src.academic.domain.entities.attendance import (
     Attendance,
     AttendanceStatus,
 )
-from src.domain.services.attendance_analyzer import (
+from src.academic.domain.services.attendance_analyzer import (
     AttendanceAnalyzer,
 )
 

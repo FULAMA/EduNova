@@ -1,10 +1,10 @@
-import pytest
+﻿import pytest
 from uuid import uuid4
 
-from src.domain.services.academic_average_calculator import (
+from src.academic.domain.services.academic_average_calculator import (
     AcademicAverageCalculator,
 )
-from src.domain.value_objects.subject_result import SubjectResult
+from src.academic.domain.value_objects.subject_result import SubjectResult
 
 
 def test_calculate_academic_average():

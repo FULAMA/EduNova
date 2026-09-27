@@ -3,18 +3,18 @@ from uuid import UUID
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from src.application.interfaces.jwt_service import JwtService
-from src.application.interfaces.user_repository import UserRepository
-from src.application.interfaces.membership_repository import MembershipRepository
-from src.application.interfaces.tenant_repository import TenantRepository
+from src.identity.application.interfaces.jwt_service import JwtService
+from src.identity.application.interfaces.user_repository import UserRepository
+from src.tenancy.application.interfaces.membership_repository import MembershipRepository
+from src.tenancy.application.interfaces.tenant_repository import TenantRepository
 from src.presentation.api.dependencies import (
     get_jwt_service,
     get_membership_repository,
     get_tenant_repository,
     get_user_repository,
 )
-from src.application.context.tenant_context import TenantContext
-from src.domain.entities.user import User
+from src.shared.application.context.tenant_context import TenantContext
+from src.identity.application.dto.authenticated_user import AuthenticatedUser
 
 
 bearer_scheme = HTTPBearer()
@@ -25,7 +25,7 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     user_repository: UserRepository = Depends(get_user_repository),
     jwt_service: JwtService = Depends(get_jwt_service),
-) -> User:
+) -> AuthenticatedUser:
 
     token = credentials.credentials
 
@@ -79,9 +79,13 @@ def get_current_user(
             detail="Compte desactive.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-    return user
-
+    return AuthenticatedUser(
+        id=user.id,
+        email=user.email,
+        role=user.role,
+        is_active=user.is_active,
+        two_factor_enabled=user.two_factor_enabled,
+    )
 
 def get_tenant_context(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
@@ -129,10 +133,10 @@ def require_role(*allowed_roles: str):
         raise ValueError("Au moins un role est requis.")
 
     def role_dependency(
-        current_user: User = Depends(get_current_user),
+        current_user: AuthenticatedUser = Depends(get_current_user),
         tenant_context: TenantContext = Depends(get_tenant_context),
         membership_repository: MembershipRepository = Depends(get_membership_repository),
-    ) -> User:
+    ) -> AuthenticatedUser:
         membership = (
             membership_repository.find_by_user_and_tenant(
                 current_user.id,
@@ -155,14 +159,3 @@ def require_role(*allowed_roles: str):
         return current_user
 
     return role_dependency
-
-
-
-
-
-
-
-
-
-
-

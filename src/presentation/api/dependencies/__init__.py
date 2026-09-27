@@ -1,37 +1,37 @@
-from src.application.use_cases.add_subject_result import AddSubjectResult
-from src.application.use_cases.analyze_academic_risk import (
+from src.academic.application.use_cases.add_subject_result import AddSubjectResult
+from src.academic.application.use_cases.analyze_academic_risk import (
     AnalyzeAcademicRisk,
 )
-from src.application.use_cases.analyze_student_academic_record import (
+from src.academic.application.use_cases.analyze_student_academic_record import (
     AnalyzeStudentAcademicRecord,
 )
-from src.application.use_cases.assign_subject_to_class import (
+from src.academic.application.use_cases.assign_subject_to_class import (
     AssignSubjectToClass,
 )
-from src.application.use_cases.create_academic_record import (
+from src.academic.application.use_cases.create_academic_record import (
     CreateAcademicRecord,
 )
-from src.application.use_cases.enable_two_factor import (
+from src.identity.application.use_cases.enable_two_factor import (
     EnableTwoFactor,
 )
-from src.application.use_cases.login_user import (
+from src.identity.application.use_cases.login_user import (
     LoginUser,
 )
-from src.application.use_cases.refresh_access_token import (
+from src.identity.application.use_cases.refresh_access_token import (
     RefreshAccessToken,
 )
-from src.application.use_cases.register_user import (
+from src.identity.application.use_cases.register_user import (
     RegisterUser,
 )
-from src.application.use_cases.verify_login_two_factor import (
+from src.identity.application.use_cases.verify_login_two_factor import (
     VerifyLoginTwoFactor,
 )
-from src.application.use_cases.verify_two_factor import (
+from src.identity.application.use_cases.verify_two_factor import (
     VerifyTwoFactor,
 )
-from src.application.interfaces.user_repository import UserRepository
-from src.application.interfaces.tenant_repository import TenantRepository
-from src.application.interfaces.membership_repository import MembershipRepository
+from src.identity.application.interfaces.user_repository import UserRepository
+from src.tenancy.application.interfaces.tenant_repository import TenantRepository
+from src.tenancy.application.interfaces.membership_repository import MembershipRepository
 from src.presentation.api.container import ApplicationContainer
 
 
@@ -105,6 +105,3 @@ def get_verify_login_two_factor_use_case() -> VerifyLoginTwoFactor:
 
 def get_verify_two_factor_use_case() -> VerifyTwoFactor:
     return get_container().verify_two_factor()
-
-
-

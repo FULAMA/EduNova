@@ -1,8 +1,8 @@
 from uuid import uuid4
 
-from src.domain.entities.membership import Membership
+from src.tenancy.domain.entities.membership import Membership
 from src.infrastructure.persistence.database import SQLiteDatabase
-from src.infrastructure.repositories.sqlite_membership_repository import (
+from src.tenancy.infrastructure.repositories.sqlite_membership_repository import (
     SQLiteMembershipRepository,
 )
 

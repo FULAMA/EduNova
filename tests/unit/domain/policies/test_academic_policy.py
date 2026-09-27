@@ -1,6 +1,6 @@
 import pytest
 
-from src.domain.policies.academic_policy import AcademicPolicy
+from src.academic.domain.policies.academic_policy import AcademicPolicy
 
 
 def test_student_passes_with_passing_average():

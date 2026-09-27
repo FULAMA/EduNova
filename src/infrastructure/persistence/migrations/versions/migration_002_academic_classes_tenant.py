@@ -1,4 +1,4 @@
-﻿from sqlite3 import Connection
+from sqlite3 import Connection
 
 
 version = "002"

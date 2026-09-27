@@ -1,4 +1,4 @@
-from src.application.interfaces.refresh_token_repository import (
+from src.identity.application.interfaces.refresh_token_repository import (
     RefreshTokenRepository,
 )
 

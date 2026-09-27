@@ -2,10 +2,11 @@
 import pytest
 from uuid import uuid4
 
-from src.domain.entities.student_academic_record import (
+from src.academic.domain.entities.student_academic_record import (
+    AcademicRecordStatus,
     StudentAcademicRecord,
 )
-from src.domain.value_objects.subject_result import SubjectResult
+from src.academic.domain.value_objects.subject_result import SubjectResult
 from src.infrastructure.repositories.sqlite_student_academic_record_repository import (
     SQLiteStudentAcademicRecordRepository,
 )
@@ -40,6 +41,8 @@ def create_test_database(tmp_path):
             failed_subjects INTEGER NOT NULL,
             credits_obtained REAL NOT NULL,
             total_credits REAL NOT NULL,
+            version INTEGER NOT NULL DEFAULT 1,
+            status TEXT NOT NULL DEFAULT 'DRAFT',
 
             PRIMARY KEY (student_id, academic_period_id),
 
@@ -153,7 +156,6 @@ def test_find_by_student_and_period_requires_tenant(
     repository = SQLiteStudentAcademicRecordRepository(database)
 
     tenant_a = uuid4()
-    tenant_b = uuid4()
 
     student_id = uuid4()
     period_id = uuid4()
@@ -206,7 +208,6 @@ def test_find_by_student_requires_tenant(
     repository = SQLiteStudentAcademicRecordRepository(database)
 
     tenant_a = uuid4()
-    tenant_b = uuid4()
 
     student_id = uuid4()
     period_id = uuid4()
@@ -494,4 +495,135 @@ def test_find_by_student_and_period_does_not_read_subject_results_from_another_t
 
 
 
+
+
+def test_save_and_find_preserves_version(
+    tmp_path,
+):
+    database = create_test_database(tmp_path)
+    repository = SQLiteStudentAcademicRecordRepository(database)
+
+    tenant_id = uuid4()
+    student_id = uuid4()
+    period_id = uuid4()
+
+    insert_student(database, student_id, tenant_id)
+
+    record = StudentAcademicRecord(
+        tenant_id=tenant_id,
+        student_id=student_id,
+        academic_period_id=period_id,
+        subject_results=(),
+        general_average=15.0,
+        failed_subjects=0,
+        credits_obtained=30.0,
+        total_credits=30.0,
+        version=2,
+    )
+
+    repository.save(record)
+
+    result = repository.find_by_student_and_period(
+        student_id,
+        period_id,
+        tenant_id,
+    )
+
+    assert result is not None
+    assert result.version == 2
+
+
+
+
+
+
+def test_save_and_find_preserves_draft_status(
+    tmp_path,
+):
+    database = create_test_database(tmp_path)
+    repository = SQLiteStudentAcademicRecordRepository(database)
+
+    tenant_id = uuid4()
+    student_id = uuid4()
+    period_id = uuid4()
+
+    insert_student(database, student_id, tenant_id)
+
+    record = StudentAcademicRecord(
+        tenant_id=tenant_id,
+        student_id=student_id,
+        academic_period_id=period_id,
+        subject_results=(),
+        general_average=15.0,
+        failed_subjects=0,
+        credits_obtained=30.0,
+        total_credits=30.0,
+        status=AcademicRecordStatus.DRAFT,
+    )
+
+    repository.save(record)
+
+    result = repository.find_by_student_and_period(
+        student_id,
+        period_id,
+        tenant_id,
+    )
+
+    assert result is not None
+    assert result.status == AcademicRecordStatus.DRAFT
+
+
+def test_save_and_find_preserves_validated_status(
+    tmp_path,
+):
+    database = create_test_database(tmp_path)
+    repository = SQLiteStudentAcademicRecordRepository(database)
+
+    tenant_id = uuid4()
+    student_id = uuid4()
+    period_id = uuid4()
+
+    insert_student(database, student_id, tenant_id)
+
+    draft = StudentAcademicRecord(
+        tenant_id=tenant_id,
+        student_id=student_id,
+        academic_period_id=period_id,
+        subject_results=(),
+        general_average=15.0,
+        failed_subjects=0,
+        credits_obtained=30.0,
+        total_credits=30.0,
+    )
+
+    validated = draft.validate()
+
+    repository.save(validated)
+
+    result = repository.find_by_student_and_period(
+        student_id,
+        period_id,
+        tenant_id,
+    )
+
+    assert result is not None
+    assert result.status == AcademicRecordStatus.VALIDATED
+
+    with pytest.raises(ValueError):
+        result.with_subject_result(
+            SubjectResult(
+                subject_id=uuid4(),
+                average=15.0,
+                coefficient=1.0,
+            )
+        )
+
+    corrected = result.create_new_version(
+        general_average=16.0,
+        failed_subjects=0,
+        credits_obtained=30.0,
+    )
+
+    assert corrected.status == AcademicRecordStatus.VALIDATED
+    assert corrected.version == result.version + 1
 

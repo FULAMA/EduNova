@@ -2,7 +2,7 @@ from uuid import uuid4
 
 import pytest
 
-from src.domain.entities.user import User
+from src.identity.domain.entities.user import User
 
 
 def test_user_is_created_with_2fa_disabled_by_default():

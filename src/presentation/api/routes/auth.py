@@ -2,14 +2,17 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from src.application.use_cases.enable_two_factor import EnableTwoFactor
-from src.application.use_cases.login_user import LoginUser
-from src.application.use_cases.refresh_access_token import RefreshAccessToken
-from src.application.use_cases.register_user import RegisterUser
-from src.application.use_cases.verify_login_two_factor import VerifyLoginTwoFactor
-from src.application.use_cases.verify_two_factor import VerifyTwoFactor
+from src.identity.application.use_cases.enable_two_factor import EnableTwoFactor
+from src.identity.application.use_cases.login_user import LoginUser
+from src.identity.application.use_cases.refresh_access_token import RefreshAccessToken
+from src.identity.application.dto.register_user_request import RegisterUserRequest as ApplicationRegisterUserRequest
+from src.identity.application.dto.login_user_request import LoginUserRequest as ApplicationLoginUserRequest
+from src.identity.application.dto.verify_login_two_factor_request import VerifyLoginTwoFactorRequest as ApplicationVerifyLoginTwoFactorRequest
+from src.identity.application.use_cases.register_user import RegisterUser
+from src.identity.application.use_cases.verify_login_two_factor import VerifyLoginTwoFactor
+from src.identity.application.use_cases.verify_two_factor import VerifyTwoFactor
 
-from src.domain.entities.user import User
+from src.identity.application.dto.authenticated_user import AuthenticatedUser
 
 from src.presentation.api.dependencies.auth import (
     get_current_user,
@@ -63,11 +66,12 @@ def register_user(
     use_case: RegisterUser = Depends(get_register_user_use_case),
 ):
     try:
-        user = use_case.execute(
+        application_request = ApplicationRegisterUserRequest(
             email=request.email,
             password=request.password,
             role=request.role,
         )
+        user = use_case.execute(application_request)
 
         return RegisterUserResponse(
             id=user.id,
@@ -102,11 +106,12 @@ def login_user(
     use_case: LoginUser = Depends(get_login_user_use_case),
 ):
     try:
-        result = use_case.execute(
+        application_request = ApplicationLoginUserRequest(
             email=request.email,
             password=request.password,
             tenant_id=request.tenant_id,
         )
+        result = use_case.execute(application_request)
 
         return LoginUserResponse(
             authenticated=result.authenticated,
@@ -242,10 +247,11 @@ def verify_login_two_factor(
     ),
 ):
     try:
-        result = use_case.execute(
+        application_request = ApplicationVerifyLoginTwoFactorRequest(
             two_factor_token=request.two_factor_token,
             code=request.code,
         )
+        result = use_case.execute(application_request)
 
         return VerifyLoginTwoFactorResponse(
             authenticated=True,
@@ -271,7 +277,7 @@ def verify_login_two_factor(
     response_model=MeResponse,
 )
 def get_me(
-    current_user: User = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     return MeResponse(
         id=current_user.id,
@@ -280,11 +286,3 @@ def get_me(
         is_active=current_user.is_active,
         two_factor_enabled=current_user.two_factor_enabled,
     )
-
-
-
-
-
-
-
-

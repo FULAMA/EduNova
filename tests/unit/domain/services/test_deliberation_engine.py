@@ -1,10 +1,10 @@
 from uuid import uuid4
 
-from src.domain.entities.deliberation import (
+from src.academic.domain.entities.deliberation import (
     DeliberationDecision,
 )
-from src.domain.policies.academic_policy import AcademicPolicy
-from src.domain.services.deliberation_engine import (
+from src.academic.domain.policies.academic_policy import AcademicPolicy
+from src.academic.domain.services.deliberation_engine import (
     DeliberationEngine,
 )
 

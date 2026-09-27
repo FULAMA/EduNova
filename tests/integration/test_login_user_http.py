@@ -1,11 +1,11 @@
-﻿from uuid import uuid4
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from src.application.services.password_hasher_service import (
-    PasswordHasherService,
+from src.identity.infrastructure.security.argon2_password_hasher import (
+    Argon2PasswordHasher,
 )
-from src.domain.entities.user import User
+from src.identity.domain.entities.user import User
 from src.infrastructure.repositories.sqlite_user_repository import (
     SQLiteUserRepository,
 )
@@ -26,7 +26,7 @@ def create_test_environment(
         container._database
     )
 
-    password_hasher = PasswordHasherService()
+    password_hasher = Argon2PasswordHasher()
 
     user = User(
         id=uuid4(),

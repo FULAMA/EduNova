@@ -3,7 +3,7 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from src.infrastructure.security.jwt_service import JwtService
-from src.domain.entities.user import User
+from src.identity.domain.entities.user import User
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
 from tests.support.tenant import TEST_TENANT_ID, seed_membership
@@ -25,7 +25,7 @@ def test_academic_record_full_http_workflow():
     app = create_app(container)
     client = TestClient(app)
 
-    # Utilisateur authentifié
+    # Utilisateur authentifiï¿½
     user = User(
         id=uuid4(),
         email="admin@edunova.com",
@@ -43,7 +43,7 @@ def test_academic_record_full_http_workflow():
         role="ADMIN",
     )
 
-    # Étudiant appartenant au même tenant
+    # ï¿½tudiant appartenant au mï¿½me tenant
     with container._database.connect() as connection:
         connection.execute(
             """
@@ -83,7 +83,7 @@ def test_academic_record_full_http_workflow():
         }
     )
 
-    # 1. Création du dossier académique
+    # 1. Crï¿½ation du dossier acadï¿½mique
     response = client.post(
         "/academic-records",
         json={
@@ -95,7 +95,7 @@ def test_academic_record_full_http_workflow():
 
     assert response.status_code == 201
 
-    # 2. Ajout de Mathématiques : 16 × coefficient 3
+    # 2. Ajout de Mathï¿½matiques : 16 ï¿½ coefficient 3
     response = client.post(
         f"/academic-records/{student_id}/{academic_period_id}/subjects",
         json={
@@ -107,7 +107,7 @@ def test_academic_record_full_http_workflow():
 
     assert response.status_code == 201
 
-    # 3. Ajout de Physique : 12 × coefficient 2
+    # 3. Ajout de Physique : 12 ï¿½ coefficient 2
     response = client.post(
         f"/academic-records/{student_id}/{academic_period_id}/subjects",
         json={
@@ -131,7 +131,7 @@ def test_academic_record_full_http_workflow():
     assert data["student_id"] == str(student_id)
     assert data["academic_period_id"] == str(academic_period_id)
 
-    # (16 × 3 + 12 × 2) / (3 + 2) = 14.4
+    # (16 ï¿½ 3 + 12 ï¿½ 2) / (3 + 2) = 14.4
     assert data["general_average"] == 14.4
 
     assert data["failed_subjects"] == 0

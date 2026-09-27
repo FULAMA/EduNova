@@ -1,6 +1,6 @@
-﻿from uuid import uuid4
+from uuid import uuid4
 
-from src.domain.entities.class_option import ClassOption
+from src.academic.domain.entities.class_option import ClassOption
 
 
 TENANT_ID = uuid4()
@@ -35,3 +35,4 @@ def test_class_option_can_be_deactivated():
     )
 
     assert class_option.active is False
+

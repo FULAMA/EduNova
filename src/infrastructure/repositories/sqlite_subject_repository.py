@@ -1,7 +1,7 @@
-﻿from uuid import UUID
+from uuid import UUID
 
-from src.application.interfaces.subject_repository import SubjectRepository
-from src.domain.entities.subject import Subject
+from src.academic.application.interfaces.subject_repository import SubjectRepository
+from src.academic.domain.entities.subject import Subject
 from src.infrastructure.persistence.database import SQLiteDatabase
 
 

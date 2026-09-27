@@ -1,7 +1,7 @@
 ﻿from uuid import uuid4
 
-from src.domain.entities.student_academic_record import StudentAcademicRecord
-from src.domain.value_objects.subject_result import SubjectResult
+from src.academic.domain.entities.student_academic_record import StudentAcademicRecord
+from src.academic.domain.value_objects.subject_result import SubjectResult
 from src.infrastructure.repositories.in_memory_student_academic_record_repository import (
     InMemoryStudentAcademicRecordRepository,
 )
@@ -145,3 +145,4 @@ def test_repository_does_not_mix_students():
     assert result_a == record_a
     assert result_b == record_b
     assert result_a != result_b
+

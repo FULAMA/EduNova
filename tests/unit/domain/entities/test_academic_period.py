@@ -2,7 +2,7 @@ import pytest
 from datetime import date
 from uuid import uuid4
 
-from src.domain.entities.academic_period import AcademicPeriod
+from src.academic.domain.entities.academic_period import AcademicPeriod
 
 
 def test_academic_period_can_be_created():

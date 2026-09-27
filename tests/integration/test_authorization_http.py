@@ -3,7 +3,7 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from src.infrastructure.security.jwt_service import JwtService
-from src.domain.entities.user import User
+from src.identity.domain.entities.user import User
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
 from tests.support.tenant import TEST_TENANT_ID, seed_membership

@@ -1,11 +1,14 @@
-﻿from sqlite3 import Connection
+from sqlite3 import Connection
 from uuid import UUID
 
-from src.application.interfaces.student_academic_record_repository import (
+from src.academic.application.interfaces.student_academic_record_repository import (
     StudentAcademicRecordRepository,
 )
-from src.domain.entities.student_academic_record import StudentAcademicRecord
-from src.domain.value_objects.subject_result import SubjectResult
+from src.academic.domain.entities.student_academic_record import (
+    AcademicRecordStatus,
+    StudentAcademicRecord,
+)
+from src.academic.domain.value_objects.subject_result import SubjectResult
 from src.infrastructure.persistence.database import SQLiteDatabase
 
 
@@ -26,9 +29,11 @@ class SQLiteStudentAcademicRecordRepository(
                     general_average,
                     failed_subjects,
                     credits_obtained,
-                    total_credits
+                    total_credits,
+                    version,
+                    status
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(record.student_id),
@@ -38,6 +43,8 @@ class SQLiteStudentAcademicRecordRepository(
                     record.failed_subjects,
                     record.credits_obtained,
                     record.total_credits,
+                    record.version,
+                    record.status.value,
                 ),
             )
 
@@ -182,8 +189,6 @@ class SQLiteStudentAcademicRecordRepository(
             failed_subjects=row["failed_subjects"],
             credits_obtained=row["credits_obtained"],
             total_credits=row["total_credits"],
+            status=AcademicRecordStatus(row["status"]),
+            version=row["version"],
         )
-
-
-
-

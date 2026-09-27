@@ -1,7 +1,7 @@
 ﻿from tests.support.tenant import TEST_TENANT_ID
 from uuid import UUID, uuid4
 
-from src.domain.entities.academic_class import AcademicClass
+from src.academic.domain.entities.academic_class import AcademicClass
 from src.infrastructure.persistence.database import SQLiteDatabase
 from src.infrastructure.repositories.sqlite_academic_class_repository import (
     SQLiteAcademicClassRepository,

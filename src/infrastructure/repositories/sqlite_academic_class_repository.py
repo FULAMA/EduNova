@@ -1,9 +1,9 @@
-﻿from uuid import UUID
+from uuid import UUID
 
-from src.application.interfaces.academic_class_repository import (
+from src.academic.application.interfaces.academic_class_repository import (
     AcademicClassRepository,
 )
-from src.domain.entities.academic_class import AcademicClass
+from src.academic.domain.entities.academic_class import AcademicClass
 from src.infrastructure.persistence.database import SQLiteDatabase
 
 

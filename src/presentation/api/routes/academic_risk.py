@@ -1,12 +1,12 @@
-﻿from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status
 
-from src.application.dto.analyze_academic_risk_request import (
+from src.academic.application.dto.analyze_academic_risk_request import (
     AnalyzeAcademicRiskRequest,
 )
-from src.application.dto.analyze_academic_risk_response import (
+from src.academic.application.dto.analyze_academic_risk_response import (
     AnalyzeAcademicRiskResponse,
 )
-from src.application.use_cases.analyze_academic_risk import (
+from src.academic.application.use_cases.analyze_academic_risk import (
     AnalyzeAcademicRisk,
 )
 from src.presentation.api.dependencies import (

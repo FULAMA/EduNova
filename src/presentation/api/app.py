@@ -1,25 +1,25 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.application.use_cases.add_subject_result import AddSubjectResult
-from src.application.use_cases.analyze_academic_risk import AnalyzeAcademicRisk
-from src.application.use_cases.analyze_student_academic_record import (
+from src.academic.application.use_cases.add_subject_result import AddSubjectResult
+from src.academic.application.use_cases.analyze_academic_risk import AnalyzeAcademicRisk
+from src.academic.application.use_cases.analyze_student_academic_record import (
     AnalyzeStudentAcademicRecord,
 )
-from src.application.use_cases.assign_subject_to_class import (
+from src.academic.application.use_cases.assign_subject_to_class import (
     AssignSubjectToClass,
 )
-from src.application.use_cases.create_academic_record import (
+from src.academic.application.use_cases.create_academic_record import (
     CreateAcademicRecord,
 )
-from src.application.use_cases.enable_two_factor import EnableTwoFactor
-from src.application.use_cases.login_user import LoginUser
-from src.application.use_cases.refresh_access_token import RefreshAccessToken
-from src.application.use_cases.register_user import RegisterUser
-from src.application.use_cases.verify_login_two_factor import (
+from src.identity.application.use_cases.enable_two_factor import EnableTwoFactor
+from src.identity.application.use_cases.login_user import LoginUser
+from src.identity.application.use_cases.refresh_access_token import RefreshAccessToken
+from src.identity.application.use_cases.register_user import RegisterUser
+from src.identity.application.use_cases.verify_login_two_factor import (
     VerifyLoginTwoFactor,
 )
-from src.application.use_cases.verify_two_factor import VerifyTwoFactor
+from src.identity.application.use_cases.verify_two_factor import VerifyTwoFactor
 
 from src.presentation.api.container import ApplicationContainer
 from src.presentation.api.dependencies import (
@@ -223,14 +223,3 @@ def create_app(
     app.include_router(auth_router)
 
     return app
-
-
-
-
-
-
-
-
-
-
-

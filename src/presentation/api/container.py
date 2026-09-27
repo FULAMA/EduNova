@@ -1,46 +1,46 @@
 from pathlib import Path
 
 from src.infrastructure.security.jwt_service import JwtService
-from src.application.services.password_hasher_service import (
-    PasswordHasherService,
+from src.identity.infrastructure.security.argon2_password_hasher import (
+    Argon2PasswordHasher,
 )
-from src.application.services.two_factor_service import (
-    TwoFactorService,
+from src.identity.infrastructure.security.pyotp_two_factor_service import (
+    PyOtpTwoFactorService,
 )
 
-from src.application.use_cases.add_subject_result import AddSubjectResult
-from src.application.use_cases.analyze_academic_risk import (
+from src.academic.application.use_cases.add_subject_result import AddSubjectResult
+from src.academic.application.use_cases.analyze_academic_risk import (
     AnalyzeAcademicRisk,
 )
-from src.application.use_cases.analyze_student_academic_record import (
+from src.academic.application.use_cases.analyze_student_academic_record import (
     AnalyzeStudentAcademicRecord,
 )
-from src.application.use_cases.assign_subject_to_class import (
+from src.academic.application.use_cases.assign_subject_to_class import (
     AssignSubjectToClass,
 )
-from src.application.use_cases.create_academic_record import (
+from src.academic.application.use_cases.create_academic_record import (
     CreateAcademicRecord,
 )
-from src.application.use_cases.enable_two_factor import (
+from src.identity.application.use_cases.enable_two_factor import (
     EnableTwoFactor,
 )
-from src.application.use_cases.login_user import (
+from src.identity.application.use_cases.login_user import (
     LoginUser,
 )
-from src.application.use_cases.refresh_access_token import (
+from src.identity.application.use_cases.refresh_access_token import (
     RefreshAccessToken,
 )
-from src.application.use_cases.register_user import (
+from src.identity.application.use_cases.register_user import (
     RegisterUser,
 )
-from src.application.use_cases.verify_login_two_factor import (
+from src.identity.application.use_cases.verify_login_two_factor import (
     VerifyLoginTwoFactor,
 )
-from src.application.use_cases.verify_two_factor import (
+from src.identity.application.use_cases.verify_two_factor import (
     VerifyTwoFactor,
 )
 
-from src.domain.services.academic_risk_analyzer import AcademicRiskAnalyzer
+from src.academic.domain.services.academic_risk_analyzer import AcademicRiskAnalyzer
 
 from src.infrastructure.config.settings import Settings
 from src.infrastructure.persistence.database import SQLiteDatabase
@@ -68,8 +68,8 @@ from src.infrastructure.repositories.sqlite_subject_repository import (
 from src.infrastructure.repositories.sqlite_user_repository import (
     SQLiteUserRepository,
 )
-from src.infrastructure.repositories.sqlite_membership_repository import SQLiteMembershipRepository
-from src.infrastructure.repositories.sqlite_tenant_repository import SQLiteTenantRepository
+from src.tenancy.infrastructure.repositories.sqlite_membership_repository import SQLiteMembershipRepository
+from src.tenancy.infrastructure.repositories.sqlite_tenant_repository import SQLiteTenantRepository
 
 
 class ApplicationContainer:
@@ -206,7 +206,7 @@ class ApplicationContainer:
         return EnableTwoFactor(
             user_repository=self._user_repository(),
             membership_repository=self._membership_repository(),
-            two_factor_service=TwoFactorService(),
+            two_factor_service=PyOtpTwoFactorService(),
         )
 
     def verify_two_factor(
@@ -215,7 +215,7 @@ class ApplicationContainer:
         return VerifyTwoFactor(
             user_repository=self._user_repository(),
             membership_repository=self._membership_repository(),
-            two_factor_service=TwoFactorService(),
+            two_factor_service=PyOtpTwoFactorService(),
         )
 
     def register_user(
@@ -223,7 +223,7 @@ class ApplicationContainer:
     ) -> RegisterUser:
         return RegisterUser(
             user_repository=self._user_repository(),
-            password_hasher=PasswordHasherService(),
+            password_hasher=Argon2PasswordHasher(),
         )
 
     def login_user(
@@ -233,8 +233,8 @@ class ApplicationContainer:
             user_repository=self._user_repository(),
             membership_repository=self._membership_repository(),
             tenant_repository=self._tenant_repository(),
-            password_hasher=PasswordHasherService(),
-            two_factor_service=TwoFactorService(),
+            password_hasher=Argon2PasswordHasher(),
+            two_factor_service=PyOtpTwoFactorService(),
             jwt_service=self._jwt_service(),
         )
 
@@ -245,7 +245,7 @@ class ApplicationContainer:
             user_repository=self._user_repository(),
             membership_repository=self._membership_repository(),
             tenant_repository=self._tenant_repository(),
-            two_factor_service=TwoFactorService(),
+            two_factor_service=PyOtpTwoFactorService(),
             jwt_service=self._jwt_service(),
         )
 
@@ -259,8 +259,3 @@ class ApplicationContainer:
             refresh_token_repository=self._refresh_token_repository(),
             jwt_service=self._jwt_service(),
         )
-
-
-
-
-

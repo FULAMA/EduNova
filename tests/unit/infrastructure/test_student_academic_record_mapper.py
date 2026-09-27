@@ -1,7 +1,7 @@
 ﻿from uuid import uuid4
 
-from src.domain.entities.student_academic_record import StudentAcademicRecord
-from src.domain.value_objects.subject_result import SubjectResult
+from src.academic.domain.entities.student_academic_record import StudentAcademicRecord
+from src.academic.domain.value_objects.subject_result import SubjectResult
 from src.infrastructure.persistence.student_academic_record_mapper import (
     StudentAcademicRecordMapper,
 )
@@ -73,3 +73,4 @@ def test_mapper_preserves_subject_results():
         reconstructed.subject_results[0].coefficient
         == record.subject_results[0].coefficient
     )
+

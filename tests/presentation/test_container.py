@@ -1,17 +1,17 @@
-﻿from src.application.use_cases.add_subject_result import AddSubjectResult
-from src.application.use_cases.analyze_academic_risk import (
+from src.academic.application.use_cases.add_subject_result import AddSubjectResult
+from src.academic.application.use_cases.analyze_academic_risk import (
     AnalyzeAcademicRisk,
 )
-from src.application.use_cases.analyze_student_academic_record import (
+from src.academic.application.use_cases.analyze_student_academic_record import (
     AnalyzeStudentAcademicRecord,
 )
-from src.application.use_cases.assign_subject_to_class import (
+from src.academic.application.use_cases.assign_subject_to_class import (
     AssignSubjectToClass,
 )
-from src.application.use_cases.create_academic_record import (
+from src.academic.application.use_cases.create_academic_record import (
     CreateAcademicRecord,
 )
-from src.domain.services.academic_risk_analyzer import AcademicRiskAnalyzer
+from src.academic.domain.services.academic_risk_analyzer import AcademicRiskAnalyzer
 from src.infrastructure.persistence.database import SQLiteDatabase
 from src.presentation.api.container import ApplicationContainer
 
@@ -77,3 +77,4 @@ def test_container_creates_analyze_academic_risk():
         use_case._analyzer,
         AcademicRiskAnalyzer,
     )
+

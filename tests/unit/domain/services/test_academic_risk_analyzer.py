@@ -1,7 +1,7 @@
-from src.domain.services.academic_risk_analyzer import (
+from src.academic.domain.services.academic_risk_analyzer import (
     AcademicRiskAnalyzer,
 )
-from src.domain.value_objects.academic_risk import RiskLevel
+from src.academic.domain.value_objects.academic_risk import RiskLevel
 
 
 def test_student_with_good_results_has_low_risk():
