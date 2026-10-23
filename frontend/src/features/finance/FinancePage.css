@@ -1,0 +1,10 @@
+.finance-page { display: grid; gap: 1.5rem; padding: 2rem; max-width: 72rem; margin: 0 auto; }
+.finance-page header { border-bottom: 1px solid #d8dee8; padding-bottom: 1rem; }
+.finance-page section, .finance-page__student { display: grid; gap: .8rem; padding: 1.25rem; border: 1px solid #d8dee8; border-radius: 1rem; background: #fff; }
+.finance-page form { display: flex; flex-wrap: wrap; gap: .75rem; }
+.finance-page input, .finance-page select, .finance-page button { min-height: 2.6rem; padding: .45rem .7rem; border: 1px solid #aeb9c9; border-radius: .5rem; }
+.finance-page button { background: #0d5c63; color: #fff; cursor: pointer; }
+.finance-page button:disabled { opacity: .55; cursor: not-allowed; }
+.finance-page [role="alert"] { color: #9d2932; }
+@media (max-width: 640px) { .finance-page { padding: 1rem; } .finance-page form > * { width: 100%; } }
+

@@ -1,0 +1,25 @@
+{
+  "name": "EduNova",
+  "short_name": "EduNova",
+  "description": "Espace scolaire EduNova",
+  "lang": "fr",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#0d4f4a",
+  "background_color": "#f4f1ea",
+  "icons": [
+    {
+      "src": "/icons/edunova-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/edunova-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

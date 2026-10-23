@@ -1,0 +1,31 @@
+﻿.dashboard-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dashboard-header__eyebrow {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.dashboard-header__title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+
+.dashboard-header__description {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 640px) {
+  .dashboard-header__title {
+    font-size: 1.5rem;
+  }
+}

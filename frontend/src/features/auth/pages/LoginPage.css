@@ -1,0 +1,115 @@
+.login-page {
+  display: grid;
+  min-height: 100vh;
+  padding: var(--space-6);
+  place-items: center;
+
+  background:
+    radial-gradient(circle at 15% 10%, rgba(39, 102, 120, 0.14), transparent 32%),
+    var(--color-background);
+}
+
+.login-card {
+  width: min(100%, 440px);
+  padding: var(--space-8);
+
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.login-card__eyebrow {
+  margin-bottom: var(--space-2);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.login-card h1 {
+  font-size: var(--font-size-3xl);
+}
+
+.login-card__description {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.login-form {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-7);
+}
+
+.login-form label {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.login-form input {
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: 400;
+}
+
+.login-form input:focus {
+  outline: 3px solid var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+
+.login-form button {
+  min-height: 44px;
+  color: var(--color-surface);
+  background: var(--color-primary);
+  border: 0;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.login-form button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.login-form__challenge {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.login-form__challenge h2 {
+  color: var(--color-text);
+  font-size: var(--font-size-lg);
+}
+
+.login-form__challenge p {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+}
+
+.login-form__secondary-button {
+  color: var(--color-primary) !important;
+  background: transparent !important;
+  border: var(--border-width) solid var(--color-border) !important;
+}
+
+.login-form__error {
+  margin: 0;
+  padding: var(--space-3);
+  color: var(--color-danger);
+  background: #fff3f1;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}

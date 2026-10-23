@@ -1,0 +1,136 @@
+@layer reset, base, tokens, recipes, utilities;
+@layer recipes { @layer base, slots, variants, compound_variants; }
+@layer recipes.slots { @layer base, variants, compound_variants; }
+@layer base {
+  :root {
+    --made-with-panda: '🐼';
+  }
+}
+@layer tokens {
+  :where(:root, :host) {
+    --colors-brand-primary: #123B4A;
+    --colors-brand-primary-hover: #0E303C;
+    --colors-brand-primary-soft: #E8F0F2;
+    --colors-surface-bg: #F7F8FA;
+    --colors-surface-card: #FFFFFF;
+    --colors-surface-subtle: #F1F3F5;
+    --colors-surface-border: #D9DEE3;
+    --colors-text-main: #182126;
+    --colors-text-muted: #66737A;
+    --colors-status-success: #247A52;
+    --colors-status-warning: #A66A00;
+    --colors-status-danger: #B42318;
+    --colors-status-info: #276678;
+    --font-sizes-xs: 12px;
+    --font-sizes-sm: 13px;
+    --font-sizes-md: 14px;
+    --font-sizes-lg: 16px;
+    --font-sizes-xl: 18px;
+    --font-sizes-2xl: 22px;
+    --font-sizes-3xl: 28px;
+    --shadows-sm: 0 1px 2px rgba(24, 33, 38, 0.06);
+    --shadows-md: 0 4px 12px rgba(24, 33, 38, 0.08);
+    --spacing-1: 4px;
+    --spacing-2: 8px;
+    --spacing-3: 12px;
+    --spacing-4: 16px;
+    --spacing-5: 20px;
+    --spacing-6: 24px;
+    --spacing-7: 28px;
+    --spacing-8: 32px;
+    --spacing-10: 40px;
+    --spacing-12: 48px;
+    --radii-sm: 4px;
+    --radii-md: 6px;
+    --radii-lg: 8px;
+  }
+}
+@layer utilities {
+  .border_1px_solid {
+    border: 1px solid;
+  }
+  .border-color_rgba\(166\,_106\,_0\,_0\.22\) {
+    border-color: rgba(166, 106, 0, 0.22);
+  }
+  .border-color_rgba\(18\,_59\,_74\,_0\.18\) {
+    border-color: rgba(18, 59, 74, 0.18);
+  }
+  .border-color_rgba\(180\,_35\,_24\,_0\.22\) {
+    border-color: rgba(180, 35, 24, 0.22);
+  }
+  .border-color_rgba\(36\,_122\,_82\,_0\.22\) {
+    border-color: rgba(36, 122, 82, 0.22);
+  }
+  .border-color_var\(--colors-surface-border\) {
+    border-color: var(--colors-surface-border);
+  }
+  .border-radius_var\(--radii-sm\) {
+    border-radius: var(--radii-sm);
+  }
+  .transition_background-color_150ms_ease\,_color_150ms_ease {
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+  .align-items_center {
+    align-items: center;
+  }
+  .background-color_rgba\(166\,_106\,_0\,_0\.10\) {
+    background-color: rgba(166, 106, 0, 0.10);
+  }
+  .background-color_rgba\(180\,_35\,_24\,_0\.10\) {
+    background-color: rgba(180, 35, 24, 0.10);
+  }
+  .background-color_rgba\(36\,_122\,_82\,_0\.10\) {
+    background-color: rgba(36, 122, 82, 0.10);
+  }
+  .background-color_var\(--colors-brand-primary-soft\) {
+    background-color: var(--colors-brand-primary-soft);
+  }
+  .background-color_var\(--colors-surface-subtle\) {
+    background-color: var(--colors-surface-subtle);
+  }
+  .color_var\(--colors-brand-primary\) {
+    color: var(--colors-brand-primary);
+  }
+  .color_var\(--colors-status-danger\) {
+    color: var(--colors-status-danger);
+  }
+  .color_var\(--colors-status-success\) {
+    color: var(--colors-status-success);
+  }
+  .color_var\(--colors-status-warning\) {
+    color: var(--colors-status-warning);
+  }
+  .color_var\(--colors-text-main\) {
+    color: var(--colors-text-main);
+  }
+  .display_inline-flex {
+    display: inline-flex;
+  }
+  .font-size_var\(--font-sizes-xs\) {
+    font-size: var(--font-sizes-xs);
+  }
+  .font-weight_600 {
+    font-weight: 600;
+  }
+  .letter-spacing_0\.02em {
+    letter-spacing: 0.02em;
+  }
+  .line-height_var\(--line-height-tight\) {
+    line-height: var(--line-height-tight);
+  }
+  .white-space_nowrap {
+    white-space: nowrap;
+  }
+  .padding-bottom_var\(--spacing-1\) {
+    padding-bottom: var(--spacing-1);
+  }
+  .padding-left_var\(--spacing-2\) {
+    padding-left: var(--spacing-2);
+  }
+  .padding-right_var\(--spacing-2\) {
+    padding-right: var(--spacing-2);
+  }
+  .padding-top_var\(--spacing-1\) {
+    padding-top: var(--spacing-1);
+  }
+}

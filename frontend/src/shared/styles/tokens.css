@@ -1,0 +1,77 @@
+﻿:root {
+  /* Brand */
+  --color-primary: #123B4A;
+  --color-primary-hover: #0E303C;
+  --color-primary-soft: #E8F0F2;
+
+  /* Surfaces */
+  --color-background: #F7F8FA;
+  --color-surface: #FFFFFF;
+  --color-surface-subtle: #F1F3F5;
+  --color-border: #D9DEE3;
+
+  /* Typography */
+  --color-text: #182126;
+  --color-text-muted: #66737A;
+
+  /* Semantic */
+  --color-success: #247A52;
+  --color-warning: #A66A00;
+  --color-danger: #B42318;
+  --color-info: #276678;
+
+  /* Fonts */
+  --font-sans:
+    Inter,
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+
+  --font-mono:
+    "Cascadia Code",
+    Consolas,
+    monospace;
+
+  /* Font sizes */
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 22px;
+  --font-size-3xl: 28px;
+
+  /* Line heights */
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.45;
+  --line-height-relaxed: 1.6;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* Borders */
+  --border-width: 1px;
+
+  /* Shadows */
+  --shadow-sm:
+    0 1px 2px rgba(24, 33, 38, 0.06);
+
+  --shadow-md:
+    0 4px 12px rgba(24, 33, 38, 0.08);
+}

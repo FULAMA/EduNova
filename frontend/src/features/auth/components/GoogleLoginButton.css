@@ -1,0 +1,32 @@
+.google-login-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: 700;
+}
+
+.google-login-button--unavailable {
+  width: 100%;
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.google-login-button__mark {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
+.google-login-button small {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 400;
+}

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="EduNova">
+  <rect width="512" height="512" rx="112" fill="#0d4f4a"/>
+  <path d="M128 141h256v59H200v53h149v56H200v61h184v59H128z" fill="#f4f1ea"/>
+  <circle cx="384" cy="141" r="32" fill="#e5a84b"/>
+</svg>

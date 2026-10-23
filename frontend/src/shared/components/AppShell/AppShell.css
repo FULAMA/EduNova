@@ -1,0 +1,51 @@
+﻿.app-shell {
+  min-height: 100vh;
+  display: flex;
+}
+
+.app-shell__content {
+  min-width: 0;
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(180deg, rgba(232, 240, 242, 0.42), transparent 180px),
+    var(--color-background);
+}
+
+.app-shell__main {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-8);
+  animation: app-shell-enter 180ms ease-out both;
+}
+
+@keyframes app-shell-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 1023px) {
+  .app-shell__main {
+    padding: var(--space-6);
+  }
+}
+
+@media (max-width: 767px) {
+  .app-shell__main {
+    padding: var(--space-4);
+  }
+}
+
+@media (max-width: 479px) {
+  .app-shell__main {
+    padding: var(--space-3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell__main {
+    animation: none;
+  }
+}
