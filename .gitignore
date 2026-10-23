@@ -6,6 +6,7 @@ __pycache__/
 .pytest_cache/
 .pytest_temp/
 .pytest-temp/
+.pytest-work/
 .coverage
 htmlcov/
 
@@ -48,3 +49,15 @@ temp_*.txt
 fix.py
 refactor.py
 *doctor*
+
+.pytest*/
+.pytest_cache/
+.temp_router_imports.txt
+*.db-journal
+
+
+.pytest*/
+.pytest_cache/
+.temp_router_imports.txt
+*.db-journal
+
