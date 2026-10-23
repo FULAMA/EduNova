@@ -55,33 +55,50 @@ class MigrationRunner:
 
             if hasattr(module, "version") and hasattr(module, "upgrade"):
                 self.register_module(module)
+
     def run(self) -> None:
-        self._connection.execute("""
-            CREATE TABLE IF NOT EXISTS schema_migrations (
-                version TEXT PRIMARY KEY,
-                applied_at TEXT NOT NULL
-            )
-        """)
+        savepoint = "edunova_migration_runner"
+        self._connection.execute(f"SAVEPOINT {savepoint}")
 
-        for version in sorted(self._migrations):
-            already_applied = self._connection.execute("""
-                SELECT 1
-                FROM schema_migrations
-                WHERE version = ?
-            """, (version,)).fetchone()
-
-            if already_applied is not None:
-                continue
-
-            self._migrations[version](self._connection)
-
+        try:
             self._connection.execute("""
-                INSERT INTO schema_migrations (version, applied_at)
-                VALUES (?, ?)
-            """, (
-                version,
-                datetime.now(timezone.utc).isoformat(),
-            ))
+                CREATE TABLE IF NOT EXISTS schema_migrations (
+                    version TEXT PRIMARY KEY,
+                    applied_at TEXT NOT NULL
+                )
+            """)
+
+            for version in sorted(self._migrations):
+                already_applied = self._connection.execute("""
+                    SELECT 1
+                    FROM schema_migrations
+                    WHERE version = ?
+                """, (version,)).fetchone()
+
+                if already_applied is not None:
+                    continue
+
+                self._migrations[version](self._connection)
+
+                self._connection.execute("""
+                    INSERT INTO schema_migrations (version, applied_at)
+                    VALUES (?, ?)
+                """, (
+                    version,
+                    datetime.now(timezone.utc).isoformat(),
+                ))
+
+            self._connection.execute(
+                f"RELEASE SAVEPOINT {savepoint}"
+            )
+        except Exception:
+            self._connection.execute(
+                f"ROLLBACK TO SAVEPOINT {savepoint}"
+            )
+            self._connection.execute(
+                f"RELEASE SAVEPOINT {savepoint}"
+            )
+            raise
 
         self._connection.commit()
 

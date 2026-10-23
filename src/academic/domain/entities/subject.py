@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import math
 from uuid import UUID
 
 
@@ -21,5 +22,5 @@ class Subject:
         if not self.code.strip():
             raise ValueError("Le code de la matière ne peut pas être vide.")
 
-        if self.coefficient <= 0:
+        if not math.isfinite(self.coefficient) or self.coefficient <= 0:
             raise ValueError("Le coefficient doit être supérieur à zéro.")

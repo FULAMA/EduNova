@@ -1,6 +1,9 @@
 from uuid import UUID
 
-from src.academic.domain.entities.student_academic_record import StudentAcademicRecord
+from src.academic.domain.entities.student_academic_record import (
+    AcademicRecordStatus,
+    StudentAcademicRecord,
+)
 from src.academic.domain.value_objects.subject_result import SubjectResult
 
 
@@ -24,6 +27,8 @@ class StudentAcademicRecordMapper:
             "failed_subjects": record.failed_subjects,
             "credits_obtained": record.credits_obtained,
             "total_credits": record.total_credits,
+            "status": record.status.value,
+            "version": record.version,
         }
 
     @staticmethod
@@ -46,4 +51,6 @@ class StudentAcademicRecordMapper:
             failed_subjects=data["failed_subjects"],
             credits_obtained=data["credits_obtained"],
             total_credits=data["total_credits"],
+            status=AcademicRecordStatus(data.get("status", "DRAFT")),
+            version=data.get("version", 1),
         )

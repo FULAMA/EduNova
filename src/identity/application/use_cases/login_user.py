@@ -18,6 +18,7 @@ class LoginUserResponse:
     two_factor_token: str | None
     access_token: str | None
     refresh_token: str | None
+    email: str | None = None
 
 
 class LoginUser:

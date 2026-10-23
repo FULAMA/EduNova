@@ -1,8 +1,13 @@
 from dataclasses import dataclass
 from enum import Enum
+import math
 from uuid import UUID
 
 from src.academic.domain.value_objects.subject_result import SubjectResult
+from src.academic.domain.policies.academic_policy import AcademicPolicy
+from src.academic.domain.services.academic_average_calculator import (
+    AcademicAverageCalculator,
+)
 
 
 class AcademicRecordStatus(str, Enum):
@@ -32,7 +37,7 @@ class StudentAcademicRecord:
                 "La version doit Ãªtre supÃ©rieure Ã  zÃ©ro."
             )
 
-        if not 0 <= self.general_average <= 20:
+        if not math.isfinite(self.general_average) or not 0 <= self.general_average <= 20:
             raise ValueError(
                 "La moyenne gÃ©nÃ©rale doit Ãªtre comprise entre 0 et 20."
             )
@@ -42,12 +47,12 @@ class StudentAcademicRecord:
                 "Le nombre de matiÃ¨res Ã©chouÃ©es ne peut pas Ãªtre nÃ©gatif."
             )
 
-        if self.credits_obtained < 0:
+        if not math.isfinite(self.credits_obtained) or self.credits_obtained < 0:
             raise ValueError(
                 "Les crÃ©dits obtenus ne peuvent pas Ãªtre nÃ©gatifs."
             )
 
-        if self.total_credits <= 0:
+        if not math.isfinite(self.total_credits) or self.total_credits <= 0:
             raise ValueError(
                 "Le total des crÃ©dits doit Ãªtre supÃ©rieur Ã  zÃ©ro."
             )
@@ -74,12 +79,15 @@ class StudentAcademicRecord:
             credits_obtained=self.credits_obtained,
             total_credits=self.total_credits,
             status=AcademicRecordStatus.VALIDATED,
-            version=self.version,
+            version=self.version + 1,
         )
 
     def with_subject_result(
         self,
         subject_result: SubjectResult,
+        *,
+        policy: AcademicPolicy | None = None,
+        average_calculator: AcademicAverageCalculator | None = None,
     ) -> "StudentAcademicRecord":
         if self.status == AcademicRecordStatus.VALIDATED:
             raise ValueError(
@@ -95,23 +103,10 @@ class StudentAcademicRecord:
             )
 
         new_subject_results = self.subject_results + (subject_result,)
-
-        total_coefficients = sum(
-            result.coefficient
-            for result in new_subject_results
-        )
-
-        weighted_sum = sum(
-            result.average * result.coefficient
-            for result in new_subject_results
-        )
-
-        general_average = weighted_sum / total_coefficients
-
-        failed_subjects = sum(
-            1
-            for result in new_subject_results
-            if result.average < 10
+        general_average, failed_subjects = self.calculate_aggregates(
+            new_subject_results,
+            policy=policy,
+            average_calculator=average_calculator,
         )
 
         return StudentAcademicRecord(
@@ -124,8 +119,26 @@ class StudentAcademicRecord:
             credits_obtained=self.credits_obtained,
             total_credits=self.total_credits,
             status=self.status,
-            version=self.version,
+            version=self.version + 1,
         )
+
+    @staticmethod
+    def calculate_aggregates(
+        subject_results: tuple[SubjectResult, ...],
+        *,
+        policy: AcademicPolicy | None = None,
+        average_calculator: AcademicAverageCalculator | None = None,
+    ) -> tuple[float, int]:
+        policy = policy or AcademicPolicy()
+        average_calculator = average_calculator or AcademicAverageCalculator()
+        average = policy.round_average(
+            average_calculator.calculate(subject_results)
+        )
+        failed_subjects = sum(
+            not policy.is_subject_passed(result.average)
+            for result in subject_results
+        )
+        return average, failed_subjects
     def create_new_version(
         self,
         general_average: float,

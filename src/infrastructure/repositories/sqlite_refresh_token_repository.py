@@ -44,3 +44,17 @@ class SQLiteRefreshTokenRepository(RefreshTokenRepository):
             ).fetchone()
 
         return row is not None
+
+    def consume(self, jti: str) -> bool:
+        if not jti.strip():
+            raise ValueError("Le jti ne peut pas etre vide.")
+
+        with self._database.connect() as connection:
+            cursor = connection.execute(
+                """
+                INSERT OR IGNORE INTO revoked_refresh_tokens (jti, revoked_at)
+                VALUES (?, ?)
+                """,
+                (jti, datetime.now(timezone.utc).isoformat()),
+            )
+            return cursor.rowcount == 1

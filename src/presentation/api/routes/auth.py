@@ -4,9 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.identity.application.use_cases.enable_two_factor import EnableTwoFactor
 from src.identity.application.use_cases.login_user import LoginUser
+from src.identity.application.use_cases.login_with_google import LoginWithGoogle
+from src.identity.application.use_cases.link_google_identity import LinkGoogleIdentity
 from src.identity.application.use_cases.refresh_access_token import RefreshAccessToken
 from src.identity.application.dto.register_user_request import RegisterUserRequest as ApplicationRegisterUserRequest
 from src.identity.application.dto.login_user_request import LoginUserRequest as ApplicationLoginUserRequest
+from src.identity.application.dto.google_login_request import GoogleLoginRequest as ApplicationGoogleLoginRequest
 from src.identity.application.dto.verify_login_two_factor_request import VerifyLoginTwoFactorRequest as ApplicationVerifyLoginTwoFactorRequest
 from src.identity.application.use_cases.register_user import RegisterUser
 from src.identity.application.use_cases.verify_login_two_factor import VerifyLoginTwoFactor
@@ -23,6 +26,8 @@ from src.presentation.api.dependencies.auth import (
 from src.presentation.api.dependencies import (
     get_enable_two_factor_use_case,
     get_login_user_use_case,
+    get_login_with_google_use_case,
+    get_link_google_identity_use_case,
     get_refresh_access_token_use_case,
     get_register_user_use_case,
     get_verify_login_two_factor_use_case,
@@ -34,6 +39,9 @@ from src.presentation.api.schemas.enable_two_factor_response import (
 )
 from src.presentation.api.schemas.me_response import MeResponse
 from src.presentation.api.schemas.login_user_request import LoginUserRequest
+from src.presentation.api.schemas.google_login_request import GoogleLoginRequest
+from src.presentation.api.schemas.google_link_request import GoogleLinkRequest
+from src.presentation.api.schemas.google_link_response import GoogleLinkResponse
 from src.presentation.api.schemas.login_user_response import LoginUserResponse
 from src.presentation.api.schemas.refresh_token_request import (
     RefreshTokenRequest,
@@ -69,7 +77,10 @@ def register_user(
         application_request = ApplicationRegisterUserRequest(
             email=request.email,
             password=request.password,
-            role=request.role,
+            # Public registration must never choose a privileged role.
+            # Administrative roles are provisioned through controlled
+            # back-office/bootstrap workflows only.
+            role="STUDENT",
         )
         user = use_case.execute(application_request)
 
@@ -90,6 +101,12 @@ def register_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=str(exc),
             )
+
+        if str(exc) == "Acces tenant refuse.":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acces tenant refuse.",
+            ) from exc
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -119,6 +136,7 @@ def login_user(
             two_factor_token=result.two_factor_token,
             access_token=result.access_token,
             refresh_token=result.refresh_token,
+            email=result.email,
         )
 
     except ValueError as exc:
@@ -131,10 +149,103 @@ def login_user(
                 detail=str(exc),
             )
 
+        if str(exc) == "Acces tenant refuse.":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acces tenant refuse.",
+            ) from exc
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         )
+
+
+@router.post(
+    "/auth/google",
+    response_model=LoginUserResponse,
+)
+def login_with_google(
+    request: GoogleLoginRequest,
+    use_case: LoginWithGoogle = Depends(get_login_with_google_use_case),
+):
+    try:
+        result = use_case.execute(
+            ApplicationGoogleLoginRequest(
+                id_token=request.id_token,
+                tenant_id=request.tenant_id,
+            )
+        )
+
+        return LoginUserResponse(
+            authenticated=result.authenticated,
+            two_factor_required=result.two_factor_required,
+            two_factor_token=result.two_factor_token,
+            access_token=result.access_token,
+            refresh_token=result.refresh_token,
+            email=result.email,
+        )
+    except ValueError as exc:
+        if str(exc) in {
+            "Identifiants invalides.",
+            "Le compte est desactive.",
+            "Jeton Google invalide.",
+            "L adresse e-mail Google n est pas verifiee.",
+        }:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentification Google refusee.",
+            ) from exc
+
+        if str(exc) == "Acces tenant refuse.":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=str(exc),
+            ) from exc
+
+        if str(exc) == "Google auth non configuree.":
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentification Google indisponible.",
+            ) from exc
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Requete Google invalide.",
+        ) from exc
+
+
+@router.post(
+    "/auth/google/link",
+    response_model=GoogleLinkResponse,
+)
+def link_google_identity(
+    request: GoogleLinkRequest,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    use_case: LinkGoogleIdentity = Depends(get_link_google_identity_use_case),
+):
+    try:
+        use_case.execute(current_user.id, request.id_token)
+    except ValueError as exc:
+        if str(exc) == "Google auth non configuree.":
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentification Google indisponible.",
+            ) from exc
+        if str(exc) in {
+            "Identite Google deja liee.",
+            "Une identite Google est deja liee.",
+        }:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Identite Google deja liee.",
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Impossible de lier cette identite Google.",
+        ) from exc
+
+    return GoogleLinkResponse(linked=True)
 
 
 @router.post(

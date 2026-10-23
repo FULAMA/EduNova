@@ -9,4 +9,5 @@ class AddSubjectResultRequest:
     academic_period_id: UUID
     subject_id: UUID
     average: float
-    coefficient: float
+    # Kept for source compatibility with internal callers; the use case ignores it.
+    coefficient: float | None = None

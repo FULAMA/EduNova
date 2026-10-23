@@ -34,6 +34,40 @@ class SQLiteSubjectRepository(SubjectRepository):
                 ),
             )
 
+    def update(self, subject: Subject) -> None:
+        with self._database.connect() as connection:
+            cursor = connection.execute(
+                """UPDATE subjects SET name = ?, code = ?, coefficient = ?, active = ?
+                WHERE id = ? AND tenant_id = ?""",
+                (subject.name, subject.code, subject.coefficient, int(subject.active),
+                 str(subject.id), str(subject.tenant_id)),
+            )
+            if cursor.rowcount != 1:
+                raise LookupError("Matière introuvable.")
+
+    def list_by_tenant(self, tenant_id: UUID, search: str | None = None) -> list[Subject]:
+        query = """SELECT id, tenant_id, name, code, coefficient, active
+            FROM subjects WHERE tenant_id = ?"""
+        params: list[object] = [str(tenant_id)]
+        if search:
+            query += " AND name LIKE ? COLLATE NOCASE"
+            params.append(f"%{search.strip()}%")
+        query += " ORDER BY name COLLATE NOCASE, id"
+        with self._database.connect() as connection:
+            rows = connection.execute(query, params).fetchall()
+        return [Subject(UUID(row["id"]), UUID(row["tenant_id"]), row["name"],
+                        row["code"], row["coefficient"], bool(row["active"]))
+                for row in rows]
+
+    def find_many_by_ids(self, subject_ids: set[UUID], tenant_id: UUID) -> dict[UUID, Subject]:
+        if not subject_ids:
+            return {}
+        return {
+            subject.id: subject
+            for subject in self.list_by_tenant(tenant_id)
+            if subject.id in subject_ids
+        }
+
     def find_by_id(
         self,
         subject_id: UUID,

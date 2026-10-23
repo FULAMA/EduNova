@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import math
 
 
 @dataclass(frozen=True)
@@ -10,6 +11,12 @@ class AcademicPolicy:
     rounding_precision: int = 2
 
     def __post_init__(self):
+        if not all(math.isfinite(value) for value in (
+            self.grading_scale,
+            self.passing_average,
+            self.minimum_subject_average,
+        )):
+            raise ValueError("Les seuils de notation doivent être finis.")
         if self.grading_scale <= 0:
             raise ValueError(
                 "L'échelle de notation doit être positive."

@@ -15,3 +15,7 @@ class AnalyzeStudentAcademicRecordResponse:
     credits_obtained: float
     total_credits: float
     subject_results: tuple[SubjectResultResponse, ...]
+    status: str
+    version: int
+    subject_names: dict[UUID, str] | None = None
+    academic_period_name: str | None = None

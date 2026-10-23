@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import math
 from datetime import date
 from uuid import UUID
 
@@ -20,7 +21,7 @@ class Assessment:
                 "Le titre de l'Ã©valuation ne peut pas Ãªtre vide."
             )
 
-        if self.maximum_score <= 0:
+        if not math.isfinite(self.maximum_score) or self.maximum_score <= 0:
             raise ValueError(
                 "Le maximum de l'Ã©valuation doit Ãªtre supÃ©rieur Ã  zÃ©ro."
             )

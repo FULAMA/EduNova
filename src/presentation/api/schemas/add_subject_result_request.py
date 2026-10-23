@@ -4,7 +4,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class AddSubjectResultRequestSchema(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     subject_id: UUID
     average: float = Field(ge=0, le=20)
-    coefficient: float = Field(gt=0)

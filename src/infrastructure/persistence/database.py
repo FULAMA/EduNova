@@ -31,8 +31,64 @@ class SQLiteDatabase:
 
         return connection
 
+    @staticmethod
+    def _has_user_tables(connection: sqlite3.Connection) -> bool:
+        row = connection.execute(
+            """
+            SELECT 1
+            FROM sqlite_master
+            WHERE type = 'table'
+              AND name NOT LIKE 'sqlite_%'
+            LIMIT 1
+            """
+        ).fetchone()
+        return row is not None
+
+    @staticmethod
+    def _has_migration_history(connection: sqlite3.Connection) -> bool:
+        if not SQLiteDatabase._schema_migrations_table_exists(connection):
+            return False
+
+        row = connection.execute(
+            """
+            SELECT 1
+            FROM schema_migrations
+            LIMIT 1
+            """
+        ).fetchone()
+        return row is not None
+
+    @staticmethod
+    def _schema_migrations_table_exists(
+        connection: sqlite3.Connection,
+    ) -> bool:
+        row = connection.execute(
+            """
+            SELECT 1
+            FROM sqlite_master
+            WHERE type = 'table'
+              AND name = 'schema_migrations'
+            LIMIT 1
+            """
+        ).fetchone()
+        return row is not None
+
+    def _reject_ambiguous_existing_database(
+        self,
+        connection: sqlite3.Connection,
+    ) -> None:
+        if self._has_user_tables(connection) and not self._has_migration_history(
+            connection
+        ):
+            raise RuntimeError(
+                "Base SQLite existante sans historique schema_migrations. "
+                "Initialisation refusee pour proteger les donnees; "
+                "une baseline ou une migration de reprise explicite est requise."
+            )
+
     def initialize(self) -> None:
         with self.connect() as connection:
+            self._reject_ambiguous_existing_database(connection)
 
             connection.execute(
                 """

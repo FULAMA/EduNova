@@ -17,3 +17,15 @@ class SubjectRepository(ABC):
         tenant_id: UUID,
     ) -> Subject | None:
         raise NotImplementedError
+
+    @abstractmethod
+    def list_by_tenant(self, tenant_id: UUID, search: str | None = None) -> list[Subject]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update(self, subject: Subject) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def find_many_by_ids(self, subject_ids: set[UUID], tenant_id: UUID) -> dict[UUID, Subject]:
+        raise NotImplementedError

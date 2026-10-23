@@ -30,6 +30,27 @@ class SQLiteAcademicClassRepository(AcademicClassRepository):
                 ),
             )
 
+    def list_by_tenant(self, tenant_id: UUID) -> tuple[AcademicClass, ...]:
+        with self._database.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT id, tenant_id, name
+                FROM academic_classes
+                WHERE tenant_id = ?
+                ORDER BY name, id
+                """,
+                (str(tenant_id),),
+            ).fetchall()
+
+        return tuple(
+            AcademicClass(
+                id=UUID(row["id"]),
+                tenant_id=UUID(row["tenant_id"]),
+                name=row["name"],
+            )
+            for row in rows
+        )
+
     def find_by_id(
         self,
         academic_class_id: UUID,

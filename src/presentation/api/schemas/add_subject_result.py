@@ -1,12 +1,12 @@
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AddSubjectResultRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     subject_id: UUID
     average: float = Field(ge=0, le=20)
-    coefficient: float = Field(gt=0)
 
 
 class AddSubjectResultResponse(BaseModel):

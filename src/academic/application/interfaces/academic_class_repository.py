@@ -7,6 +7,10 @@ from src.academic.domain.entities.academic_class import AcademicClass
 class AcademicClassRepository(ABC):
 
     @abstractmethod
+    def list_by_tenant(self, tenant_id: UUID) -> tuple[AcademicClass, ...]:
+        raise NotImplementedError
+
+    @abstractmethod
     def save(self, academic_class: AcademicClass) -> None:
         pass
 

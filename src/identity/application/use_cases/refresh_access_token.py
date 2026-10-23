@@ -70,8 +70,6 @@ class RefreshAccessToken:
         if membership is None or not membership.active:
             raise ValueError("Le membership n'est pas actif.")
 
-        self._refresh_token_repository.revoke(jti)
-
         access_token = self._jwt_service.create_access_token(
             user_id=user.id,
             role=membership.role,
@@ -83,8 +81,12 @@ class RefreshAccessToken:
             tenant_id=tenant_uuid,
         )
 
-        return RefreshAccessTokenResponse(
+        response = RefreshAccessTokenResponse(
             access_token=access_token,
             refresh_token=new_refresh_token,
         )
+        if not self._refresh_token_repository.consume(jti):
+            raise ValueError("Token refresh revoque.")
+
+        return response
 

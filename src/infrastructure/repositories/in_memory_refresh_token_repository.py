@@ -19,3 +19,11 @@ class InMemoryRefreshTokenRepository(RefreshTokenRepository):
             raise ValueError("Le jti ne peut pas etre vide.")
 
         return jti in self._revoked_tokens
+
+    def consume(self, jti: str) -> bool:
+        if not jti.strip():
+            raise ValueError("Le jti ne peut pas etre vide.")
+        if jti in self._revoked_tokens:
+            return False
+        self._revoked_tokens.add(jti)
+        return True

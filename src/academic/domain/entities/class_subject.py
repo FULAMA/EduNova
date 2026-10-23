@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import math
 from uuid import UUID
 
 
@@ -16,5 +17,5 @@ class ClassSubject:
         if self.tenant_id is None:
             raise ValueError("Le tenant est obligatoire.")
 
-        if self.coefficient <= 0:
+        if not math.isfinite(self.coefficient) or self.coefficient <= 0:
             raise ValueError("Le coefficient doit être supérieur à zéro.")

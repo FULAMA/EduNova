@@ -17,6 +17,10 @@ from src.shared.application.context.tenant_context import TenantContext
 from src.identity.application.dto.authenticated_user import AuthenticatedUser
 
 
+FINANCE_ROLES = ("ADMIN", "DIRECTION", "ACCOUNTANT", "CASHIER")
+FINANCE_MANAGEMENT_ROLES = ("ADMIN", "DIRECTION")
+
+
 bearer_scheme = HTTPBearer()
 
 
@@ -159,3 +163,11 @@ def require_role(*allowed_roles: str):
         return current_user
 
     return role_dependency
+
+
+def require_finance_role():
+    return require_role(*FINANCE_ROLES)
+
+
+def require_finance_manager_role():
+    return require_role(*FINANCE_MANAGEMENT_ROLES)

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.presentation.api.dependencies import (
     get_assign_subject_to_class_use_case,
+    get_list_academic_classes_use_case,
 )
 from src.presentation.api.schemas.assign_subject_to_class import (
     AssignSubjectToClassRequestSchema,
@@ -13,6 +14,9 @@ from src.presentation.api.schemas.assign_subject_to_class_response import (
 )
 from src.presentation.api.dependencies.auth import get_tenant_context
 from src.shared.application.context.tenant_context import TenantContext
+from src.academic.application.use_cases.list_academic_classes import ListAcademicClasses
+from src.presentation.api.schemas.academic_class import AcademicClassResponse
+from src.presentation.api.dependencies.auth import require_role
 from src.academic.application.dto.assign_subject_to_class_request import (
     AssignSubjectToClassRequest,
 )
@@ -22,6 +26,25 @@ router = APIRouter(
     prefix="/classes",
     tags=["Classes"],
 )
+
+
+@router.get(
+    "",
+    response_model=list[AcademicClassResponse],
+    dependencies=[Depends(require_role("ADMIN"))],
+)
+def list_academic_classes(
+    use_case: ListAcademicClasses = Depends(get_list_academic_classes_use_case),
+    tenant_context: TenantContext = Depends(get_tenant_context),
+) -> list[AcademicClassResponse]:
+    return [
+        AcademicClassResponse(
+            id=academic_class.id,
+            name=academic_class.name,
+            active=academic_class.active,
+        )
+        for academic_class in use_case.execute(tenant_context.tenant_id)
+    ]
 
 
 @router.post(

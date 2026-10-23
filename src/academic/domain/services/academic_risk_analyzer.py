@@ -1,3 +1,5 @@
+import math
+
 from src.academic.domain.value_objects.academic_risk import (
     AcademicRisk,
     RiskLevel,
@@ -12,6 +14,13 @@ class AcademicRiskAnalyzer:
         attendance_rate: float,
         unjustified_absences: int,
     ) -> AcademicRisk:
+
+        if not math.isfinite(average) or not 0 <= average <= 20:
+            raise ValueError("La moyenne doit être comprise entre 0 et 20.")
+        if not math.isfinite(attendance_rate) or not 0 <= attendance_rate <= 100:
+            raise ValueError("Le taux de présence doit être compris entre 0 et 100.")
+        if unjustified_absences < 0:
+            raise ValueError("Le nombre d'absences injustifiées ne peut pas être négatif.")
 
         score = 0
         reasons = []

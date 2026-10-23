@@ -10,3 +10,8 @@ class RefreshTokenRepository(ABC):
     @abstractmethod
     def is_revoked(self, jti: str) -> bool:
         pass
+
+    @abstractmethod
+    def consume(self, jti: str) -> bool:
+        """Atomically mark a refresh-token identifier as consumed once."""
+        pass

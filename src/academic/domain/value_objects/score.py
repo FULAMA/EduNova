@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import math
 
 @dataclass(frozen=True)
 class Score:
@@ -6,6 +7,8 @@ class Score:
     maximum: float
 
     def __post_init__(self):
+        if not math.isfinite(self.value) or not math.isfinite(self.maximum):
+            raise ValueError("La note et son maximum doivent être des nombres finis.")
         if self.maximum <= 0:
             raise ValueError("Le maximum doit etre superieur à zéro")
         if self.value < 0:

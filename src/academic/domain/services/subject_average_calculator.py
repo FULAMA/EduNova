@@ -1,9 +1,13 @@
-from collections.abc import Iterable
+﻿from collections.abc import Iterable
 
 from src.academic.domain.entities.grade import Grade
+from src.academic.domain.services.score_converter import ScoreConverter
 
 
 class SubjectAverageCalculator:
+
+    def __init__(self, converter: ScoreConverter) -> None:
+        self._converter = converter
 
     def calculate(self, grades: Iterable[Grade]) -> float:
         grades = list(grades)
@@ -17,7 +21,7 @@ class SubjectAverageCalculator:
         total_coefficient = 0.0
 
         for grade in grades:
-            normalized_score = grade.normalized_score()
+            normalized_score = self._converter.convert(grade.score)
             coefficient = grade.assessment.coefficient.value
 
             total_weighted_score += (
