@@ -46,6 +46,42 @@ def test_repository_can_save_record():
     assert result == record
 
 
+def test_repository_keeps_correction_audit_metadata():
+    repository = InMemoryStudentAcademicRecordRepository()
+    record = create_record()
+    actor_id = uuid4()
+
+    repository.save(
+        record,
+        operation="CORRECTED",
+        actor_id=actor_id,
+        reason="Correction de test",
+    )
+
+    assert repository.history[-1]["operation"] == "CORRECTED"
+    assert repository.history[-1]["actor_id"] == str(actor_id)
+    assert repository.history[-1]["reason"] == "Correction de test"
+
+
+def test_repository_history_is_not_mutable_through_read_results():
+    repository = InMemoryStudentAcademicRecordRepository()
+    record = create_record()
+    repository.save(record, operation="CREATED")
+
+    history = repository.history
+    history[0]["snapshot"]["general_average"] = 0
+    history[0]["snapshot"]["subject_results"][0]["average"] = 0
+
+    current = repository.find_by_student_and_period(
+        record.student_id,
+        record.academic_period_id,
+        record.tenant_id,
+    )
+    assert current == record
+    assert repository.history[0]["snapshot"]["general_average"] == 14.0
+    assert repository.history[0]["snapshot"]["subject_results"][0]["average"] == 14.0
+
+
 def test_repository_returns_record_by_student():
     repository = InMemoryStudentAcademicRecordRepository()
     record = create_record()
@@ -80,7 +116,7 @@ def test_repository_returns_none_for_unknown_period():
     assert result is None
 
 
-def test_repository_can_replace_existing_record():
+def test_repository_updates_existing_record_with_expected_version():
     repository = InMemoryStudentAcademicRecordRepository()
 
     student_id = uuid4()
@@ -100,9 +136,20 @@ def test_repository_can_replace_existing_record():
         academic_period_id=academic_period_id,
         general_average=16.0,
     )
+    second_record = StudentAcademicRecord(
+        tenant_id=second_record.tenant_id,
+        student_id=second_record.student_id,
+        academic_period_id=second_record.academic_period_id,
+        subject_results=second_record.subject_results,
+        general_average=second_record.general_average,
+        failed_subjects=second_record.failed_subjects,
+        credits_obtained=second_record.credits_obtained,
+        total_credits=second_record.total_credits,
+        version=2,
+    )
 
     repository.save(first_record)
-    repository.save(second_record)
+    repository.save(second_record, expected_version=1)
 
     result = repository.find_by_student_and_period(
         student_id,

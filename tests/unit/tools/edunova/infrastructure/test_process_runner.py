@@ -61,3 +61,25 @@ def test_process_runner_raises_os_error_for_unlaunchable_process() -> None:
 
     with pytest.raises(OSError):
         runner.run(["executable-that-does-not-exist"])
+
+
+def test_process_runner_uses_configured_timeout() -> None:
+    runner = ProcessRunner(timeout=0.01)
+
+    with pytest.raises(subprocess.TimeoutExpired):
+        runner.run(
+            ["python", "-c", "import time; time.sleep(1)"]
+        )
+
+
+def test_process_runner_can_disable_timeout() -> None:
+    runner = ProcessRunner(timeout=None)
+
+    result = runner.run(["python", "-c", "print('finished')"])
+
+    assert result.returncode == 0
+
+
+def test_process_runner_rejects_non_positive_timeout() -> None:
+    with pytest.raises(ValueError, match="greater than zero"):
+        ProcessRunner(timeout=0)

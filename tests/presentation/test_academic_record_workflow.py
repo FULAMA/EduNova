@@ -1,4 +1,4 @@
-from uuid import uuid4
+﻿from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
@@ -6,17 +6,16 @@ from src.infrastructure.security.jwt_service import JwtService
 from src.identity.domain.entities.user import User
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
+from tests.support.security import TEST_JWT_SECRET
 from tests.support.tenant import TEST_TENANT_ID, seed_membership
+from tests.integration.test_academic_record_http_sqlite import seed_eligible_context
 
 
-JWT_SECRET = "edunova-development-secret-key-32-bytes-minimum-change-in-production"
 
 
 def test_academic_record_full_http_workflow():
     student_id = uuid4()
     academic_period_id = uuid4()
-    subject_math_id = uuid4()
-    subject_physics_id = uuid4()
 
     container = ApplicationContainer(
         database_path=":memory:"
@@ -68,8 +67,10 @@ def test_academic_record_full_http_workflow():
             ),
         )
 
+    subjects = seed_eligible_context(container, user.id, student_id, academic_period_id)
+
     # JWT contenant le tenant actif
-    jwt_service = JwtService(secret_key=JWT_SECRET)
+    jwt_service = JwtService(secret_key=TEST_JWT_SECRET)
 
     token = jwt_service.create_access_token(
         user_id=user.id,
@@ -99,25 +100,25 @@ def test_academic_record_full_http_workflow():
     response = client.post(
         f"/academic-records/{student_id}/{academic_period_id}/subjects",
         json={
-            "subject_id": str(subject_math_id),
+            "subject_id": str(subjects[0].id),
             "average": 16,
-            "coefficient": 3,
         },
     )
 
     assert response.status_code == 201
+    assert response.json()["coefficient"] == 2
 
     # 3. Ajout de Physique : 12 � coefficient 2
     response = client.post(
         f"/academic-records/{student_id}/{academic_period_id}/subjects",
         json={
-            "subject_id": str(subject_physics_id),
+            "subject_id": str(subjects[1].id),
             "average": 12,
-            "coefficient": 2,
         },
     )
 
     assert response.status_code == 201
+    assert response.json()["coefficient"] == 3
 
     # 4. Consultation du dossier
     response = client.get(
@@ -132,22 +133,21 @@ def test_academic_record_full_http_workflow():
     assert data["academic_period_id"] == str(academic_period_id)
 
     # (16 � 3 + 12 � 2) / (3 + 2) = 14.4
-    assert data["general_average"] == 14.4
+    assert data["general_average"] == 13.6
 
     assert data["failed_subjects"] == 0
     assert data["total_credits"] == 30
 
     assert len(data["subject_results"]) == 2
 
-    assert data["subject_results"][0] == {
-        "subject_id": str(subject_math_id),
-        "average": 16,
-        "coefficient": 3,
+    results = {row["subject_id"]: row for row in data["subject_results"]}
+    assert results[str(subjects[0].id)] == {
+        "subject_id": str(subjects[0].id), "subject_name": subjects[0].name,
+        "average": 16, "coefficient": 2,
+    }
+    assert results[str(subjects[1].id)] == {
+        "subject_id": str(subjects[1].id), "subject_name": subjects[1].name,
+        "average": 12, "coefficient": 3,
     }
 
-    assert data["subject_results"][1] == {
-        "subject_id": str(subject_physics_id),
-        "average": 12,
-        "coefficient": 2,
-    }
 

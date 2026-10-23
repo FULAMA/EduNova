@@ -101,6 +101,23 @@ def test_old_refresh_token_is_revoked():
     assert refresh_repository.is_revoked(payload["jti"]) is True
 
 
+def test_token_generation_failure_does_not_consume_old_refresh_token(monkeypatch):
+    user_repository, refresh_repository, jwt_service, use_case = create_environment()
+    user = create_user(user_repository)
+    old_token = jwt_service.create_refresh_token(user.id, tenant_id=TEST_TENANT_ID)
+    payload = jwt_service.decode_refresh_token(old_token)
+
+    def fail_to_create_refresh_token(*args, **kwargs):
+        raise RuntimeError("signing failed")
+
+    monkeypatch.setattr(jwt_service, "create_refresh_token", fail_to_create_refresh_token)
+
+    with pytest.raises(RuntimeError, match="signing failed"):
+        use_case.execute(old_token)
+
+    assert refresh_repository.is_revoked(payload["jti"]) is False
+
+
 def test_revoked_refresh_token_is_rejected():
     user_repository, refresh_repository, jwt_service, use_case = (
         create_environment()

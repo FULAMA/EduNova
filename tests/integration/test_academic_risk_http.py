@@ -1,8 +1,14 @@
+from uuid import uuid4
+
 from fastapi.testclient import TestClient
 
 from src.academic.domain.value_objects.academic_risk import RiskLevel
+from src.infrastructure.security.jwt_service import JwtService
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
+from src.identity.domain.entities.user import User
+from tests.support.security import TEST_JWT_SECRET
+from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
 def create_test_client():
@@ -10,9 +16,40 @@ def create_test_client():
         database_path=":memory:"
     )
 
-    app = create_app(container)
+    user = User(
+        id=uuid4(),
+        email="risk-admin@example.test",
+        password_hash="hashed-password",
+        role="ADMIN",
+    )
+    container._user_repository().save(user)
+    seed_membership(container, user.id, tenant_id=TEST_TENANT_ID, role="ADMIN")
 
-    return TestClient(app)
+    app = create_app(container)
+    token = JwtService(secret_key=TEST_JWT_SECRET).create_access_token(
+        user_id=user.id,
+        role="ADMIN",
+        tenant_id=TEST_TENANT_ID,
+    )
+    client = TestClient(app)
+    client.headers.update({"Authorization": f"Bearer {token}"})
+    return client
+
+
+def test_analyze_academic_risk_requires_authentication():
+    app = create_app(ApplicationContainer(database_path=":memory:"))
+    client = TestClient(app)
+
+    response = client.post(
+        "/academic-risk",
+        json={
+            "average": 14,
+            "attendance_rate": 95,
+            "unjustified_absences": 0,
+        },
+    )
+
+    assert response.status_code == 401
 
 
 def test_analyze_academic_risk_low():
@@ -88,6 +125,17 @@ def test_analyze_academic_risk_rejects_invalid_average():
             "attendance_rate": 95,
             "unjustified_absences": 0,
         },
+    )
+
+    assert response.status_code == 422
+
+
+def test_analyze_academic_risk_rejects_non_finite_values():
+    client = create_test_client()
+
+    response = client.post(
+        "/academic-risk",
+        json={"average": "Infinity", "attendance_rate": 95, "unjustified_absences": 0},
     )
 
     assert response.status_code == 422

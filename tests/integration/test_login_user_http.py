@@ -9,6 +9,8 @@ from src.identity.domain.entities.user import User
 from src.infrastructure.repositories.sqlite_user_repository import (
     SQLiteUserRepository,
 )
+from src.infrastructure.config.settings import Settings
+from src.infrastructure.bootstrap.development_seed import DEVELOPMENT_USER_EMAIL
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
 from tests.support.tenant import TEST_TENANT_ID, seed_membership
@@ -130,3 +132,61 @@ def test_login_rejects_inactive_user():
     )
 
     assert response.status_code == 401
+
+
+def test_development_seeded_account_can_login_in_memory():
+    settings = Settings(
+        environment="development",
+        jwt_secret="test-secret-key-32-bytes-minimum",
+        access_token_expire_minutes=15,
+        refresh_token_expire_days=7,
+        database_path=":memory:",
+        cors_allowed_origins=("http://127.0.0.1:5173",),
+        development_seed_enabled=True,
+        development_seed_password="DevPassword@2026",
+    )
+    container = ApplicationContainer(settings=settings)
+    client = TestClient(create_app(container))
+
+    response = client.post(
+        "/auth/login",
+        json={
+            "email": DEVELOPMENT_USER_EMAIL,
+            "password": "DevPassword@2026",
+            "tenant_id": str(TEST_TENANT_ID),
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["authenticated"] is True
+    assert response.json()["access_token"]
+
+
+def test_login_rejects_unknown_account():
+    client, _ = create_test_environment()
+
+    response = client.post(
+        "/auth/login",
+        json={
+            "email": "missing@edunova.com",
+            "password": "EduNova@2026",
+            "tenant_id": str(TEST_TENANT_ID),
+        },
+    )
+
+    assert response.status_code == 401
+
+
+def test_login_rejects_unknown_tenant_membership_as_forbidden():
+    client, user = create_test_environment()
+
+    response = client.post(
+        "/auth/login",
+        json={
+            "email": user.email,
+            "password": "EduNova@2026",
+            "tenant_id": str(uuid4()),
+        },
+    )
+
+    assert response.status_code == 403

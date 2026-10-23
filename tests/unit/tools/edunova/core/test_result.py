@@ -46,24 +46,24 @@ def test_command_result_safe_uses_zero_exit_code() -> None:
     assert result.exit_code == 0
 
 
-def test_command_result_warn_uses_zero_exit_code() -> None:
+def test_command_result_warn_uses_reviewable_exit_code() -> None:
     result = CommandResult(
         command="quality",
         status=Status.WARN,
         message="Warnings detected.",
     )
 
-    assert result.exit_code == 0
+    assert result.exit_code == 10
 
 
-def test_command_result_review_uses_zero_exit_code() -> None:
+def test_command_result_review_uses_reviewable_exit_code() -> None:
     result = CommandResult(
         command="security",
         status=Status.REVIEW,
         message="Manual review required.",
     )
 
-    assert result.exit_code == 0
+    assert result.exit_code == 2
 
 def test_command_result_fail_uses_non_zero_exit_code() -> None:
     result = CommandResult(
@@ -74,5 +74,18 @@ def test_command_result_fail_uses_non_zero_exit_code() -> None:
     )
 
     assert result.exit_code != 0
+    assert result.succeeded is False
+
+
+def test_command_result_safe_with_non_zero_exit_becomes_failure() -> None:
+    result = CommandResult(
+        command="tests",
+        status=Status.SAFE,
+        message="The process reported a failure.",
+        exit_code=7,
+    )
+
+    assert result.status is Status.FAIL
+    assert result.exit_code == 7
     assert result.succeeded is False
 

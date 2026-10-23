@@ -48,3 +48,11 @@ def test_is_revoked_rejects_empty_jti():
 
     with pytest.raises(ValueError):
         repository.is_revoked("")
+
+
+def test_consume_returns_true_only_once():
+    repository = InMemoryRefreshTokenRepository()
+
+    assert repository.consume("token-123") is True
+    assert repository.consume("token-123") is False
+    assert repository.is_revoked("token-123") is True

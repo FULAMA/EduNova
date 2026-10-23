@@ -6,13 +6,10 @@ from src.infrastructure.security.jwt_service import JwtService
 from src.identity.domain.entities.user import User
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
+from tests.support.security import TEST_JWT_SECRET
 from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
-JWT_SECRET = (
-    "edunova-development-secret-key-"
-    "32-bytes-minimum-change-in-production"
-)
 
 
 def create_test_client():
@@ -22,7 +19,7 @@ def create_test_client():
 
 
 def create_token(user_id, role):
-    jwt_service = JwtService(secret_key=JWT_SECRET)
+    jwt_service = JwtService(secret_key=TEST_JWT_SECRET)
     return jwt_service.create_access_token(
         user_id=user_id,
         role=role,
@@ -123,7 +120,7 @@ def test_refresh_token_cannot_be_used_as_access_token():
 
     user = create_user(container, "ADMIN")
 
-    jwt_service = JwtService(secret_key=JWT_SECRET)
+    jwt_service = JwtService(secret_key=TEST_JWT_SECRET)
     refresh_token = jwt_service.create_refresh_token(
         user_id=user.id,
         tenant_id=TEST_TENANT_ID,
@@ -236,7 +233,7 @@ def test_inactive_tenant_is_rejected():
 def test_invalid_user_id_in_jwt_is_rejected():
     client, _ = create_test_client()
 
-    jwt_service = JwtService(secret_key=JWT_SECRET)
+    jwt_service = JwtService(secret_key=TEST_JWT_SECRET)
 
     token = jwt_service.create_access_token(
         user_id=uuid4(),
@@ -248,14 +245,14 @@ def test_invalid_user_id_in_jwt_is_rejected():
 
     payload = pyjwt.decode(
         token,
-        JWT_SECRET,
+        TEST_JWT_SECRET,
         algorithms=["HS256"],
     )
     payload["sub"] = "not-a-valid-uuid"
 
     invalid_token = pyjwt.encode(
         payload,
-        JWT_SECRET,
+        TEST_JWT_SECRET,
         algorithm="HS256",
     )
 
@@ -272,7 +269,7 @@ def test_invalid_tenant_id_in_jwt_is_rejected():
 
     user = create_user(container, "ADMIN")
 
-    jwt_service = JwtService(secret_key=JWT_SECRET)
+    jwt_service = JwtService(secret_key=TEST_JWT_SECRET)
 
     token = jwt_service.create_access_token(
         user_id=user.id,
@@ -284,14 +281,14 @@ def test_invalid_tenant_id_in_jwt_is_rejected():
 
     payload = pyjwt.decode(
         token,
-        JWT_SECRET,
+        TEST_JWT_SECRET,
         algorithms=["HS256"],
     )
     payload["tenant_id"] = "not-a-valid-uuid"
 
     invalid_token = pyjwt.encode(
         payload,
-        JWT_SECRET,
+        TEST_JWT_SECRET,
         algorithm="HS256",
     )
 
@@ -302,4 +299,6 @@ def test_invalid_tenant_id_in_jwt_is_rejected():
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Tenant JWT invalide."
+
+
 

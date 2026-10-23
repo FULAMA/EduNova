@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from src.academic.domain.entities.assessment import Assessment
 from src.academic.domain.entities.grade import Grade
+from src.academic.domain.services.score_converter import Scale20Converter
 from src.academic.domain.services.subject_average_calculator import (
     SubjectAverageCalculator,
 )
@@ -42,7 +43,7 @@ def test_calculate_weighted_subject_average():
         create_grade(16, 20, 3),
     ]
 
-    calculator = SubjectAverageCalculator()
+    calculator = SubjectAverageCalculator(Scale20Converter())
 
     result = calculator.calculate(grades)
 
@@ -51,7 +52,7 @@ def test_calculate_weighted_subject_average():
 
 def test_cannot_calculate_average_without_grades():
 
-    calculator = SubjectAverageCalculator()
+    calculator = SubjectAverageCalculator(Scale20Converter())
 
     with pytest.raises(ValueError):
         calculator.calculate([])
@@ -63,7 +64,7 @@ def test_single_grade_returns_its_normalized_score():
         create_grade(15, 20, 2),
     ]
 
-    calculator = SubjectAverageCalculator()
+    calculator = SubjectAverageCalculator(Scale20Converter())
 
     result = calculator.calculate(grades)
 
@@ -76,8 +77,28 @@ def test_different_grading_scales_are_normalized():
         create_grade(15, 30, 1),
     ]
 
-    calculator = SubjectAverageCalculator()
+    calculator = SubjectAverageCalculator(Scale20Converter())
 
     result = calculator.calculate(grades)
 
     assert result == pytest.approx(10)
+from src.academic.domain.services.score_converter import ScoreConverter
+
+
+class FixedScoreConverter:
+    def convert(self, score: Score) -> float:
+        return 17.0
+
+
+def test_calculator_uses_injected_score_converter():
+
+    grades = [
+        create_grade(5, 20, 1),
+        create_grade(10, 20, 1),
+    ]
+
+    calculator = SubjectAverageCalculator(FixedScoreConverter())
+
+    result = calculator.calculate(grades)
+
+    assert result == pytest.approx(17.0)

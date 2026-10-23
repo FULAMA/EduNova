@@ -38,6 +38,24 @@ def test_academic_class_returns_none_when_not_found():
     assert result is None
 
 
+def test_academic_class_list_is_scoped_to_tenant_and_sorted():
+    database = SQLiteDatabase(":memory:")
+    database.initialize()
+    repository = SQLiteAcademicClassRepository(database)
+    other_tenant_id = UUID("00000000-0000-0000-0000-000000000002")
+
+    repository.save(AcademicClass(uuid4(), TEST_TENANT_ID, "Terminale"))
+    repository.save(AcademicClass(uuid4(), TEST_TENANT_ID, "Seconde"))
+    repository.save(AcademicClass(uuid4(), other_tenant_id, "Autre tenant"))
+
+    result = repository.list_by_tenant(TEST_TENANT_ID)
+
+    assert [academic_class.name for academic_class in result] == [
+        "Seconde",
+        "Terminale",
+    ]
+
+
 
 
 

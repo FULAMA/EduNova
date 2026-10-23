@@ -73,6 +73,37 @@ def test_runner_applies_registered_migration():
     assert migration is not None
 
 
+def test_runner_rolls_back_failed_migration_and_history():
+    connection = sqlite3.connect(":memory:")
+    runner = MigrationRunner(connection)
+
+    def failing_migration(connection):
+        connection.execute(
+            "CREATE TABLE partial_migration (id INTEGER PRIMARY KEY)"
+        )
+        raise RuntimeError("migration failed")
+
+    runner.register("001", failing_migration)
+
+    with pytest.raises(RuntimeError, match="migration failed"):
+        runner.run()
+
+    assert connection.execute(
+        """
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table' AND name = 'partial_migration'
+        """
+    ).fetchone() is None
+    assert connection.execute(
+        """
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table' AND name = 'schema_migrations'
+        """
+    ).fetchone() is None
+
+
 def test_runner_executes_migration_only_once():
     connection = sqlite3.connect(":memory:")
 

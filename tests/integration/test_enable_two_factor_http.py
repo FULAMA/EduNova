@@ -9,13 +9,10 @@ from src.infrastructure.repositories.sqlite_user_repository import (
 )
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
+from tests.support.security import TEST_JWT_SECRET
 from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
-JWT_SECRET = (
-    "edunova-development-secret-key-"
-    "32-bytes-minimum-change-in-production"
-)
 
 
 def create_test_environment():
@@ -50,7 +47,7 @@ def create_test_environment():
 
 def create_admin_token(user: User) -> str:
     jwt_service = JwtService(
-        secret_key=JWT_SECRET
+        secret_key=TEST_JWT_SECRET
     )
 
     return jwt_service.create_access_token(
@@ -95,4 +92,5 @@ def test_enable_two_factor_http_unknown_user():
     )
 
     assert response.status_code == 404
+
 

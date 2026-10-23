@@ -6,10 +6,10 @@ from src.infrastructure.security.jwt_service import JwtService
 from src.identity.domain.entities.user import User
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
+from tests.support.security import TEST_JWT_SECRET
 from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
-JWT_SECRET = "edunova-development-secret-key-32-bytes-minimum-change-in-production"
 
 
 def authenticated_client(app, container):
@@ -29,7 +29,7 @@ def authenticated_client(app, container):
         role="ADMIN",
     )
 
-    jwt_service = JwtService(secret_key=JWT_SECRET)
+    jwt_service = JwtService(secret_key=TEST_JWT_SECRET)
 
     token = jwt_service.create_access_token(
         user_id=user.id,
@@ -61,5 +61,6 @@ def test_get_academic_record_through_http():
     )
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Aucun dossier academique trouve pour cet etudiant et cette periode."
+    assert response.json()["detail"] == "Aucun dossier académique trouvé pour cet étudiant et cette période."
+
 

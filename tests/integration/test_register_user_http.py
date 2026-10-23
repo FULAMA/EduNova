@@ -20,9 +20,8 @@ def test_register_user_http_success():
     response = client.post(
         "/auth/register",
         json={
-            "email": "admin@edunova.com",
+            "email": "student@edunova.com",
             "password": "EduNova@2026",
-            "role": "ADMIN",
         },
     )
 
@@ -30,8 +29,8 @@ def test_register_user_http_success():
 
     data = response.json()
 
-    assert data["email"] == "admin@edunova.com"
-    assert data["role"] == "ADMIN"
+    assert data["email"] == "student@edunova.com"
+    assert data["role"] == "STUDENT"
     assert data["is_active"] is True
     assert data["two_factor_enabled"] is False
     assert "id" in data
@@ -43,7 +42,6 @@ def test_register_user_http_duplicate_email():
     payload = {
         "email": "admin@edunova.com",
         "password": "EduNova@2026",
-        "role": "ADMIN",
     }
 
     first_response = client.post(
@@ -68,6 +66,20 @@ def test_register_user_http_rejects_short_password():
         json={
             "email": "admin@edunova.com",
             "password": "123",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_register_user_http_rejects_privileged_role_in_public_payload():
+    client, _ = create_test_client()
+
+    response = client.post(
+        "/auth/register",
+        json={
+            "email": "attacker@edunova.com",
+            "password": "EduNova@2026",
             "role": "ADMIN",
         },
     )

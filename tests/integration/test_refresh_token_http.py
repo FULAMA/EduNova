@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -6,18 +8,15 @@ from src.infrastructure.security.jwt_service import JwtService
 from src.identity.domain.entities.user import User
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
+from tests.support.security import TEST_JWT_SECRET
 from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
-JWT_SECRET = (
-    "edunova-development-secret-key-"
-    "32-bytes-minimum-change-in-production"
-)
 
 
-def create_test_environment(is_active: bool = True):
+def create_test_environment(is_active: bool = True, database_path=":memory:"):
     container = ApplicationContainer(
-        database_path=":memory:"
+        database_path=database_path
     )
 
     user = User(
@@ -32,13 +31,14 @@ def create_test_environment(is_active: bool = True):
     seed_membership(container, user.id)
 
     app = create_app(container)
+    app.state.container = container
 
     return TestClient(app), container, user
 
 
 def create_refresh_token(user, tenant_id=TEST_TENANT_ID):
     jwt_service = JwtService(
-        secret_key=JWT_SECRET
+        secret_key=TEST_JWT_SECRET
     )
 
     return jwt_service.create_refresh_token(
@@ -48,7 +48,7 @@ def create_refresh_token(user, tenant_id=TEST_TENANT_ID):
 
 def create_access_token(user, tenant_id=TEST_TENANT_ID):
     jwt_service = JwtService(
-        secret_key=JWT_SECRET
+        secret_key=TEST_JWT_SECRET
     )
 
     return jwt_service.create_access_token(
@@ -158,11 +158,12 @@ def test_refresh_rejects_unknown_user():
 
 
 def test_refresh_rejects_inactive_user():
-    client, _, user = create_test_environment(
+    client, container, user = create_test_environment(
         is_active=False
     )
 
     refresh_token = create_refresh_token(user)
+    payload = JwtService(secret_key=TEST_JWT_SECRET).decode_refresh_token(refresh_token)
 
     response = client.post(
         "/auth/refresh",
@@ -172,6 +173,53 @@ def test_refresh_rejects_inactive_user():
     )
 
     assert response.status_code == 401
+    assert container._refresh_token_repository().is_revoked(payload["jti"]) is False
+
+
+def test_refresh_rejects_inactive_tenant_without_consuming_token():
+    client, container, user = create_test_environment()
+    token = create_refresh_token(user)
+    payload = JwtService(secret_key=TEST_JWT_SECRET).decode_refresh_token(token)
+    with container._database.connect() as connection:
+        connection.execute("UPDATE tenants SET active = 0 WHERE id = ?", (str(TEST_TENANT_ID),))
+
+    response = client.post("/auth/refresh", json={"refresh_token": token})
+
+    assert response.status_code == 401
+    assert container._refresh_token_repository().is_revoked(payload["jti"]) is False
+
+
+def test_refresh_rejects_inactive_membership_without_consuming_token():
+    client, container, user = create_test_environment()
+    token = create_refresh_token(user)
+    payload = JwtService(secret_key=TEST_JWT_SECRET).decode_refresh_token(token)
+    with container._database.connect() as connection:
+        connection.execute(
+            "UPDATE memberships SET active = 0 WHERE user_id = ? AND tenant_id = ?",
+            (str(user.id), str(TEST_TENANT_ID)),
+        )
+
+    response = client.post("/auth/refresh", json={"refresh_token": token})
+
+    assert response.status_code == 401
+    assert container._refresh_token_repository().is_revoked(payload["jti"]) is False
+
+
+def test_only_one_concurrent_refresh_can_consume_the_same_token(tmp_path):
+    client, _, user = create_test_environment(database_path=str(tmp_path / "refresh-http.db"))
+    token = create_refresh_token(user)
+    app = client.app
+    barrier = Barrier(2)
+
+    def refresh():
+        with TestClient(app) as concurrent_client:
+            barrier.wait()
+            return concurrent_client.post("/auth/refresh", json={"refresh_token": token})
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        responses = list(executor.map(lambda _: refresh(), range(2)))
+
+    assert sorted(response.status_code for response in responses) == [200, 401]
 
 
 def test_refresh_requires_refresh_token():
@@ -183,4 +231,5 @@ def test_refresh_requires_refresh_token():
     )
 
     assert response.status_code == 422
+
 

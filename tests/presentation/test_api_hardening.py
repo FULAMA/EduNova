@@ -1,4 +1,4 @@
-﻿from uuid import uuid4
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
@@ -6,10 +6,10 @@ from src.infrastructure.security.jwt_service import JwtService
 from src.identity.domain.entities.user import User
 from src.academic.domain.value_objects.academic_risk import RiskLevel
 from src.presentation.api.app import create_app
+from tests.support.security import TEST_JWT_SECRET
 from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
-JWT_SECRET = "edunova-development-secret-key-32-bytes-minimum-change-in-production"
 
 
 class FakeAnalyzeAcademicRisk:
@@ -52,12 +52,12 @@ class FakeAssignSubjectToClass:
                 "active": True,
             },
         )()
-def authenticated_client(app, application_container):
+def authenticated_client(app, application_container, role="ADMIN"):
     user = User(
         id=uuid4(),
         email="hardening-admin@edunova.com",
         password_hash="hashed-password",
-        role="ADMIN",
+        role=role,
     )
 
     application_container._user_repository().save(user)
@@ -66,14 +66,14 @@ def authenticated_client(app, application_container):
         application_container,
         user.id,
         tenant_id=TEST_TENANT_ID,
-        role="ADMIN",
+        role=role,
     )
 
-    jwt_service = JwtService(secret_key=JWT_SECRET)
+    jwt_service = JwtService(secret_key=TEST_JWT_SECRET)
 
     token = jwt_service.create_access_token(
         user_id=user.id,
-        role="ADMIN",
+        role=role,
         tenant_id=TEST_TENANT_ID,
     )
 
@@ -83,6 +83,22 @@ def authenticated_client(app, application_container):
     )
 
     return client
+
+
+def test_analyze_academic_risk_rejects_non_admin(application_container):
+    app = create_app(application_container)
+    client = authenticated_client(app, application_container, role="TEACHER")
+
+    response = client.post(
+        "/academic-risk",
+        json={
+            "average": 15,
+            "attendance_rate": 90,
+            "unjustified_absences": 0,
+        },
+    )
+
+    assert response.status_code == 403
 
 
 def test_analyze_academic_risk_returns_result(application_container):
@@ -98,7 +114,7 @@ def test_analyze_academic_risk_returns_result(application_container):
         ),
     )
 
-    client = TestClient(app)
+    client = authenticated_client(app, application_container)
 
     response = client.post(
         "/academic-risk",
@@ -123,7 +139,7 @@ def test_analyze_academic_risk_returns_result(application_container):
 
 def test_analyze_academic_risk_rejects_invalid_attendance_rate(application_container):
     app = create_app(application_container)
-    client = TestClient(app)
+    client = authenticated_client(app, application_container)
 
     response = client.post(
         "/academic-risk",
@@ -139,7 +155,7 @@ def test_analyze_academic_risk_rejects_invalid_attendance_rate(application_conta
 
 def test_analyze_academic_risk_rejects_negative_absences(application_container):
     app = create_app(application_container)
-    client = TestClient(app)
+    client = authenticated_client(app, application_container)
 
     response = client.post(
         "/academic-risk",
@@ -232,9 +248,3 @@ def test_assign_subject_route_maps_unknown_business_error_to_bad_request(applica
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Erreur métier inattendue"
-
-
-
-
-
-

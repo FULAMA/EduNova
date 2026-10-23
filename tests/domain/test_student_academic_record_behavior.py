@@ -61,7 +61,7 @@ def test_add_subject_result_counts_failed_subjects():
 
     failed_subject = SubjectResult(
         subject_id=uuid4(),
-        average=8,
+        average=7,
         coefficient=2,
     )
 

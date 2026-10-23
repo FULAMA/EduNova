@@ -1,5 +1,4 @@
-﻿from pathlib import Path
-from uuid import uuid4
+﻿from uuid import uuid4
 
 from src.academic.domain.entities.student_academic_record import StudentAcademicRecord
 from src.academic.domain.value_objects.subject_result import SubjectResult
@@ -7,11 +6,6 @@ from src.infrastructure.persistence.database import SQLiteDatabase
 from src.infrastructure.repositories.sqlite_student_academic_record_repository import (
     SQLiteStudentAcademicRecordRepository,
 )
-
-TEST_DATABASE_DIRECTORY = (
-    Path(__file__).parent / "databases"
-)
-
 
 def create_record() -> StudentAcademicRecord:
     return StudentAcademicRecord(
@@ -37,16 +31,8 @@ def create_record() -> StudentAcademicRecord:
     )
 
 
-def create_repository() -> SQLiteStudentAcademicRecordRepository:
-    TEST_DATABASE_DIRECTORY.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    database_path = (
-        TEST_DATABASE_DIRECTORY
-        / f"edunova_test_{uuid4().hex}.db"
-    )
+def create_repository(tmp_path) -> SQLiteStudentAcademicRecordRepository:
+    database_path = tmp_path / f"edunova_test_{uuid4().hex}.db"
 
     database = SQLiteDatabase(database_path)
     database.initialize()
@@ -86,8 +72,8 @@ def create_student(
         )
 
 
-def test_sql_repository_can_save_and_reload_record():
-    repository = create_repository()
+def test_sql_repository_can_save_and_reload_record(tmp_path):
+    repository = create_repository(tmp_path)
     record = create_record()
 
     create_student(repository, record)
@@ -103,16 +89,16 @@ def test_sql_repository_can_save_and_reload_record():
     assert result == record
 
 
-def test_sql_repository_returns_none_for_unknown_student():
-    repository = create_repository()
+def test_sql_repository_returns_none_for_unknown_student(tmp_path):
+    repository = create_repository(tmp_path)
 
     result = repository.find_by_student(uuid4(), uuid4())
 
     assert result is None
 
 
-def test_sql_repository_returns_none_for_unknown_period():
-    repository = create_repository()
+def test_sql_repository_returns_none_for_unknown_period(tmp_path):
+    repository = create_repository(tmp_path)
     record = create_record()
 
     create_student(repository, record)
@@ -128,8 +114,8 @@ def test_sql_repository_returns_none_for_unknown_period():
     assert result is None
 
 
-def test_sql_repository_preserves_subject_results():
-    repository = create_repository()
+def test_sql_repository_preserves_subject_results(tmp_path):
+    repository = create_repository(tmp_path)
     record = create_record()
 
     create_student(repository, record)
@@ -176,8 +162,8 @@ def test_sql_repository_preserves_subject_results():
     )
 
 
-def test_sql_repository_replaces_existing_record():
-    repository = create_repository()
+def test_sql_repository_replaces_existing_record(tmp_path):
+    repository = create_repository(tmp_path)
     record = create_record()
 
     create_student(repository, record)
@@ -199,9 +185,10 @@ def test_sql_repository_replaces_existing_record():
         failed_subjects=0,
         credits_obtained=30.0,
         total_credits=30.0,
+        version=2,
     )
 
-    repository.save(updated)
+    repository.save(updated, expected_version=record.version)
 
     result = repository.find_by_student_and_period(
         record.student_id,

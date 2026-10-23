@@ -1,4 +1,4 @@
-﻿from uuid import uuid4
+from uuid import uuid4
 
 from src.academic.application.dto.analyze_student_academic_record_request import (
     AnalyzeStudentAcademicRecordRequest,
@@ -82,7 +82,7 @@ def test_use_case_raises_error_when_record_does_not_exist():
         use_case.execute(request)
         assert False, "Une exception etait attendue."
     except ValueError as error:
-        assert "dossier academique" in str(error).lower()
+        assert "dossier académique" in str(error).lower()
 
 
 def test_use_case_uses_the_requested_student_and_period():

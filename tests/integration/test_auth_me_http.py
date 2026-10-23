@@ -6,13 +6,10 @@ from src.infrastructure.security.jwt_service import JwtService
 from src.identity.domain.entities.user import User
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
+from tests.support.security import TEST_JWT_SECRET
 from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
-JWT_SECRET = (
-    "edunova-development-secret-key-"
-    "32-bytes-minimum-change-in-production"
-)
 
 
 def create_test_environment():
@@ -42,7 +39,7 @@ def create_user(container, role="ADMIN", is_active=True):
 
 def create_access_token(user, tenant_id=TEST_TENANT_ID):
     jwt_service = JwtService(
-        secret_key=JWT_SECRET
+        secret_key=TEST_JWT_SECRET
     )
 
     return jwt_service.create_access_token(
@@ -124,4 +121,5 @@ def test_get_me_rejects_inactive_user():
     )
 
     assert response.status_code == 401
+
 

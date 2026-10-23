@@ -6,10 +6,10 @@ from src.infrastructure.security.jwt_service import JwtService
 from src.identity.domain.entities.user import User
 from src.presentation.api.app import create_app
 from src.presentation.api.container import ApplicationContainer
+from tests.support.security import TEST_JWT_SECRET
 from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
-JWT_SECRET = "edunova-development-secret-key-32-bytes-minimum-change-in-production"
 
 
 class FakeAddSubjectResult:
@@ -20,7 +20,7 @@ class FakeAddSubjectResult:
             {
                 "subject_id": request.subject_id,
                 "average": request.average,
-                "coefficient": request.coefficient,
+                "coefficient": 3,
             },
         )()
 
@@ -59,7 +59,7 @@ def test_add_subject_result_route_uses_injected_use_case():
 
     client = TestClient(app)
 
-    jwt_service = JwtService(secret_key=JWT_SECRET)
+    jwt_service = JwtService(secret_key=TEST_JWT_SECRET)
 
     token = jwt_service.create_access_token(
         user_id=user.id,
@@ -78,7 +78,6 @@ def test_add_subject_result_route_uses_injected_use_case():
         json={
             "subject_id": str(subject_id),
             "average": 16.5,
-            "coefficient": 3,
         },
     )
 
@@ -89,5 +88,6 @@ def test_add_subject_result_route_uses_injected_use_case():
     assert body["subject_id"] == str(subject_id)
     assert body["average"] == 16.5
     assert body["coefficient"] == 3
+
 
 

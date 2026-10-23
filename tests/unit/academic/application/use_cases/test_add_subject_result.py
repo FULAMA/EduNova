@@ -9,13 +9,15 @@ from src.academic.application.use_cases.add_subject_result import (
     AddSubjectResult,
 )
 from src.academic.domain.entities.student_academic_record import StudentAcademicRecord
+from tests.support.academic_eligibility import eligible_result_repositories
 
 
 class FakeAcademicRecordRepository:
     def __init__(self):
         self.records = {}
 
-    def save(self, record):
+    def save(self, record, *, expected_version=None, operation="SAVE"):
+        del expected_version, operation
         key = (
             record.tenant_id,
             record.student_id,
@@ -52,9 +54,8 @@ def test_add_subject_result_updates_record():
     record = create_record()
     repository.save(record)
 
-    use_case = AddSubjectResult(repository)
-
     subject_id = uuid4()
+    use_case = AddSubjectResult(repository, **eligible_result_repositories([subject_id], coefficient=3))
 
     response = use_case.execute(
         AddSubjectResultRequest(
@@ -63,7 +64,7 @@ def test_add_subject_result_updates_record():
             academic_period_id=record.academic_period_id,
             subject_id=subject_id,
             average=16,
-            coefficient=3,
+            coefficient=999,
         )
     )
 
@@ -83,20 +84,21 @@ def test_add_subject_result_updates_record():
     assert updated_record.failed_subjects == 0
 
 
-def test_add_subject_result_counts_failed_subject():
+def test_add_subject_result_uses_the_policy_threshold():
     repository = FakeAcademicRecordRepository()
     record = create_record()
     repository.save(record)
 
-    use_case = AddSubjectResult(repository)
+    subject_id = uuid4()
+    use_case = AddSubjectResult(repository, **eligible_result_repositories([subject_id]))
 
     use_case.execute(
         AddSubjectResultRequest(
             tenant_id=record.tenant_id,
             student_id=record.student_id,
             academic_period_id=record.academic_period_id,
-            subject_id=uuid4(),
-            average=8,
+            subject_id=subject_id,
+            average=7,
             coefficient=2,
         )
     )
@@ -112,7 +114,8 @@ def test_add_subject_result_counts_failed_subject():
 
 def test_add_subject_result_requires_existing_record():
     repository = FakeAcademicRecordRepository()
-    use_case = AddSubjectResult(repository)
+    subject_id = uuid4()
+    use_case = AddSubjectResult(repository, **eligible_result_repositories([subject_id]))
 
     with pytest.raises(ValueError, match=r"Aucun dossier acad.*mique"):
         use_case.execute(
@@ -120,7 +123,7 @@ def test_add_subject_result_requires_existing_record():
                 tenant_id=uuid4(),
                 student_id=uuid4(),
                 academic_period_id=uuid4(),
-                subject_id=uuid4(),
+                subject_id=subject_id,
                 average=15,
                 coefficient=2,
             )
@@ -132,14 +135,15 @@ def test_add_subject_result_preserves_original_record():
     record = create_record()
     repository.save(record)
 
-    use_case = AddSubjectResult(repository)
+    subject_id = uuid4()
+    use_case = AddSubjectResult(repository, **eligible_result_repositories([subject_id]))
 
     use_case.execute(
         AddSubjectResultRequest(
             tenant_id=record.tenant_id,
             student_id=record.student_id,
             academic_period_id=record.academic_period_id,
-            subject_id=uuid4(),
+            subject_id=subject_id,
             average=15,
             coefficient=2,
         )
@@ -154,7 +158,8 @@ def test_add_subject_result_rejects_invalid_average():
     record = create_record()
     repository.save(record)
 
-    use_case = AddSubjectResult(repository)
+    subject_id = uuid4()
+    use_case = AddSubjectResult(repository, **eligible_result_repositories([subject_id]))
 
     with pytest.raises(
         ValueError,
@@ -165,7 +170,7 @@ def test_add_subject_result_rejects_invalid_average():
                 tenant_id=record.tenant_id,
                 student_id=record.student_id,
                 academic_period_id=record.academic_period_id,
-                subject_id=uuid4(),
+                subject_id=subject_id,
                 average=25,
                 coefficient=2,
             )
@@ -177,7 +182,8 @@ def test_add_subject_result_rejects_invalid_coefficient():
     record = create_record()
     repository.save(record)
 
-    use_case = AddSubjectResult(repository)
+    subject_id = uuid4()
+    use_case = AddSubjectResult(repository, **eligible_result_repositories([subject_id], coefficient=0))
 
     with pytest.raises(
         ValueError,
@@ -188,8 +194,8 @@ def test_add_subject_result_rejects_invalid_coefficient():
                 tenant_id=record.tenant_id,
                 student_id=record.student_id,
                 academic_period_id=record.academic_period_id,
-                subject_id=uuid4(),
+                subject_id=subject_id,
                 average=15,
-                coefficient=0,
+                coefficient=999,
             )
         )

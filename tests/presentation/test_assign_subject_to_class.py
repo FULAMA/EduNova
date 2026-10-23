@@ -1,4 +1,4 @@
-﻿from uuid import uuid4
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
@@ -6,10 +6,10 @@ from src.infrastructure.security.jwt_service import JwtService
 from src.academic.domain.entities.class_subject import ClassSubject
 from src.identity.domain.entities.user import User
 from src.presentation.api.app import create_app
+from tests.support.security import TEST_JWT_SECRET
 from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
-JWT_SECRET = "edunova-development-secret-key-32-bytes-minimum-change-in-production"
 
 
 class FakeAssignSubjectToClass:
@@ -50,7 +50,7 @@ def authenticated_client(app, application_container):
         role="ADMIN",
     )
 
-    jwt_service = JwtService(secret_key=JWT_SECRET)
+    jwt_service = JwtService(secret_key=TEST_JWT_SECRET)
 
     token = jwt_service.create_access_token(
         user_id=user.id,
@@ -108,5 +108,6 @@ def test_assign_subject_to_class_rejects_invalid_coefficient(application_contain
     )
 
     assert response.status_code == 422
+
 
 

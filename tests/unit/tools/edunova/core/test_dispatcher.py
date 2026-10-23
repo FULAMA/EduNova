@@ -11,7 +11,7 @@ class FakeService(CommandService):
     def __init__(self) -> None:
         self.executed_commands: list[str] = []
 
-    def execute(self, name: str) -> CommandResult:
+    def execute(self, name: str, args: tuple[str, ...] = ()) -> CommandResult:
         self.executed_commands.append(name)
 
         return CommandResult(
@@ -45,3 +45,4 @@ def test_dispatcher_propagates_unknown_command_error() -> None:
         match="Unknown command: missing",
     ):
         dispatcher.dispatch("missing")
+

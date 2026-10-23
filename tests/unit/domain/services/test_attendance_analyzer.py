@@ -19,8 +19,11 @@ def create_attendance(
 
     return Attendance(
         id=uuid4(),
+        tenant_id=uuid4(),
         student_id=uuid4(),
         academic_period_id=uuid4(),
+        academic_class_id=uuid4(),
+        academic_year_id=uuid4(),
         attendance_date=date.today(),
         status=status,
         justified=justified,

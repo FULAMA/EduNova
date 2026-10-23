@@ -1,4 +1,7 @@
 ﻿import sqlite3
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
+
 import pytest
 from uuid import uuid4
 
@@ -7,10 +10,14 @@ from src.academic.domain.entities.student_academic_record import (
     StudentAcademicRecord,
 )
 from src.academic.domain.value_objects.subject_result import SubjectResult
+from src.academic.application.dto.add_subject_result_request import AddSubjectResultRequest
+from src.academic.application.exceptions import AcademicRecordConcurrencyError
+from src.academic.application.use_cases.add_subject_result import AddSubjectResult
 from src.infrastructure.repositories.sqlite_student_academic_record_repository import (
     SQLiteStudentAcademicRecordRepository,
 )
 from src.infrastructure.persistence.database import SQLiteDatabase
+from tests.support.academic_eligibility import eligible_result_repositories
 
 
 def create_test_database(tmp_path):
@@ -627,3 +634,209 @@ def test_save_and_find_preserves_validated_status(
     assert corrected.status == AcademicRecordStatus.VALIDATED
     assert corrected.version == result.version + 1
 
+
+def test_save_updates_existing_subject_results_without_replacing_parent(
+    tmp_path,
+):
+    database = create_test_database(tmp_path)
+    repository = SQLiteStudentAcademicRecordRepository(database)
+
+    tenant_id = uuid4()
+    student_id = uuid4()
+    period_id = uuid4()
+
+    subject_a = uuid4()
+    subject_b = uuid4()
+    subject_c = uuid4()
+
+    insert_student(database, student_id, tenant_id)
+
+    first_record = StudentAcademicRecord(
+        tenant_id=tenant_id,
+        student_id=student_id,
+        academic_period_id=period_id,
+        subject_results=(
+            SubjectResult(
+                subject_id=subject_a,
+                average=12.0,
+                coefficient=2.0,
+            ),
+            SubjectResult(
+                subject_id=subject_b,
+                average=14.0,
+                coefficient=3.0,
+            ),
+        ),
+        general_average=13.0,
+        failed_subjects=0,
+        credits_obtained=30.0,
+        total_credits=30.0,
+    )
+
+    repository.save(first_record)
+
+    second_record = StudentAcademicRecord(
+        tenant_id=tenant_id,
+        student_id=student_id,
+        academic_period_id=period_id,
+        subject_results=(
+            SubjectResult(
+                subject_id=subject_c,
+                average=17.0,
+                coefficient=4.0,
+            ),
+        ),
+        general_average=17.0,
+        failed_subjects=0,
+        credits_obtained=30.0,
+        total_credits=30.0,
+        version=2,
+    )
+
+    repository.save(second_record, expected_version=first_record.version)
+
+    result = repository.find_by_student_and_period(
+        student_id,
+        period_id,
+        tenant_id,
+    )
+
+    assert result is not None
+    assert result.general_average == 17.0
+    assert len(result.subject_results) == 1
+    assert result.subject_results[0].subject_id == subject_c
+
+    with database.connect() as connection:
+        rows = connection.execute(
+            """
+            SELECT subject_id
+            FROM subject_results
+            WHERE student_id = ?
+              AND academic_period_id = ?
+              AND tenant_id = ?
+            ORDER BY position
+            """,
+            (
+                str(student_id),
+                str(period_id),
+                str(tenant_id),
+            ),
+        ).fetchall()
+
+    assert len(rows) == 1
+    assert rows[0]["subject_id"] == str(subject_c)
+
+
+def test_concurrent_duplicate_record_insert_is_refused(tmp_path):
+    database = create_test_database(tmp_path)
+    repository = SQLiteStudentAcademicRecordRepository(database)
+    tenant_id, student_id, period_id = uuid4(), uuid4(), uuid4()
+    insert_student(database, student_id, tenant_id)
+    record = make_record(tenant_id, student_id, period_id)
+    barrier = Barrier(2)
+
+    def insert():
+        barrier.wait()
+        try:
+            repository.save(record)
+            return "created"
+        except ValueError as exc:
+            assert str(exc) == "Academic record already exists"
+            return "duplicate"
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        outcomes = list(executor.map(lambda _: insert(), range(2)))
+
+    assert sorted(outcomes) == ["created", "duplicate"]
+    assert repository.find_by_student_and_period(student_id, period_id, tenant_id) == record
+
+
+def test_valid_finite_numeric_values_round_trip_through_sqlite(tmp_path):
+    database = create_test_database(tmp_path)
+    repository = SQLiteStudentAcademicRecordRepository(database)
+    tenant_id, student_id, period_id, subject_id = uuid4(), uuid4(), uuid4(), uuid4()
+    insert_student(database, student_id, tenant_id)
+    record = StudentAcademicRecord(
+        tenant_id=tenant_id,
+        student_id=student_id,
+        academic_period_id=period_id,
+        subject_results=(SubjectResult(subject_id, 15.0, 1e300),),
+        general_average=15.0,
+        failed_subjects=0,
+        credits_obtained=0.0,
+        total_credits=30.0,
+    )
+
+    repository.save(record)
+
+    loaded = repository.find_by_student_and_period(student_id, period_id, tenant_id)
+    assert loaded == record
+
+
+@pytest.mark.parametrize("same_subject", [False, True])
+def test_concurrent_subject_additions_detect_stale_version_without_losing_result(
+    tmp_path, same_subject
+):
+    database = create_test_database(tmp_path)
+    base_repository = SQLiteStudentAcademicRecordRepository(database)
+    tenant_id, student_id, period_id = uuid4(), uuid4(), uuid4()
+    insert_student(database, student_id, tenant_id)
+    initial = StudentAcademicRecord(
+        tenant_id=tenant_id,
+        student_id=student_id,
+        academic_period_id=period_id,
+        subject_results=(),
+        general_average=0.0,
+        failed_subjects=0,
+        credits_obtained=0.0,
+        total_credits=30.0,
+    )
+    base_repository.save(initial)
+    read_barrier = Barrier(2)
+
+    class ConcurrentReadRepository:
+        def __init__(self):
+            self._read_count = 0
+
+        def find_by_student_and_period(self, *args):
+            record = base_repository.find_by_student_and_period(*args)
+            self._read_count += 1
+            if self._read_count <= 2:
+                read_barrier.wait()
+            return record
+
+        def save(self, record, *, expected_version=None, operation="SAVE"):
+            return base_repository.save(
+                record, expected_version=expected_version, operation=operation
+            )
+
+    subject_ids = [uuid4(), uuid4()]
+    if same_subject:
+        subject_ids[1] = subject_ids[0]
+    use_case = AddSubjectResult(
+        ConcurrentReadRepository(), **eligible_result_repositories(subject_ids)
+    )
+
+    def add(subject_id):
+        try:
+            use_case.execute(AddSubjectResultRequest(
+                tenant_id=tenant_id,
+                student_id=student_id,
+                academic_period_id=period_id,
+                subject_id=subject_id,
+                average=15.0,
+                coefficient=2.0,
+            ))
+            return "added"
+        except AcademicRecordConcurrencyError:
+            return "stale"
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        outcomes = list(executor.map(add, subject_ids))
+
+    persisted = base_repository.find_by_student_and_period(student_id, period_id, tenant_id)
+    assert sorted(outcomes) == ["added", "stale"]
+    assert persisted is not None
+    assert len(persisted.subject_results) == 1
+    assert persisted.subject_results[0].subject_id in subject_ids
+    assert persisted.version == 2

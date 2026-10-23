@@ -25,6 +25,13 @@ class FakeCommand(Command):
         )
 
 
+class ExplodingCommand(Command):
+    name = "exploding"
+
+    def execute(self) -> CommandResult:
+        raise RuntimeError("secret-value=do-not-print")
+
+
 def test_work_executes_commands_in_order() -> None:
     execution_log: list[str] = []
 
@@ -61,6 +68,16 @@ def test_work_stops_after_first_failure() -> None:
     assert result.exit_code == 1
 
 
+def test_work_converts_unexpected_step_error_to_failure() -> None:
+    work = WorkCommand([ExplodingCommand(), FakeCommand("later", Status.SAFE, [])])
+
+    result = work.execute()
+
+    assert result.status is Status.FAIL
+    assert result.exit_code == 1
+    assert "secret-value" not in result.message
+
+
 def test_work_returns_warn_when_no_command_fails() -> None:
     execution_log: list[str] = []
 
@@ -74,7 +91,7 @@ def test_work_returns_warn_when_no_command_fails() -> None:
     result = work.execute()
 
     assert result.status == Status.WARN
-    assert result.exit_code == 0
+    assert result.exit_code == 10
 
 
 def test_work_returns_review_when_no_command_fails() -> None:
@@ -90,7 +107,7 @@ def test_work_returns_review_when_no_command_fails() -> None:
     result = work.execute()
 
     assert result.status == Status.REVIEW
-    assert result.exit_code == 0
+    assert result.exit_code == 2
 
 
 def test_work_returns_safe_for_empty_workflow() -> None:

@@ -1,10 +1,6 @@
 from uuid import uuid4
 
-
-
 from fastapi.testclient import TestClient
-
-
 
 from src.infrastructure.security.jwt_service import JwtService
 
@@ -46,23 +42,8 @@ from src.presentation.api.app import create_app
 
 from src.presentation.api.container import ApplicationContainer
 
+from tests.support.security import TEST_JWT_SECRET
 from tests.support.tenant import TEST_TENANT_ID, seed_membership
-
-
-
-
-
-JWT_SECRET = (
-
-    "edunova-development-secret-key-"
-
-    "32-bytes-minimum-change-in-production"
-
-)
-
-
-
-
 
 def create_test_environment():
 
@@ -72,15 +53,11 @@ def create_test_environment():
 
     )
 
-
-
     academic_class_repository = SQLiteAcademicClassRepository(
 
         container._database
 
     )
-
-
 
     subject_repository = SQLiteSubjectRepository(
 
@@ -88,23 +65,17 @@ def create_test_environment():
 
     )
 
-
-
     academic_option_repository = SQLiteAcademicOptionRepository(
 
         container._database
 
     )
 
-
-
     class_option_repository = SQLiteClassOptionRepository(
 
         container._database
 
     )
-
-
 
     academic_class = AcademicClass(
 
@@ -115,8 +86,6 @@ def create_test_environment():
         name="6e Informatique",
 
     )
-
-
 
     subject = Subject(
 
@@ -132,8 +101,6 @@ def create_test_environment():
 
     )
 
-
-
     option = AcademicOption(
 
         id=uuid4(),
@@ -145,8 +112,6 @@ def create_test_environment():
         code="INFO",
 
     )
-
-
 
     class_option = ClassOption(
 
@@ -160,8 +125,6 @@ def create_test_environment():
 
     )
 
-
-
     academic_class_repository.save(academic_class)
 
     subject_repository.save(subject)
@@ -169,8 +132,6 @@ def create_test_environment():
     academic_option_repository.save(option)
 
     class_option_repository.save(class_option)
-
-
 
     user = User(
 
@@ -184,11 +145,7 @@ def create_test_environment():
 
     )
 
-
-
     container._user_repository().save(user)
-
-
 
     seed_membership(
 
@@ -202,15 +159,11 @@ def create_test_environment():
 
     )
 
-
-
     jwt_service = JwtService(
 
-        secret_key=JWT_SECRET
+        secret_key=TEST_JWT_SECRET
 
     )
-
-
 
     token = jwt_service.create_access_token(
 
@@ -222,13 +175,9 @@ def create_test_environment():
 
     )
 
-
-
     app = create_app(container)
 
     client = TestClient(app)
-
-
 
     client.headers.update(
 
@@ -239,8 +188,6 @@ def create_test_environment():
         }
 
     )
-
-
 
     return (
 
@@ -254,15 +201,9 @@ def create_test_environment():
 
     )
 
-
-
-
-
 def test_assign_subject_http_sqlite_success():
 
     client, academic_class, subject, _ = create_test_environment()
-
-
 
     response = client.post(
 
@@ -278,15 +219,9 @@ def test_assign_subject_http_sqlite_success():
 
     )
 
-
-
     assert response.status_code == 201
 
-
-
     data = response.json()
-
-
 
     assert data["academic_class_id"] == str(
 
@@ -294,33 +229,21 @@ def test_assign_subject_http_sqlite_success():
 
     )
 
-
-
     assert data["subject_id"] == str(
 
         subject.id
 
     )
 
-
-
     assert data["coefficient"] == 3
-
-
 
     assert data["academic_option_id"] is None
 
     assert data["active"] is True
 
-
-
-
-
 def test_assign_subject_http_sqlite_duplicate_returns_409():
 
     client, academic_class, subject, _ = create_test_environment()
-
-
 
     first_response = client.post(
 
@@ -336,11 +259,7 @@ def test_assign_subject_http_sqlite_duplicate_returns_409():
 
     )
 
-
-
     assert first_response.status_code == 201
-
-
 
     second_response = client.post(
 
@@ -356,13 +275,7 @@ def test_assign_subject_http_sqlite_duplicate_returns_409():
 
     )
 
-
-
     assert second_response.status_code == 409
-
-
-
-
 
 def test_assign_subject_with_option_http_sqlite_success():
 
@@ -371,8 +284,6 @@ def test_assign_subject_with_option_http_sqlite_success():
         create_test_environment()
 
     )
-
-
 
     response = client.post(
 
@@ -390,15 +301,9 @@ def test_assign_subject_with_option_http_sqlite_success():
 
     )
 
-
-
     assert response.status_code == 201
 
-
-
     data = response.json()
-
-
 
     assert data["academic_class_id"] == str(
 
@@ -406,15 +311,11 @@ def test_assign_subject_with_option_http_sqlite_success():
 
     )
 
-
-
     assert data["subject_id"] == str(
 
         subject.id
 
     )
-
-
 
     assert data["academic_option_id"] == str(
 
@@ -422,6 +323,7 @@ def test_assign_subject_with_option_http_sqlite_success():
 
     )
 
-
-
     assert data["coefficient"] == 3
+
+
+

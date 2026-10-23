@@ -6,6 +6,7 @@ from src.academic.domain.entities.student_academic_record import (
     AcademicRecordStatus,
     StudentAcademicRecord,
 )
+from src.academic.domain.policies.academic_policy import AcademicPolicy
 
 
 def test_student_academic_record_can_be_created():
@@ -114,6 +115,8 @@ def test_validated_academic_record_cannot_be_modified():
 
     validated_record = record.validate()
 
+    assert validated_record.version == record.version + 1
+
     result = SubjectResult(
         subject_id=uuid4(),
         average=16,
@@ -136,7 +139,7 @@ def test_new_academic_record_starts_at_version_one():
 
     assert record.version == 1
 
-def test_draft_modification_preserves_current_version():
+def test_draft_modification_increments_current_version():
     record = StudentAcademicRecord(
         tenant_id=uuid4(),
         student_id=uuid4(),
@@ -157,7 +160,63 @@ def test_draft_modification_preserves_current_version():
 
     modified_record = record.with_subject_result(result)
 
-    assert modified_record.version == 3
+    assert modified_record.version == 4
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_record_rejects_non_finite_average_and_credits(value):
+    fields = {
+        "tenant_id": uuid4(),
+        "student_id": uuid4(),
+        "academic_period_id": uuid4(),
+        "subject_results": (),
+        "general_average": 14.0,
+        "failed_subjects": 0,
+        "credits_obtained": 0.0,
+        "total_credits": 30.0,
+    }
+    for field in ("general_average", "credits_obtained", "total_credits"):
+        invalid_fields = dict(fields, **{field: value})
+        with pytest.raises(ValueError):
+            StudentAcademicRecord(**invalid_fields)
+
+
+def test_weighted_average_remains_finite_for_large_finite_coefficients():
+    record = StudentAcademicRecord(
+        tenant_id=uuid4(),
+        student_id=uuid4(),
+        academic_period_id=uuid4(),
+        subject_results=(),
+        general_average=0.0,
+        failed_subjects=0,
+        credits_obtained=0.0,
+        total_credits=30.0,
+    )
+
+    updated = record.with_subject_result(SubjectResult(uuid4(), 16.0, 1e308))
+    updated = updated.with_subject_result(SubjectResult(uuid4(), 12.0, 1e308))
+
+    assert updated.general_average == 14.0
+
+
+def test_failed_subjects_use_the_academic_policy_threshold():
+    record = StudentAcademicRecord(
+        tenant_id=uuid4(),
+        student_id=uuid4(),
+        academic_period_id=uuid4(),
+        subject_results=(),
+        general_average=0.0,
+        failed_subjects=0,
+        credits_obtained=0.0,
+        total_credits=30.0,
+    )
+
+    updated = record.with_subject_result(
+        SubjectResult(uuid4(), 8.0, 1.0),
+        policy=AcademicPolicy(minimum_subject_average=8.0),
+    )
+
+    assert updated.failed_subjects == 0
 
 def test_correction_creates_new_version_without_modifying_previous_record():
     record = StudentAcademicRecord(

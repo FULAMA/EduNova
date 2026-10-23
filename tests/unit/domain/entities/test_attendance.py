@@ -13,7 +13,10 @@ def test_student_can_be_marked_present():
 
     attendance = Attendance(
         id=uuid4(),
+        tenant_id=uuid4(),
         student_id=uuid4(),
+        academic_class_id=uuid4(),
+        academic_year_id=uuid4(),
         academic_period_id=uuid4(),
         attendance_date=date.today(),
         status=AttendanceStatus.PRESENT,
@@ -28,7 +31,10 @@ def test_student_can_be_marked_absent():
 
     attendance = Attendance(
         id=uuid4(),
+        tenant_id=uuid4(),
         student_id=uuid4(),
+        academic_class_id=uuid4(),
+        academic_year_id=uuid4(),
         academic_period_id=uuid4(),
         attendance_date=date.today(),
         status=AttendanceStatus.ABSENT,
@@ -41,7 +47,10 @@ def test_student_can_be_marked_late():
 
     attendance = Attendance(
         id=uuid4(),
+        tenant_id=uuid4(),
         student_id=uuid4(),
+        academic_class_id=uuid4(),
+        academic_year_id=uuid4(),
         academic_period_id=uuid4(),
         attendance_date=date.today(),
         status=AttendanceStatus.LATE,
@@ -54,7 +63,10 @@ def test_absence_can_be_justified():
 
     attendance = Attendance(
         id=uuid4(),
+        tenant_id=uuid4(),
         student_id=uuid4(),
+        academic_class_id=uuid4(),
+        academic_year_id=uuid4(),
         academic_period_id=uuid4(),
         attendance_date=date.today(),
         status=AttendanceStatus.ABSENT,
@@ -71,7 +83,10 @@ def test_present_student_cannot_have_justified_absence():
 
         Attendance(
             id=uuid4(),
+            tenant_id=uuid4(),
             student_id=uuid4(),
+            academic_class_id=uuid4(),
+            academic_year_id=uuid4(),
             academic_period_id=uuid4(),
             attendance_date=date.today(),
             status=AttendanceStatus.PRESENT,

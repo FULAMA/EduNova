@@ -1,4 +1,4 @@
-﻿from uuid import uuid4
+from uuid import uuid4
 
 
 from src.academic.application.interfaces.student_academic_record_repository import (
@@ -18,10 +18,11 @@ from src.academic.application.use_cases.add_subject_result import (
 from src.presentation.api.dependencies import (
     get_add_subject_result_use_case,
 )
+from tests.support.security import TEST_JWT_SECRET
 from tests.support.tenant import TEST_TENANT_ID, seed_membership
+from tests.support.academic_eligibility import eligible_result_repositories
 
 
-JWT_SECRET = "edunova-development-secret-key-32-bytes-minimum-change-in-production"
 
 
 
@@ -42,7 +43,7 @@ def authenticate_test_client(container, client):
         role="ADMIN",
     )
 
-    jwt_service = JwtService(secret_key=JWT_SECRET)
+    jwt_service = JwtService(secret_key=TEST_JWT_SECRET)
 
     token = jwt_service.create_access_token(
         user_id=user.id,
@@ -61,7 +62,7 @@ class FakeAcademicRecordRepository(StudentAcademicRecordRepository):
     def __init__(self):
         self.records = {}
 
-    def save(self, record):
+    def save(self, record, *, expected_version=None, operation="SAVE"):
         key = (
             record.tenant_id,
             record.student_id,
@@ -170,6 +171,8 @@ def test_academic_record_returns_existing_record(application_container, api_clie
             "credits_obtained": 24,
             "total_credits": 30,
             "subject_results": [],
+            "status": "DRAFT",
+            "version": 1,
         }
 
     finally:
@@ -227,6 +230,8 @@ def test_academic_record_returns_subject_results(application_container, api_clie
                     "coefficient": 3,
                 }
             ],
+            "status": "DRAFT",
+            "version": 1,
         }
     finally:
         api_client.app.dependency_overrides.pop(get_analyze_student_academic_record_use_case, None)
@@ -253,7 +258,7 @@ def test_add_subject_result_returns_created_result(application_container, api_cl
 
     repository.save(record)
 
-    use_case = AddSubjectResult(repository)
+    use_case = AddSubjectResult(repository, **eligible_result_repositories([subject_id], coefficient=3))
 
     api_client.app.dependency_overrides[get_add_subject_result_use_case] = (
         lambda: use_case
@@ -265,7 +270,6 @@ def test_add_subject_result_returns_created_result(application_container, api_cl
             json={
                 "subject_id": str(subject_id),
                 "average": 16,
-                "coefficient": 3,
             },
         )
 
@@ -284,7 +288,7 @@ def test_add_subject_result_returns_created_result(application_container, api_cl
 def test_add_subject_result_returns_404_when_record_does_not_exist(application_container, api_client):
     authenticate_test_client(application_container, api_client)
     repository = FakeAcademicRecordRepository()
-    use_case = AddSubjectResult(repository)
+    use_case = AddSubjectResult(repository, **eligible_result_repositories([uuid4()]))
 
     api_client.app.dependency_overrides[get_add_subject_result_use_case] = (
         lambda: use_case
@@ -299,7 +303,6 @@ def test_add_subject_result_returns_404_when_record_does_not_exist(application_c
             json={
                 "subject_id": str(uuid4()),
                 "average": 15,
-                "coefficient": 2,
             },
         )
 
@@ -330,7 +333,7 @@ def test_add_subject_result_rejects_invalid_average(application_container, api_c
 
     repository.save(record)
 
-    use_case = AddSubjectResult(repository)
+    use_case = AddSubjectResult(repository, **eligible_result_repositories([uuid4()]))
 
     api_client.app.dependency_overrides[get_add_subject_result_use_case] = (
         lambda: use_case
@@ -342,7 +345,6 @@ def test_add_subject_result_rejects_invalid_average(application_container, api_c
             json={
                 "subject_id": str(uuid4()),
                 "average": 25,
-                "coefficient": 2,
             },
         )
 
@@ -372,7 +374,7 @@ def test_add_subject_result_rejects_invalid_coefficient(application_container, a
 
     repository.save(record)
 
-    use_case = AddSubjectResult(repository)
+    use_case = AddSubjectResult(repository, **eligible_result_repositories([uuid4()]))
 
     api_client.app.dependency_overrides[get_add_subject_result_use_case] = (
         lambda: use_case
@@ -392,7 +394,4 @@ def test_add_subject_result_rejects_invalid_coefficient(application_container, a
 
     finally:
         api_client.app.dependency_overrides.pop(get_add_subject_result_use_case, None)
-
-
-
 

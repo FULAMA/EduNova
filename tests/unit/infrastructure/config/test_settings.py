@@ -71,3 +71,21 @@ def test_environment_variables_are_used(monkeypatch):
         "https://edunova.example.com",
         "https://admin.edunova.example.com",
     )
+
+def test_development_jwt_secret_is_stable(monkeypatch):
+    monkeypatch.delenv("EDUNOVA_JWT_SECRET", raising=False)
+    monkeypatch.setenv("EDUNOVA_ENVIRONMENT", "development")
+
+    settings_one = Settings.from_environment()
+    settings_two = Settings.from_environment()
+
+    assert settings_one.jwt_secret == settings_two.jwt_secret
+
+def test_development_jwt_secret_is_stable(monkeypatch):
+    monkeypatch.delenv("EDUNOVA_JWT_SECRET", raising=False)
+    monkeypatch.setenv("EDUNOVA_ENVIRONMENT", "development")
+
+    settings_one = Settings.from_environment()
+    settings_two = Settings.from_environment()
+
+    assert settings_one.jwt_secret == settings_two.jwt_secret

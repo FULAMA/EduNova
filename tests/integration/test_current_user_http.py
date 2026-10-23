@@ -17,13 +17,10 @@ from src.presentation.api.dependencies import (
     get_user_repository,
 )
 from src.presentation.api.container import ApplicationContainer
+from tests.support.security import TEST_JWT_SECRET
 from tests.support.tenant import TEST_TENANT_ID, seed_membership
 
 
-JWT_SECRET = (
-    "edunova-development-secret-key-"
-    "32-bytes-minimum-change-in-production"
-)
 
 
 def create_test_environment(is_active: bool = True):
@@ -77,7 +74,7 @@ def test_current_user_accepts_valid_access_token():
     client, user = create_test_environment()
 
     jwt_service = JwtService(
-        secret_key=JWT_SECRET
+        secret_key=TEST_JWT_SECRET
     )
 
     token = jwt_service.create_access_token(
@@ -126,7 +123,7 @@ def test_current_user_rejects_refresh_token():
     client, user = create_test_environment()
 
     jwt_service = JwtService(
-        secret_key=JWT_SECRET
+        secret_key=TEST_JWT_SECRET
     )
 
     token = jwt_service.create_refresh_token(
@@ -148,7 +145,7 @@ def test_current_user_rejects_two_factor_pending_token():
     client, user = create_test_environment()
 
     jwt_service = JwtService(
-        secret_key=JWT_SECRET
+        secret_key=TEST_JWT_SECRET
     )
 
     token = jwt_service.create_two_factor_token(
@@ -170,7 +167,7 @@ def test_current_user_rejects_unknown_user():
     client, _ = create_test_environment()
 
     jwt_service = JwtService(
-        secret_key=JWT_SECRET
+        secret_key=TEST_JWT_SECRET
     )
 
     token = jwt_service.create_access_token(
@@ -195,7 +192,7 @@ def test_current_user_rejects_inactive_user():
     )
 
     jwt_service = JwtService(
-        secret_key=JWT_SECRET
+        secret_key=TEST_JWT_SECRET
     )
 
     token = jwt_service.create_access_token(
@@ -212,6 +209,7 @@ def test_current_user_rejects_inactive_user():
     )
 
     assert response.status_code == 401
+
 
 
 
