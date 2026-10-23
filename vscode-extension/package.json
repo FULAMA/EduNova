@@ -1,0 +1,58 @@
+{
+  "name": "fulama-workflow",
+  "displayName": "FulamaWorkflow",
+  "description": "Run and diagnose project checks from Visual Studio Code.",
+  "version": "0.1.0",
+  "publisher": "edunova-local",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:edunova.runTests",
+    "onCommand:edunova.runQuality",
+    "onCommand:edunova.runSecurity",
+    "onCommand:edunova.runFulamaWorkflow",
+    "onCommand:edunova.diagnoseProject"
+  ],
+  "main": "./extension.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "edunova.runTests",
+        "title": "FulamaWorkflow: Run Tests"
+      },
+      {
+        "command": "edunova.runQuality",
+        "title": "FulamaWorkflow: Run Quality Checks"
+      },
+      {
+        "command": "edunova.runSecurity",
+        "title": "FulamaWorkflow: Run Bandit Security Scan"
+      },
+      {
+        "command": "edunova.runFulamaWorkflow",
+        "title": "FulamaWorkflow: Run Full Workflow"
+      },
+      {
+        "command": "edunova.diagnoseProject",
+        "title": "FulamaWorkflow: Diagnose Project"
+      }
+    ],
+    "configuration": {
+      "title": "FulamaWorkflow",
+      "properties": {
+        "edunova.executable": {
+          "type": "string",
+          "default": "edunova",
+          "description": "CLI executable available on PATH, or an absolute path to its executable."
+        }
+      }
+    }
+  }
+}
