@@ -1,4 +1,6 @@
-﻿from .command_registry import CommandRegistry
+from collections.abc import Sequence
+
+from .command_registry import CommandRegistry
 from .result import CommandResult
 from .runner import CommandRunner
 
@@ -12,6 +14,10 @@ class CommandService:
         self._registry = registry
         self._runner = runner
 
-    def execute(self, name: str) -> CommandResult:
-        command = self._registry.get(name)
+    def execute(
+        self,
+        name: str,
+        args: Sequence[str] = (),
+    ) -> CommandResult:
+        command = self._registry.get(name).bind(args)
         return self._runner.run(command)

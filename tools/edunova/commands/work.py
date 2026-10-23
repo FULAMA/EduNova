@@ -12,7 +12,7 @@ class WorkResult:
 
     @property
     def succeeded(self) -> bool:
-        return self.status != Status.FAIL
+        return self.status is Status.SAFE
 
 
 class WorkCommand(Command):
@@ -28,14 +28,23 @@ class WorkCommand(Command):
             command=self.name,
             status=result.status,
             message=self._build_message(result),
-            exit_code=0 if result.succeeded else 1,
         )
 
     def run_workflow(self) -> WorkResult:
         results: list[CommandResult] = []
 
         for command in self._commands:
-            result = command.execute()
+            try:
+                result = command.execute()
+            except Exception as error:
+                result = CommandResult(
+                    command=command.name,
+                    status=Status.FAIL,
+                    message=(
+                        f"Workflow step '{command.name}' failed "
+                        f"unexpectedly ({type(error).__name__})."
+                    ),
+                )
             results.append(result)
 
             if result.status == Status.FAIL:
