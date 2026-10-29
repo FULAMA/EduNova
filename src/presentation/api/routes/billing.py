@@ -7,6 +7,7 @@ from src.presentation.api.dependencies import get_billing_service
 from src.presentation.api.dependencies.auth import get_current_user, get_tenant_context, require_finance_manager_role, require_finance_role
 from src.presentation.api.schemas.billing import (
     BillingSummaryResponse,
+    CurrencyBalanceResponse,
     ChargeCreateRequest,
     ChargeResponse,
     PaymentCreateRequest,
@@ -81,7 +82,20 @@ def get_billing_summary(student_id: UUID, service: BillingService = Depends(get_
         summary = service.summary(tenant.tenant_id, student_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Eleve introuvable dans cet etablissement.") from exc
-    return BillingSummaryResponse(charges=[_charge_response(item) for item in summary.charges], payments=[_payment_response(item) for item in summary.payments])
+    balances = service.calculate_balances(summary)
+    return BillingSummaryResponse(
+        charges=[_charge_response(item) for item in summary.charges],
+        payments=[_payment_response(item) for item in summary.payments],
+        balances=[
+            CurrencyBalanceResponse(
+                currency=item.currency,
+                total_charged=item.total_charged,
+                total_paid=item.total_paid,
+                outstanding=item.outstanding,
+            )
+            for item in balances
+        ],
+    )
 
 
 @router.get("/fee-types", response_model=list[FeeTypeResponse], dependencies=_finance)
