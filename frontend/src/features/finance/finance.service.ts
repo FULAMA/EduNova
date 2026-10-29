@@ -3,7 +3,8 @@ import { apiRequest } from '../../shared/api/client'
 export type Currency = 'USD' | 'CDF'
 export type Charge = { id: string; student_id: string; description: string; amount: string; currency: Currency; due_date: string | null; status: string }
 export type Payment = { id: string; charge_id: string; student_id: string; amount: string; currency: Currency; status: string; recorded_at: string; receipt_number: string; receipt_status: string }
-export type BillingSummary = { charges: Charge[]; payments: Payment[] }
+export type CurrencyBalance = { currency: Currency; total_charged: string; total_paid: string; outstanding: string }
+export type BillingSummary = { charges: Charge[]; payments: Payment[]; balances?: CurrencyBalance[] }
 export type FeeType = { id: string; name: string; description: string; category: string; amount: string; currency: Currency; academic_period_id: string | null; applicability: string; status: string; version: number; created_by: string; created_at: string; updated_at: string }
 
 export function getBillingSummary(studentId: string): Promise<BillingSummary> {
