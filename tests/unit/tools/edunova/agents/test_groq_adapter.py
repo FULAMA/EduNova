@@ -2,7 +2,6 @@
 
 from tools.edunova.agents.provider import AgentProvider
 from tools.edunova.agents.providers.groq import GroqAdapter
-from tools.edunova.agents.result import AgentResult
 from tools.edunova.agents.role import AgentRole
 
 
