@@ -24,6 +24,9 @@ from src.presentation.api.schemas.student_portal import (
     LinkStudentAccountInput,
     StudentPortalResponse,
     StudentPortalAttendanceResponse,
+    StudentPortalStudent,
+    StudentPortalAssignment,
+    StudentPortalYear,
 )
 from src.presentation.api.schemas.academic_record import AcademicRecordResponse, SubjectResultResponse
 from src.presentation.api.schemas.attendance import AttendanceResponse
@@ -71,27 +74,27 @@ def get_my_student_profile(
     assignment = profile.assignment
     year = profile.academic_year
     return StudentPortalResponse(
-        student={
+        student=StudentPortalStudent(
             "id": profile.student.id,
             "first_name": profile.student.first_name,
             "last_name": profile.student.last_name,
             "email": profile.student.email,
             "active": profile.student.active,
-        },
-        assignment={
+        ),
+        assignment=StudentPortalAssignment(
             "id": assignment.id,
             "academic_year_id": assignment.academic_year_id,
             "academic_class_id": assignment.academic_class_id,
             "status": assignment.status,
             "created_at": assignment.created_at,
-        } if assignment else None,
-        academic_year={
+        ) if assignment else None,
+        academic_year=StudentPortalYear(
             "id": year.id,
             "label": year.label,
             "start_date": year.start_date,
             "end_date": year.end_date,
             "status": year.status,
-        } if year else None,
+        ) if year else None,
     )
 
 
@@ -111,7 +114,7 @@ def list_my_academic_periods(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return [
-        {"id": str(period["id"]), "name": period["name"]}
+        {"id": str(period["id"]), "name": str(period["name"]) if period["name"] is not None else None}
         for period in use_case.execute_detailed(profile.student.id, tenant.tenant_id)
     ]
 
@@ -191,5 +194,5 @@ def get_my_attendance(
     )
     return StudentPortalAttendanceResponse(
         records=[AttendanceResponse(**record.__dict__) for record in records],
-        statistics=statistics,
+        statistics=AttendanceStatisticsResponse(**statistics),
     )
