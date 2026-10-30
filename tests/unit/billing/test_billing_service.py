@@ -3,6 +3,8 @@ from uuid import UUID, uuid4
 
 import pytest
 
+from src.academic.domain.entities.academic_year import AcademicYear, AcademicYearStatus
+from src.academic.domain.entities.student_assignment import StudentAssignment, StudentAssignmentStatus
 from src.billing.application.service import BillingService
 from src.billing.domain.money import Currency
 from src.infrastructure.persistence.database import SQLiteDatabase
@@ -93,3 +95,118 @@ def test_fee_assignment_keeps_immutable_catalogue_snapshot_after_catalogue_chang
     assert snapshot["snapshot_applicability"] == "STUDENT"
     assert snapshot["amount"] == "75.00"
     assert snapshot["currency"] == "CDF"
+
+
+
+def test_class_fee_requires_active_assignment_in_target_class_and_preserves_class_snapshot():
+    service, student_id = service_with_student()
+    database = service._repository._database
+    actor_id, year_id, class_id, other_class_id, period_id = (
+        uuid4(), uuid4(), uuid4(), uuid4(), uuid4()
+    )
+    now = "2026-10-30T10:00:00+00:00"
+    with database.connect() as connection:
+        connection.execute(
+            "INSERT INTO academic_years (id, tenant_id, label, start_date, end_date, status) "
+            "VALUES (?, ?, ?, ?, ?, 'ACTIVE')",
+            (str(year_id), str(TENANT), "2026-2027", "2026-09-01", "2027-07-31"),
+        )
+        for class_id_value, class_name in ((class_id, "6e primaire"), (other_class_id, "5e primaire")):
+            connection.execute(
+                "INSERT INTO academic_classes (id, tenant_id, name) VALUES (?, ?, ?)",
+                (str(class_id_value), str(TENANT), class_name),
+            )
+        connection.execute(
+            "INSERT INTO academic_periods (id, tenant_id, name, start_date, end_date, academic_year_id) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (str(period_id), str(TENANT), "Trimestre 1", "2026-09-01", "2026-12-20", str(year_id)),
+        )
+        connection.execute(
+            """INSERT INTO student_assignments
+            (id, tenant_id, student_id, academic_year_id, academic_class_id,
+             academic_option_id, status, created_by, created_at, updated_at, closed_at)
+            VALUES (?, ?, ?, ?, ?, NULL, 'ACTIVE', ?, ?, ?, NULL)""",
+            (str(uuid4()), str(TENANT), str(student_id), str(year_id), str(class_id),
+             str(actor_id), now, now),
+        )
+
+    fee = service.create_fee_type(
+        TENANT, "Frais de classe", "Frais réservés à une classe", "SCHOOL",
+        Decimal("50.00"), Currency.CDF, period_id, "CLASS", actor_id, class_id,
+    )
+    service.change_fee_type_status(TENANT, fee.id, "PUBLISHED", actor_id)
+    assignment = service.assign_fee_type(TENANT, fee.id, student_id, period_id, actor_id)
+
+    assert assignment.snapshot_class_id == class_id
+    with database.connect() as connection:
+        snapshot = connection.execute(
+            "SELECT snapshot_class_id FROM billing_fee_assignments WHERE tenant_id = ? AND id = ?",
+            (str(TENANT), str(assignment.id)),
+        ).fetchone()
+    assert snapshot["snapshot_class_id"] == str(class_id)
+
+
+def test_class_fee_rejects_student_assigned_to_another_class_and_cross_tenant_target():
+    service, student_id = service_with_student()
+    database = service._repository._database
+    actor_id, year_id, target_class_id, actual_class_id, period_id = (
+        uuid4(), uuid4(), uuid4(), uuid4(), uuid4()
+    )
+    now = "2026-10-30T10:00:00+00:00"
+    with database.connect() as connection:
+        connection.execute(
+            "INSERT INTO academic_years (id, tenant_id, label, start_date, end_date, status) "
+            "VALUES (?, ?, ?, ?, ?, 'ACTIVE')",
+            (str(year_id), str(TENANT), "2026-2027", "2026-09-01", "2027-07-31"),
+        )
+        for class_id_value, class_name in ((target_class_id, "Classe cible"), (actual_class_id, "Autre classe")):
+            connection.execute(
+                "INSERT INTO academic_classes (id, tenant_id, name) VALUES (?, ?, ?)",
+                (str(class_id_value), str(TENANT), class_name),
+            )
+        connection.execute(
+            "INSERT INTO academic_periods (id, tenant_id, name, start_date, end_date, academic_year_id) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (str(period_id), str(TENANT), "Trimestre 1", "2026-09-01", "2026-12-20", str(year_id)),
+        )
+        connection.execute(
+            """INSERT INTO student_assignments
+            (id, tenant_id, student_id, academic_year_id, academic_class_id,
+             academic_option_id, status, created_by, created_at, updated_at, closed_at)
+            VALUES (?, ?, ?, ?, ?, NULL, 'ACTIVE', ?, ?, ?, NULL)""",
+            (str(uuid4()), str(TENANT), str(student_id), str(year_id), str(actual_class_id),
+             str(actor_id), now, now),
+        )
+
+    fee = service.create_fee_type(
+        TENANT, "Frais cible", "Classe précise", "SCHOOL",
+        Decimal("30.00"), Currency.CDF, period_id, "CLASS", actor_id, target_class_id,
+    )
+    service.change_fee_type_status(TENANT, fee.id, "PUBLISHED", actor_id)
+    with pytest.raises(ValueError, match="affectation active"):
+        service.assign_fee_type(TENANT, fee.id, student_id, period_id, actor_id)
+
+    foreign_class_id = uuid4()
+    with database.connect() as connection:
+        connection.execute(
+            "INSERT INTO academic_classes (id, tenant_id, name) VALUES (?, ?, ?)",
+            (str(foreign_class_id), str(OTHER_TENANT), "Classe étrangère"),
+        )
+    with pytest.raises(LookupError, match="Classe cible"):
+        service.create_fee_type(
+            TENANT, "Frais invalide", "Classe hors tenant", "SCHOOL",
+            Decimal("30.00"), Currency.CDF, period_id, "CLASS", actor_id, foreign_class_id,
+        )
+
+
+def test_establishment_fee_applies_to_active_tenant_student_without_class_target():
+    service, student_id = service_with_student()
+    actor_id = uuid4()
+    fee = service.create_fee_type(
+        TENANT, "Frais établissement", "Pour les élèves actifs", "SCHOOL",
+        Decimal("20.00"), Currency.USD, None, "ESTABLISHMENT", actor_id,
+    )
+    service.change_fee_type_status(TENANT, fee.id, "PUBLISHED", actor_id)
+    assignment = service.assign_fee_type(TENANT, fee.id, student_id, None, actor_id)
+    assert assignment.student_id == student_id
+    assert assignment.snapshot_class_id is None
