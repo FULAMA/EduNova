@@ -80,6 +80,14 @@ class BillingSummary:
     payments: tuple[Payment, ...]
 
 
+@dataclass(frozen=True)
+class CurrencyBalance:
+    currency: Currency
+    total_charged: Decimal
+    total_paid: Decimal
+    outstanding: Decimal
+
+
 class BillingService:
     def __init__(self, repository):
         self._repository = repository
@@ -145,6 +153,41 @@ class BillingService:
         if not self._repository.student_exists(student_id, tenant_id):
             raise LookupError("Eleve introuvable dans cet etablissement.")
         return self._repository.summary(tenant_id, student_id)
+
+    @staticmethod
+    def calculate_balances(summary: BillingSummary) -> tuple[CurrencyBalance, ...]:
+        totals: dict[Currency, dict[str, Decimal]] = {}
+        eligible_charge_ids: set[UUID] = set()
+        for charge in summary.charges:
+            if charge.status == "CANCELLED":
+                continue
+            eligible_charge_ids.add(charge.id)
+            bucket = totals.setdefault(charge.amount.currency, {
+                "charged": Decimal("0.00"), "paid": Decimal("0.00")
+            })
+            bucket["charged"] += charge.amount.amount
+
+        for payment in summary.payments:
+            if (
+                payment.status != "CONFIRMED"
+                or payment.receipt_status == "REVERSED"
+                or payment.charge_id not in eligible_charge_ids
+            ):
+                continue
+            bucket = totals.setdefault(payment.amount.currency, {
+                "charged": Decimal("0.00"), "paid": Decimal("0.00")
+            })
+            bucket["paid"] += payment.amount.amount
+
+        return tuple(
+            CurrencyBalance(
+                currency=currency,
+                total_charged=values["charged"],
+                total_paid=values["paid"],
+                outstanding=values["charged"] - values["paid"],
+            )
+            for currency, values in sorted(totals.items(), key=lambda item: item[0].value)
+        )
 
     def reverse_payment(self, tenant_id: UUID, payment_id: UUID, reason: str, actor_id: UUID) -> CounterEntry:
         if not reason.strip():

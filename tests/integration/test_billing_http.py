@@ -1,7 +1,11 @@
+from datetime import datetime
+from decimal import Decimal
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
+from src.billing.application.service import BillingService, BillingSummary, Charge, Payment
+from src.billing.domain.money import Currency, Money
 from src.identity.domain.entities.user import User
 from src.infrastructure.security.jwt_service import JwtService
 from src.presentation.api.app import create_app
@@ -49,6 +53,10 @@ def test_billing_payment_is_idempotent_and_summary_is_tenant_scoped():
     assert summary.status_code == 200
     assert len(summary.json()["charges"]) == 1
     assert len(summary.json()["payments"]) == 1
+    assert summary.json()["balances"] == [{
+        "currency": "USD", "total_charged": "100.00",
+        "total_paid": "40.00", "outstanding": "60.00",
+    }]
 
 
 def test_billing_correction_preserves_payment_and_marks_receipt_reversed():
@@ -66,10 +74,15 @@ def test_billing_correction_preserves_payment_and_marks_receipt_reversed():
     summary = client.get(f"/billing/students/{student_id}/summary").json()
     assert summary["payments"][0]["id"] == payment["id"]
     assert summary["payments"][0]["receipt_status"] == "REVERSED"
+    assert summary["balances"][0]["total_paid"] == "0.00"
+    assert summary["balances"][0]["outstanding"] == "100.00"
     replacement = client.post("/billing/payments", json={
         "charge_id": charge["id"], "amount": "40.00", "currency": "USD", "idempotency_key": "replacement-1",
     })
     assert replacement.status_code == 200
+    final_summary = client.get(f"/billing/students/{student_id}/summary").json()
+    assert final_summary["balances"][0]["total_paid"] == "40.00"
+    assert final_summary["balances"][0]["outstanding"] == "60.00"
     pdf = client.get(f"/billing/receipts/{payment['receipt_number']}/pdf")
     assert pdf.status_code == 200
     assert pdf.headers["content-type"].startswith("application/pdf")
@@ -149,3 +162,69 @@ def test_billing_rejects_invalid_amount_and_currency_mismatch():
         "charge_id": charge["id"], "amount": "0", "currency": "CDF", "idempotency_key": "zero",
     }).status_code == 422
 
+
+
+def test_billing_summary_keeps_currencies_separate():
+    client, student_id = make_client()
+    usd = client.post("/billing/charges", json={
+        "student_id": str(student_id), "description": "Scolarite",
+        "amount": "100.00", "currency": "USD",
+    }).json()
+    cdf = client.post("/billing/charges", json={
+        "student_id": str(student_id), "description": "Uniforme",
+        "amount": "50000.00", "currency": "CDF",
+    }).json()
+    client.post("/billing/payments", json={
+        "charge_id": usd["id"], "amount": "25.00", "currency": "USD", "idempotency_key": "usd-balance",
+    })
+    client.post("/billing/payments", json={
+        "charge_id": cdf["id"], "amount": "10000.00", "currency": "CDF", "idempotency_key": "cdf-balance",
+    })
+
+    summary = client.get(f"/billing/students/{student_id}/summary").json()
+    balances = {item["currency"]: item for item in summary["balances"]}
+    assert balances["USD"]["outstanding"] == "75.00"
+    assert balances["CDF"]["outstanding"] == "40000.00"
+    assert balances["USD"]["total_paid"] == "25.00"
+    assert balances["CDF"]["total_paid"] == "10000.00"
+
+
+def test_billing_balance_excludes_payments_for_cancelled_charges():
+    tenant_id = uuid4()
+    student_id = uuid4()
+    actor_id = uuid4()
+    active_charge_id = uuid4()
+    cancelled_charge_id = uuid4()
+    active_charge = Charge(
+        id=active_charge_id, tenant_id=tenant_id, student_id=student_id,
+        description="Frais actifs", amount=Money(Decimal("100.00"), Currency.USD),
+        due_date=None, status="OPEN",
+    )
+    cancelled_charge = Charge(
+        id=cancelled_charge_id, tenant_id=tenant_id, student_id=student_id,
+        description="Frais annules", amount=Money(Decimal("50.00"), Currency.USD),
+        due_date=None, status="CANCELLED",
+    )
+    now = datetime.now()
+    active_payment = Payment(
+        id=uuid4(), tenant_id=tenant_id, charge_id=active_charge_id,
+        student_id=student_id, amount=Money(Decimal("30.00"), Currency.USD),
+        idempotency_key="active-payment", status="CONFIRMED",
+        recorded_by=actor_id, recorded_at=now, receipt_number="R-ACTIVE",
+    )
+    cancelled_payment = Payment(
+        id=uuid4(), tenant_id=tenant_id, charge_id=cancelled_charge_id,
+        student_id=student_id, amount=Money(Decimal("20.00"), Currency.USD),
+        idempotency_key="cancelled-payment", status="CONFIRMED",
+        recorded_by=actor_id, recorded_at=now, receipt_number="R-CANCELLED",
+    )
+
+    balances = BillingService.calculate_balances(BillingSummary(
+        charges=(active_charge, cancelled_charge),
+        payments=(active_payment, cancelled_payment),
+    ))
+
+    assert len(balances) == 1
+    assert balances[0].total_charged == Decimal("100.00")
+    assert balances[0].total_paid == Decimal("30.00")
+    assert balances[0].outstanding == Decimal("70.00")

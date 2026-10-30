@@ -70,9 +70,17 @@ class CounterEntryResponse(BaseModel):
     recorded_at: datetime
 
 
+class CurrencyBalanceResponse(BaseModel):
+    currency: Currency
+    total_charged: Decimal
+    total_paid: Decimal
+    outstanding: Decimal
+
+
 class BillingSummaryResponse(BaseModel):
     charges: list[ChargeResponse]
     payments: list[PaymentResponse]
+    balances: list[CurrencyBalanceResponse] = Field(default_factory=list)
 
 
 class FeeTypeResponse(BaseModel):
