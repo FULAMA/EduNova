@@ -1,7 +1,5 @@
 ﻿from pathlib import Path
 
-import pytest
-
 from tools.edunova.agents.context_scanner import ContextScanner
 from tools.edunova.infrastructure.process_runner import ProcessRunner
 
