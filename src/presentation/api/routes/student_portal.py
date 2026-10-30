@@ -29,7 +29,7 @@ from src.presentation.api.schemas.student_portal import (
     StudentPortalYear,
 )
 from src.presentation.api.schemas.academic_record import AcademicRecordResponse, SubjectResultResponse
-from src.presentation.api.schemas.attendance import AttendanceResponse
+from src.presentation.api.schemas.attendance import AttendanceResponse, AttendanceStatisticsResponse
 from src.shared.application.context.tenant_context import TenantContext
 
 
@@ -53,7 +53,7 @@ def link_student_account(
         raise HTTPException(status_code=409, detail="Ce compte ou cet eleve est deja associe.") from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return {"status": "linked"}
+    return {status="linked"}
 
 
 @router.get(
@@ -75,25 +75,25 @@ def get_my_student_profile(
     year = profile.academic_year
     return StudentPortalResponse(
         student=StudentPortalStudent(
-            "id": profile.student.id,
-            "first_name": profile.student.first_name,
-            "last_name": profile.student.last_name,
-            "email": profile.student.email,
-            "active": profile.student.active,
+            id=profile.student.id,
+            first_name=profile.student.first_name,
+            last_name=profile.student.last_name,
+            email=profile.student.email,
+            active=profile.student.active,
         ),
         assignment=StudentPortalAssignment(
-            "id": assignment.id,
-            "academic_year_id": assignment.academic_year_id,
-            "academic_class_id": assignment.academic_class_id,
-            "status": assignment.status,
-            "created_at": assignment.created_at,
+            id=assignment.id,
+            academic_year_id=assignment.academic_year_id,
+            academic_class_id=assignment.academic_class_id,
+            status=assignment.status,
+            created_at=assignment.created_at,
         ) if assignment else None,
         academic_year=StudentPortalYear(
-            "id": year.id,
-            "label": year.label,
-            "start_date": year.start_date,
-            "end_date": year.end_date,
-            "status": year.status,
+            id=year.id,
+            label=year.label,
+            start_date=year.start_date,
+            end_date=year.end_date,
+            status=year.status,
         ) if year else None,
     )
 
@@ -114,7 +114,7 @@ def list_my_academic_periods(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return [
-        {"id": str(period["id"]), "name": str(period["name"]) if period["name"] is not None else None}
+        {id=str(period["id"]), "name": str(period["name"]) if period["name"] is not None else None}
         for period in use_case.execute_detailed(profile.student.id, tenant.tenant_id)
     ]
 
