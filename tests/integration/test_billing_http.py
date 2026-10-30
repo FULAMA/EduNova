@@ -1,7 +1,11 @@
+from datetime import datetime
+from decimal import Decimal
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
+from src.billing.application.service import BillingService, BillingSummary, Charge, Payment
+from src.billing.domain.money import Currency, Money
 from src.identity.domain.entities.user import User
 from src.infrastructure.security.jwt_service import JwtService
 from src.presentation.api.app import create_app
@@ -183,3 +187,44 @@ def test_billing_summary_keeps_currencies_separate():
     assert balances["CDF"]["outstanding"] == "40000.00"
     assert balances["USD"]["total_paid"] == "25.00"
     assert balances["CDF"]["total_paid"] == "10000.00"
+
+
+def test_billing_balance_excludes_payments_for_cancelled_charges():
+    tenant_id = uuid4()
+    student_id = uuid4()
+    actor_id = uuid4()
+    active_charge_id = uuid4()
+    cancelled_charge_id = uuid4()
+    active_charge = Charge(
+        id=active_charge_id, tenant_id=tenant_id, student_id=student_id,
+        description="Frais actifs", amount=Money(Decimal("100.00"), Currency.USD),
+        due_date=None, status="OPEN",
+    )
+    cancelled_charge = Charge(
+        id=cancelled_charge_id, tenant_id=tenant_id, student_id=student_id,
+        description="Frais annules", amount=Money(Decimal("50.00"), Currency.USD),
+        due_date=None, status="CANCELLED",
+    )
+    now = datetime.now()
+    active_payment = Payment(
+        id=uuid4(), tenant_id=tenant_id, charge_id=active_charge_id,
+        student_id=student_id, amount=Money(Decimal("30.00"), Currency.USD),
+        idempotency_key="active-payment", status="CONFIRMED",
+        recorded_by=actor_id, recorded_at=now, receipt_number="R-ACTIVE",
+    )
+    cancelled_payment = Payment(
+        id=uuid4(), tenant_id=tenant_id, charge_id=cancelled_charge_id,
+        student_id=student_id, amount=Money(Decimal("20.00"), Currency.USD),
+        idempotency_key="cancelled-payment", status="CONFIRMED",
+        recorded_by=actor_id, recorded_at=now, receipt_number="R-CANCELLED",
+    )
+
+    balances = BillingService.calculate_balances(BillingSummary(
+        charges=(active_charge, cancelled_charge),
+        payments=(active_payment, cancelled_payment),
+    ))
+
+    assert len(balances) == 1
+    assert balances[0].total_charged == Decimal("100.00")
+    assert balances[0].total_paid == Decimal("30.00")
+    assert balances[0].outstanding == Decimal("70.00")
