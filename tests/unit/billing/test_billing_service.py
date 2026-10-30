@@ -1,3 +1,4 @@
+import sqlite3
 from decimal import Decimal
 from uuid import UUID, uuid4
 
@@ -93,6 +94,13 @@ def test_fee_assignment_keeps_immutable_catalogue_snapshot_after_catalogue_chang
     assert snapshot["snapshot_applicability"] == "STUDENT"
     assert snapshot["amount"] == "75.00"
     assert snapshot["currency"] == "CDF"
+
+    with pytest.raises(sqlite3.IntegrityError, match="snapshots are immutable"):
+        with service._repository._database.connect() as connection:
+            connection.execute(
+                "UPDATE billing_fee_assignments SET snapshot_name = ? WHERE tenant_id = ? AND id = ?",
+                ("Historique altéré", str(TENANT), str(first.id)),
+            )
 
 
 
