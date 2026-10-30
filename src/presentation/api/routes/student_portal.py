@@ -1,4 +1,5 @@
 import sqlite3
+from typing import cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -195,13 +196,13 @@ def get_my_attendance(
     return StudentPortalAttendanceResponse(
         records=[AttendanceResponse(**record.__dict__) for record in records],
         statistics=AttendanceStatisticsResponse(
-            total_sessions=int(statistics["total_sessions"]),
-            absences=int(statistics["absences"]),
-            justified_absences=int(statistics["justified_absences"]),
-            unjustified_absences=int(statistics["unjustified_absences"]),
-            lates=int(statistics["lates"]),
+            total_sessions=cast(int, statistics["total_sessions"]),
+            absences=cast(int, statistics["absences"]),
+            justified_absences=cast(int, statistics["justified_absences"]),
+            unjustified_absences=cast(int, statistics["unjustified_absences"]),
+            lates=cast(int, statistics["lates"]),
             attendance_rate=(
-                float(statistics["attendance_rate"])
+                cast(float, statistics["attendance_rate"])
                 if statistics["attendance_rate"] is not None else None
             ),
         ),
