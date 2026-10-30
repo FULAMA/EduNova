@@ -18,6 +18,7 @@ def upgrade(connection: Connection) -> None:
          AND fee_type.tenant_id = assignment.tenant_id
         WHERE fee_type.id IS NULL
            OR fee_type.name IS NULL
+           OR fee_type.description IS NULL
            OR fee_type.category IS NULL
            OR fee_type.applicability IS NULL
            OR fee_type.amount IS NULL
