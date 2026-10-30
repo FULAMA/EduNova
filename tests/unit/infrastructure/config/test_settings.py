@@ -89,3 +89,37 @@ def test_development_jwt_secret_is_stable(monkeypatch):
     settings_two = Settings.from_environment()
 
     assert settings_one.jwt_secret == settings_two.jwt_secret
+
+
+@pytest.mark.parametrize(
+    "weak_secret",
+    [
+        "change-this-secret-in-production",
+        "secret",
+        "changeme",
+    ],
+)
+def test_production_rejects_known_weak_jwt_secrets(monkeypatch, weak_secret):
+    monkeypatch.setenv("EDUNOVA_ENVIRONMENT", "production")
+    monkeypatch.setenv("EDUNOVA_JWT_SECRET", weak_secret)
+
+    with pytest.raises(ValueError, match="valeur par defaut connue"):
+        Settings.from_environment()
+
+
+def test_production_rejects_jwt_secret_shorter_than_32_characters(monkeypatch):
+    monkeypatch.setenv("EDUNOVA_ENVIRONMENT", "production")
+    monkeypatch.setenv("EDUNOVA_JWT_SECRET", "a" * 31)
+
+    with pytest.raises(ValueError, match="32 caracteres"):
+        Settings.from_environment()
+
+
+def test_production_accepts_jwt_secret_with_at_least_32_characters(monkeypatch):
+    monkeypatch.setenv("EDUNOVA_ENVIRONMENT", "production")
+    monkeypatch.setenv("EDUNOVA_JWT_SECRET", "a" * 32)
+    monkeypatch.setenv("EDUNOVA_CORS_ALLOWED_ORIGINS", "https://edunova.example")
+
+    settings = Settings.from_environment()
+
+    assert settings.jwt_secret == "a" * 32
