@@ -102,7 +102,7 @@ def test_protected_environments_reject_known_weak_jwt_secrets(monkeypatch, envir
     monkeypatch.setenv("EDUNOVA_JWT_SECRET", weak_secret)
     monkeypatch.setenv("EDUNOVA_CORS_ALLOWED_ORIGINS", "https://edunova.example.com")
 
-    with pytest.raises(ValueError, match="32 caracteres"):
+    with pytest.raises(ValueError, match="valeur faible ou connue"):
         Settings.from_environment()
 
 
