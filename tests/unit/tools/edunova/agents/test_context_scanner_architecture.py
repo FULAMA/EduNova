@@ -86,8 +86,7 @@ def test_scanner_excludes_python_cache_directories() -> None:
         "__pycache__" not in path
         for path in context.tests
     )
-from tools.edunova.agents.context import GitChange
-from tools.edunova.agents.context_scanner import ContextScanner
+from tools.edunova.agents.context import GitChange  # noqa: E402
 
 
 def test_parse_git_changes_preserves_status_and_path():
