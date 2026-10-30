@@ -41,7 +41,7 @@ def make_runner() -> FakeProcessRunner:
 
 def test_scanner_discovers_architecture_areas() -> None:
     scanner = ContextScanner(
-        project_root=Path("F:/EduNova"),
+        project_root=Path.cwd(),
         scope="agent-kernel",
         process_runner=make_runner(),
     )
@@ -58,7 +58,7 @@ def test_scanner_discovers_architecture_areas() -> None:
 
 def test_scanner_discovers_test_areas() -> None:
     scanner = ContextScanner(
-        project_root=Path("F:/EduNova"),
+        project_root=Path.cwd(),
         scope="agent-kernel",
         process_runner=make_runner(),
     )
@@ -71,7 +71,7 @@ def test_scanner_discovers_test_areas() -> None:
 
 def test_scanner_excludes_python_cache_directories() -> None:
     scanner = ContextScanner(
-        project_root=Path("F:/EduNova"),
+        project_root=Path.cwd(),
         scope="agent-kernel",
         process_runner=make_runner(),
     )
@@ -86,8 +86,7 @@ def test_scanner_excludes_python_cache_directories() -> None:
         "__pycache__" not in path
         for path in context.tests
     )
-from tools.edunova.agents.context import GitChange
-from tools.edunova.agents.context_scanner import ContextScanner
+from tools.edunova.agents.context import GitChange  # noqa: E402
 
 
 def test_parse_git_changes_preserves_status_and_path():
