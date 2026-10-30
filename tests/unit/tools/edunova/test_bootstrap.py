@@ -101,10 +101,10 @@ def test_bootstrap_work_runs_quality_then_security() -> None:
     assert result.command == "work"
     assert result.status.value == "SAFE"
     assert process_runner.commands == [
-        tool_command("ruff", ["check", "src", "tools/edunova"]),
-        [sys.executable, "-m", "mypy", "src", "tools/edunova"],
+        tool_command("ruff", ["check", "src"]),
+        [sys.executable, "-m", "mypy", "src"],
         expected_pytest_command(),
-        tool_command("bandit", ["-r", "src", "tools/edunova", "-ll"]),
+        tool_command("bandit", ["-r", "src", "tools", "-ll"]),
     ]
 
 
