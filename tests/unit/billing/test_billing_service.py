@@ -3,8 +3,6 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from src.academic.domain.entities.academic_year import AcademicYear, AcademicYearStatus
-from src.academic.domain.entities.student_assignment import StudentAssignment, StudentAssignmentStatus
 from src.billing.application.service import BillingService
 from src.billing.domain.money import Currency
 from src.infrastructure.persistence.database import SQLiteDatabase
