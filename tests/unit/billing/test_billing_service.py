@@ -208,3 +208,47 @@ def test_establishment_fee_applies_to_active_tenant_student_without_class_target
     assignment = service.assign_fee_type(TENANT, fee.id, student_id, None, actor_id)
     assert assignment.student_id == student_id
     assert assignment.snapshot_class_id is None
+
+
+
+def test_class_fee_rejects_period_without_linked_academic_year():
+    service, student_id = service_with_student()
+    database = service._repository._database
+    actor_id, class_id, period_id = uuid4(), uuid4(), uuid4()
+    with database.connect() as connection:
+        connection.execute(
+            "INSERT INTO academic_classes (id, tenant_id, name) VALUES (?, ?, ?)",
+            (str(class_id), str(TENANT), "Classe sans année"),
+        )
+        connection.execute(
+            "INSERT INTO academic_periods (id, tenant_id, name, start_date, end_date) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (str(period_id), str(TENANT), "Période historique", "2026-09-01", "2026-12-20"),
+        )
+
+    fee = service.create_fee_type(
+        TENANT, "Frais classe", "Période sans année", "SCHOOL",
+        Decimal("25.00"), Currency.CDF, period_id, "CLASS", actor_id, class_id,
+    )
+    service.change_fee_type_status(TENANT, fee.id, "PUBLISHED", actor_id)
+
+    with pytest.raises(ValueError, match="annee scolaire"):
+        service.assign_fee_type(TENANT, fee.id, student_id, period_id, actor_id)
+
+
+def test_fee_assignment_rejects_inactive_student():
+    service, student_id = service_with_student()
+    actor_id = uuid4()
+    fee = service.create_fee_type(
+        TENANT, "Frais individuel", "Elève actif uniquement", "SCHOOL",
+        Decimal("15.00"), Currency.CDF, None, "STUDENT", actor_id,
+    )
+    service.change_fee_type_status(TENANT, fee.id, "PUBLISHED", actor_id)
+    with service._repository._database.connect() as connection:
+        connection.execute(
+            "UPDATE students SET active = 0 WHERE tenant_id = ? AND id = ?",
+            (str(TENANT), str(student_id)),
+        )
+
+    with pytest.raises(LookupError, match="Eleve actif"):
+        service.assign_fee_type(TENANT, fee.id, student_id, None, actor_id)
