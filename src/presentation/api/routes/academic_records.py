@@ -206,7 +206,7 @@ def prepare_deliberation(
         raise HTTPException(status_code=status_code, detail=str(exc)) from exc
     return DeliberationResponse(
         student_id=result.student_id,
-        academic_period_id=result.academic_period_id,
+        academic_period_id=academic_period_id,
         record_version=result.record_version or 0,
         average=result.average,
         failed_subjects=result.failed_subjects,
