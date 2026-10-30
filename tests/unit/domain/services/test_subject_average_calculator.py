@@ -82,9 +82,6 @@ def test_different_grading_scales_are_normalized():
     result = calculator.calculate(grades)
 
     assert result == pytest.approx(10)
-from src.academic.domain.services.score_converter import ScoreConverter
-
-
 class FixedScoreConverter:
     def convert(self, score: Score) -> float:
         return 17.0
