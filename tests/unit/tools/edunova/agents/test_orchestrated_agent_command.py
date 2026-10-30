@@ -1,7 +1,4 @@
-﻿from tools.edunova.agents.orchestration.service import (
-    AgentOrchestrationService,
-)
-from tools.edunova.agents.result import AgentResult
+﻿from tools.edunova.agents.result import AgentResult
 from tools.edunova.agents.role import AgentRole
 from tools.edunova.commands.agent import OrchestratedAgentCommand
 from tools.edunova.core.result import Status
