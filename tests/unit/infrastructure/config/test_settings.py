@@ -63,7 +63,7 @@ def test_environment_variables_are_used(monkeypatch):
     settings = Settings.from_environment()
 
     assert settings.environment == "production"
-    assert settings.jwt_secret == "production-super-secret-key"
+    assert settings.jwt_secret == "production-super-secret-key-32chars"
     assert settings.access_token_expire_minutes == 30
     assert settings.refresh_token_expire_days == 14
     assert settings.database_path == "production.db"
