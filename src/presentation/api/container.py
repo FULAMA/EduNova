@@ -332,8 +332,10 @@ class ApplicationContainer:
 
     def link_student_account(self) -> LinkStudentAccount:
         return LinkStudentAccount(
-            self._student_user_link_repository(),
-            self._student_repository(),
+            links=self._student_user_link_repository(),
+            students=self._student_repository(),
+            users=self._user_repository(),
+            memberships=self._membership_repository(),
         )
 
     def get_student_portal_profile(self) -> GetStudentPortalProfile:
