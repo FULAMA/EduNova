@@ -72,16 +72,23 @@ class SQLiteBillingRepository:
             student = connection.execute("SELECT 1 FROM students WHERE tenant_id = ? AND id = ?", (str(tenant_id), str(student_id))).fetchone()
             if student is None:
                 raise LookupError("Eleve introuvable dans cet etablissement.")
-            existing = connection.execute("SELECT a.*, f.amount, f.currency FROM billing_fee_assignments a JOIN billing_fee_types f ON f.tenant_id = a.tenant_id AND f.id = a.fee_type_id WHERE a.tenant_id = ? AND a.fee_type_id = ? AND a.student_id = ? AND COALESCE(a.academic_period_id, '') = COALESCE(?, '')", (str(tenant_id), str(fee_type_id), str(student_id), str(academic_period_id) if academic_period_id else None)).fetchone()
+            existing = connection.execute("SELECT * FROM billing_fee_assignments WHERE tenant_id = ? AND fee_type_id = ? AND student_id = ? AND COALESCE(academic_period_id, '') = COALESCE(?, '')", (str(tenant_id), str(fee_type_id), str(student_id), str(academic_period_id) if academic_period_id else None)).fetchone()
             if existing is not None:
                 return self._fee_assignment(existing)
             now = datetime.now().astimezone()
             assignment_id, charge_id = uuid4(), uuid4()
             connection.execute("INSERT INTO billing_charges (id, tenant_id, student_id, description, amount, currency, due_date, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'OPEN')", (str(charge_id), str(tenant_id), str(student_id), fee["name"], fee["amount"], fee["currency"], None))
             connection.execute("""INSERT INTO billing_fee_assignments
-                (id, tenant_id, fee_type_id, fee_type_version, student_id, academic_period_id, charge_id, created_by, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", (str(assignment_id), str(tenant_id), str(fee_type_id), fee["version"], str(student_id), str(academic_period_id) if academic_period_id else None, str(charge_id), str(actor_id), now.isoformat()))
-            row = connection.execute("SELECT a.*, f.amount, f.currency FROM billing_fee_assignments a JOIN billing_fee_types f ON f.tenant_id = a.tenant_id AND f.id = a.fee_type_id WHERE a.tenant_id = ? AND a.id = ?", (str(tenant_id), str(assignment_id))).fetchone()
+                (id, tenant_id, fee_type_id, fee_type_version, student_id, academic_period_id,
+                 charge_id, created_by, created_at, snapshot_name, snapshot_description,
+                 snapshot_category, snapshot_applicability, amount, currency)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (str(assignment_id), str(tenant_id), str(fee_type_id), fee["version"],
+                 str(student_id), str(academic_period_id) if academic_period_id else None,
+                 str(charge_id), str(actor_id), now.isoformat(), fee["name"],
+                 fee["description"], fee["category"], fee["applicability"],
+                 fee["amount"], fee["currency"]))
+            row = connection.execute("SELECT * FROM billing_fee_assignments WHERE tenant_id = ? AND id = ?", (str(tenant_id), str(assignment_id))).fetchone()
         return self._fee_assignment(row)
 
     def record_payment(self, tenant_id: UUID, charge_id: UUID, money: Money,
