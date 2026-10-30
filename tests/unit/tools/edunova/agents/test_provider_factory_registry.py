@@ -1,9 +1,5 @@
 ﻿import pytest
 
-from tools.edunova.agents.orchestration.config import ProviderConfig
-from tools.edunova.agents.providers.groq import (
-    GroqProviderFactory,
-)
 
 
 class FakeFactory:
