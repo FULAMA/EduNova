@@ -54,3 +54,42 @@ def test_rejects_cross_tenant_student_and_charge_access():
     with pytest.raises(LookupError):
         service.create_charge(OTHER_TENANT, student_id, "Frais", Decimal("10.00"), Currency.USD, None)
 
+
+
+def test_fee_assignment_keeps_immutable_catalogue_snapshot_after_catalogue_change():
+    service, student_id = service_with_student()
+    actor_id = uuid4()
+    fee = service.create_fee_type(
+        TENANT, "Travaux", "Travaux pratiques", "ACTIVITY",
+        Decimal("75.00"), Currency.CDF, None, "STUDENT", actor_id,
+    )
+    service.change_fee_type_status(TENANT, fee.id, "PUBLISHED", actor_id)
+
+    first = service.assign_fee_type(TENANT, fee.id, student_id, None, actor_id)
+
+    with service._repository._database.connect() as connection:
+        connection.execute(
+            "UPDATE billing_fee_types SET amount = ?, currency = ?, name = ? WHERE tenant_id = ? AND id = ?",
+            ("99.00", "USD", "Travaux modifiés", str(TENANT), str(fee.id)),
+        )
+
+    retry = service.assign_fee_type(TENANT, fee.id, student_id, None, actor_id)
+
+    assert first.id == retry.id
+    assert retry.amount.amount == Decimal("75.00")
+    assert retry.amount.currency is Currency.CDF
+
+    with service._repository._database.connect() as connection:
+        snapshot = connection.execute(
+            "SELECT snapshot_name, snapshot_description, snapshot_category, "
+            "snapshot_applicability, amount, currency FROM billing_fee_assignments "
+            "WHERE tenant_id = ? AND id = ?",
+            (str(TENANT), str(first.id)),
+        ).fetchone()
+
+    assert snapshot["snapshot_name"] == "Travaux"
+    assert snapshot["snapshot_description"] == "Travaux pratiques"
+    assert snapshot["snapshot_category"] == "ACTIVITY"
+    assert snapshot["snapshot_applicability"] == "STUDENT"
+    assert snapshot["amount"] == "75.00"
+    assert snapshot["currency"] == "CDF"
