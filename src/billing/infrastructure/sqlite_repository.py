@@ -14,7 +14,7 @@ class SQLiteBillingRepository:
     def student_exists(self, student_id: UUID, tenant_id: UUID) -> bool:
         with self._database.connect() as connection:
             return connection.execute(
-                "SELECT 1 FROM students WHERE id = ? AND tenant_id = ?",
+                "SELECT 1 FROM students WHERE id = ? AND tenant_id = ? AND active = 1",
                 (str(student_id), str(tenant_id)),
             ).fetchone() is not None
 
@@ -29,17 +29,42 @@ class SQLiteBillingRepository:
                  charge.due_date.isoformat() if charge.due_date else None, charge.status),
             )
 
-    def create_fee_type(self, tenant_id, name, description, category, money, academic_period_id, applicability, actor_id):
+    def create_fee_type(
+        self, tenant_id, name, description, category, money, academic_period_id,
+        applicability, actor_id, target_class_id=None,
+    ):
         now = datetime.now().astimezone()
-        fee_type = FeeType(uuid4(), tenant_id, name, description, category, money, academic_period_id, applicability, "DRAFT", 1, actor_id, now, now)
+        fee_type = FeeType(
+            uuid4(), tenant_id, name, description, category, money,
+            academic_period_id, target_class_id, applicability, "DRAFT", 1,
+            actor_id, now, now,
+        )
         with self._database.connect() as connection:
+            if academic_period_id is not None:
+                period = connection.execute(
+                    "SELECT 1 FROM academic_periods WHERE tenant_id = ? AND id = ?",
+                    (str(tenant_id), str(academic_period_id)),
+                ).fetchone()
+                if period is None:
+                    raise LookupError("Periode scolaire introuvable dans cet etablissement.")
+            if target_class_id is not None:
+                target_class = connection.execute(
+                    "SELECT 1 FROM academic_classes WHERE tenant_id = ? AND id = ?",
+                    (str(tenant_id), str(target_class_id)),
+                ).fetchone()
+                if target_class is None:
+                    raise LookupError("Classe cible introuvable dans cet etablissement.")
             connection.execute("""INSERT INTO billing_fee_types
-                (id, tenant_id, name, description, category, amount, currency, academic_period_id,
-                 applicability, status, version, created_by, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (str(fee_type.id), str(tenant_id), name, description, category, str(money.amount), money.currency.value,
-                 str(academic_period_id) if academic_period_id else None, applicability, fee_type.status,
-                 fee_type.version, str(actor_id), now.isoformat(), now.isoformat()))
+                (id, tenant_id, name, description, category, amount, currency,
+                 academic_period_id, applicability, target_class_id, status,
+                 version, created_by, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (str(fee_type.id), str(tenant_id), name, description, category,
+                 str(money.amount), money.currency.value,
+                 str(academic_period_id) if academic_period_id else None,
+                 applicability, str(target_class_id) if target_class_id else None,
+                 fee_type.status, fee_type.version, str(actor_id),
+                 now.isoformat(), now.isoformat()))
         return fee_type
 
     def list_fee_types(self, tenant_id):
@@ -62,33 +87,99 @@ class SQLiteBillingRepository:
     def assign_fee_type(self, tenant_id, fee_type_id, student_id, academic_period_id, actor_id):
         with self._database.connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
-            fee = connection.execute("SELECT * FROM billing_fee_types WHERE tenant_id = ? AND id = ?", (str(tenant_id), str(fee_type_id))).fetchone()
+            fee = connection.execute(
+                "SELECT * FROM billing_fee_types WHERE tenant_id = ? AND id = ?",
+                (str(tenant_id), str(fee_type_id)),
+            ).fetchone()
             if fee is None:
                 raise LookupError("Type de frais introuvable dans cet etablissement.")
             if fee["status"] != "PUBLISHED":
                 raise ValueError("Seul un type de frais publie peut etre attribue.")
             if fee["academic_period_id"] and str(academic_period_id) != fee["academic_period_id"]:
                 raise ValueError("La periode ne correspond pas au type de frais.")
-            student = connection.execute("SELECT 1 FROM students WHERE tenant_id = ? AND id = ?", (str(tenant_id), str(student_id))).fetchone()
+
+            student = connection.execute(
+                "SELECT 1 FROM students WHERE tenant_id = ? AND id = ? AND active = 1",
+                (str(tenant_id), str(student_id)),
+            ).fetchone()
             if student is None:
-                raise LookupError("Eleve introuvable dans cet etablissement.")
-            existing = connection.execute("SELECT * FROM billing_fee_assignments WHERE tenant_id = ? AND fee_type_id = ? AND student_id = ? AND COALESCE(academic_period_id, '') = COALESCE(?, '')", (str(tenant_id), str(fee_type_id), str(student_id), str(academic_period_id) if academic_period_id else None)).fetchone()
+                raise LookupError("Eleve actif introuvable dans cet etablissement.")
+
+            snapshot_class_id = None
+            period = None
+            if academic_period_id is not None:
+                period = connection.execute(
+                    "SELECT academic_year_id FROM academic_periods WHERE tenant_id = ? AND id = ?",
+                    (str(tenant_id), str(academic_period_id)),
+                ).fetchone()
+                if period is None:
+                    raise LookupError("Periode scolaire introuvable dans cet etablissement.")
+
+            applicability = fee["applicability"]
+            if applicability == "ESTABLISHMENT":
+                if fee["target_class_id"] is not None:
+                    raise ValueError("Un frais ETABLISSEMENT ne peut pas cibler une classe.")
+            elif applicability == "CLASS":
+                target_class_id = fee["target_class_id"]
+                if target_class_id is None:
+                    raise ValueError("Ce frais CLASS ne possede pas de classe cible.")
+                if academic_period_id is None or period is None or period["academic_year_id"] is None:
+                    raise ValueError("Un frais CLASS exige une periode liee a une annee scolaire.")
+                target_class = connection.execute(
+                    "SELECT 1 FROM academic_classes WHERE tenant_id = ? AND id = ?",
+                    (str(tenant_id), target_class_id),
+                ).fetchone()
+                if target_class is None:
+                    raise LookupError("Classe cible introuvable dans cet etablissement.")
+                assignment = connection.execute(
+                    """SELECT 1 FROM student_assignments
+                    WHERE tenant_id = ? AND student_id = ? AND academic_class_id = ?
+                      AND academic_year_id = ? AND status = 'ACTIVE'""",
+                    (str(tenant_id), str(student_id), target_class_id, period["academic_year_id"]),
+                ).fetchone()
+                if assignment is None:
+                    raise ValueError("L'eleve ne possede pas d'affectation active dans la classe cible pour cette annee scolaire.")
+                snapshot_class_id = UUID(target_class_id)
+            elif applicability == "STUDENT":
+                if fee["target_class_id"] is not None:
+                    raise ValueError("Un frais STUDENT ne peut pas cibler une classe.")
+            else:
+                raise ValueError("Regle d applicabilite invalide.")
+
+            existing = connection.execute(
+                """SELECT * FROM billing_fee_assignments
+                WHERE tenant_id = ? AND fee_type_id = ? AND student_id = ?
+                  AND COALESCE(academic_period_id, '') = COALESCE(?, '')""",
+                (str(tenant_id), str(fee_type_id), str(student_id),
+                 str(academic_period_id) if academic_period_id else None),
+            ).fetchone()
             if existing is not None:
                 return self._fee_assignment(existing)
+
             now = datetime.now().astimezone()
             assignment_id, charge_id = uuid4(), uuid4()
-            connection.execute("INSERT INTO billing_charges (id, tenant_id, student_id, description, amount, currency, due_date, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'OPEN')", (str(charge_id), str(tenant_id), str(student_id), fee["name"], fee["amount"], fee["currency"], None))
+            connection.execute(
+                """INSERT INTO billing_charges
+                (id, tenant_id, student_id, description, amount, currency, due_date, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'OPEN')""",
+                (str(charge_id), str(tenant_id), str(student_id), fee["name"],
+                 fee["amount"], fee["currency"], None),
+            )
             connection.execute("""INSERT INTO billing_fee_assignments
                 (id, tenant_id, fee_type_id, fee_type_version, student_id, academic_period_id,
                  charge_id, created_by, created_at, snapshot_name, snapshot_description,
-                 snapshot_category, snapshot_applicability, amount, currency)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                 snapshot_category, snapshot_applicability, amount, currency, snapshot_class_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (str(assignment_id), str(tenant_id), str(fee_type_id), fee["version"],
                  str(student_id), str(academic_period_id) if academic_period_id else None,
                  str(charge_id), str(actor_id), now.isoformat(), fee["name"],
                  fee["description"], fee["category"], fee["applicability"],
-                 fee["amount"], fee["currency"]))
-            row = connection.execute("SELECT * FROM billing_fee_assignments WHERE tenant_id = ? AND id = ?", (str(tenant_id), str(assignment_id))).fetchone()
+                 fee["amount"], fee["currency"],
+                 str(snapshot_class_id) if snapshot_class_id else None))
+            row = connection.execute(
+                "SELECT * FROM billing_fee_assignments WHERE tenant_id = ? AND id = ?",
+                (str(tenant_id), str(assignment_id)),
+            ).fetchone()
         return self._fee_assignment(row)
 
     def record_payment(self, tenant_id: UUID, charge_id: UUID, money: Money,
@@ -192,11 +283,11 @@ class SQLiteBillingRepository:
 
     @staticmethod
     def _fee_type(row):
-        return FeeType(UUID(row["id"]), UUID(row["tenant_id"]), row["name"], row["description"], row["category"], Money(Decimal(row["amount"]), Currency(row["currency"])), UUID(row["academic_period_id"]) if row["academic_period_id"] else None, row["applicability"], row["status"], row["version"], UUID(row["created_by"]), datetime.fromisoformat(row["created_at"]), datetime.fromisoformat(row["updated_at"]))
+        return FeeType(UUID(row["id"]), UUID(row["tenant_id"]), row["name"], row["description"], row["category"], Money(Decimal(row["amount"]), Currency(row["currency"])), UUID(row["academic_period_id"]) if row["academic_period_id"] else None, UUID(row["target_class_id"]) if row["target_class_id"] else None, row["applicability"], row["status"], row["version"], UUID(row["created_by"]), datetime.fromisoformat(row["created_at"]), datetime.fromisoformat(row["updated_at"]))
 
     @staticmethod
     def _fee_assignment(row):
-        return FeeAssignment(UUID(row["id"]), UUID(row["tenant_id"]), UUID(row["fee_type_id"]), row["fee_type_version"], UUID(row["student_id"]), UUID(row["academic_period_id"]) if row["academic_period_id"] else None, UUID(row["charge_id"]), Money(Decimal(row["amount"]), Currency(row["currency"])), UUID(row["created_by"]), datetime.fromisoformat(row["created_at"]))
+        return FeeAssignment(UUID(row["id"]), UUID(row["tenant_id"]), UUID(row["fee_type_id"]), row["fee_type_version"], UUID(row["student_id"]), UUID(row["academic_period_id"]) if row["academic_period_id"] else None, UUID(row["snapshot_class_id"]) if row["snapshot_class_id"] else None, UUID(row["charge_id"]), Money(Decimal(row["amount"]), Currency(row["currency"])), UUID(row["created_by"]), datetime.fromisoformat(row["created_at"]))
 
     @staticmethod
     def _charge(row) -> Charge:
