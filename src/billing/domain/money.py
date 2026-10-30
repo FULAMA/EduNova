@@ -20,7 +20,8 @@ class Money:
             raise ValueError("Le montant est invalide.") from exc
         if not value.is_finite() or value <= 0:
             raise ValueError("Le montant doit etre strictement positif.")
-        if value.as_tuple().exponent < -2:
+        exponent = value.as_tuple().exponent
+        if not isinstance(exponent, int) or exponent < -2:
             raise ValueError("Le montant ne peut pas depasser deux decimales.")
         object.__setattr__(self, "amount", value.quantize(Decimal("0.01")))
 
