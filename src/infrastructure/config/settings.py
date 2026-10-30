@@ -3,6 +3,16 @@ import secrets
 from dataclasses import dataclass
 
 
+MINIMUM_JWT_SECRET_LENGTH = 32
+FORBIDDEN_JWT_SECRETS = frozenset(
+    {
+        "change-this-secret-in-production",
+        "secret",
+        "changeme",
+    }
+)
+
+
 _DEVELOPMENT_JWT_SECRET = secrets.token_urlsafe(32)
 
 
@@ -38,6 +48,19 @@ class Settings:
                 raise ValueError(
                     "EDUNOVA_JWT_SECRET doit etre defini "
                     "en environnement de production."
+                )
+
+        if environment == "production":
+            if jwt_secret in FORBIDDEN_JWT_SECRETS:
+                raise ValueError(
+                    "EDUNOVA_JWT_SECRET ne peut pas reutiliser "
+                    "une valeur par defaut connue."
+                )
+
+            if len(jwt_secret) < MINIMUM_JWT_SECRET_LENGTH:
+                raise ValueError(
+                    "EDUNOVA_JWT_SECRET doit contenir au moins "
+                    f"{MINIMUM_JWT_SECRET_LENGTH} caracteres."
                 )
 
         access_token_expire_minutes = int(
