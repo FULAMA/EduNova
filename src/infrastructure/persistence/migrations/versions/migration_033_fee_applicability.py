@@ -96,3 +96,22 @@ def upgrade(connection: Connection) -> None:
             SELECT RAISE(ABORT, 'snapshot class must belong to the same tenant');
         END
     """)
+
+
+    connection.execute("""
+        CREATE TRIGGER IF NOT EXISTS trg_fee_assignment_snapshot_immutable
+        BEFORE UPDATE OF snapshot_name, snapshot_description, snapshot_category,
+                         snapshot_applicability, amount, currency, snapshot_class_id
+        ON billing_fee_assignments
+        WHEN
+            OLD.snapshot_name IS NOT NEW.snapshot_name
+            OR OLD.snapshot_description IS NOT NEW.snapshot_description
+            OR OLD.snapshot_category IS NOT NEW.snapshot_category
+            OR OLD.snapshot_applicability IS NOT NEW.snapshot_applicability
+            OR OLD.amount IS NOT NEW.amount
+            OR OLD.currency IS NOT NEW.currency
+            OR OLD.snapshot_class_id IS NOT NEW.snapshot_class_id
+        BEGIN
+            SELECT RAISE(ABORT, 'fee assignment snapshots are immutable');
+        END
+    """)
