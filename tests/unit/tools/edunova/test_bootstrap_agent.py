@@ -1,7 +1,4 @@
-﻿from tools.edunova.agents.orchestration.service import (
-    AgentOrchestrationService,
-)
-from tools.edunova.commands.agent import OrchestratedAgentCommand
+﻿from tools.edunova.commands.agent import OrchestratedAgentCommand
 from tools.edunova.bootstrap import CliBootstrap
 
 
