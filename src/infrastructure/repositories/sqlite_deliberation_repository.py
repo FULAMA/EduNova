@@ -31,7 +31,7 @@ class SQLiteDeliberationRepository(DeliberationRepository):
                     str(saved.id), str(saved.tenant_id), str(saved.student_id),
                     str(saved.academic_period_id), saved.record_version, saved.average,
                     saved.failed_subjects, saved.decision.value, saved.status, saved.version,
-                    str(saved.created_by), saved.created_at.isoformat(),
+                    str(saved.created_by), now.isoformat(),
                     str(saved.validated_by) if saved.validated_by else None,
                     saved.validated_at.isoformat() if saved.validated_at else None,
                 ))
