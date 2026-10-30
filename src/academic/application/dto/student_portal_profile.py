@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from uuid import UUID
 
 from src.academic.application.dto.student_summary import StudentSummary
 from src.academic.domain.entities.academic_year import AcademicYear
