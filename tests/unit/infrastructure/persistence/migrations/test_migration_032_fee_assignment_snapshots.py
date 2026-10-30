@@ -95,3 +95,44 @@ def test_migration_032_backfills_snapshot_from_same_tenant_fee_type():
         "250.00",
         "USD",
     )
+
+
+@pytest.mark.parametrize(
+    ("tenant_id", "description"),
+    [
+        ("tenant-2", "Type de frais d'un autre établissement"),
+        ("tenant-1", None),
+    ],
+)
+def test_migration_032_rejects_cross_tenant_or_incomplete_fee_type(
+    tenant_id: str,
+    description: str | None,
+):
+    connection = _connection()
+    connection.execute(
+        """
+        INSERT INTO billing_fee_types (
+            id, tenant_id, name, description, category,
+            applicability, amount, currency
+        )
+        VALUES ('fee-1', ?, 'Frais scolaires', ?, 'SCHOOL', 'STUDENT', '250.00', 'USD')
+        """,
+        (tenant_id, description),
+    )
+    connection.execute(
+        """
+        INSERT INTO billing_fee_assignments (id, tenant_id, fee_type_id)
+        VALUES ('assignment-1', 'tenant-1', 'fee-1')
+        """
+    )
+
+    with pytest.raises(RuntimeError, match="1 billing fee assignment"):
+        migration_032_fee_assignment_snapshots.upgrade(connection)
+
+    columns = {
+        row[1]
+        for row in connection.execute(
+            "PRAGMA table_info(billing_fee_assignments)"
+        ).fetchall()
+    }
+    assert "snapshot_name" not in columns
