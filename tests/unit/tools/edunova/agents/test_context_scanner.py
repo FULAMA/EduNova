@@ -46,7 +46,7 @@ def test_scanner_collects_git_branch() -> None:
     )
 
     scanner = ContextScanner(
-        project_root=Path("F:/EduNova"),
+        project_root=Path.cwd(),
         scope="academic-records",
         process_runner=runner,
     )
@@ -71,7 +71,7 @@ def test_scanner_collects_git_status() -> None:
     )
 
     scanner = ContextScanner(
-        project_root=Path("F:/EduNova"),
+        project_root=Path.cwd(),
         scope="academic-records",
         process_runner=runner,
     )
@@ -103,7 +103,7 @@ def test_scanner_extracts_changed_files() -> None:
     )
 
     scanner = ContextScanner(
-        project_root=Path("F:/EduNova"),
+        project_root=Path.cwd(),
         scope="academic-records",
         process_runner=runner,
     )
@@ -132,7 +132,7 @@ def test_scanner_uses_project_root_for_git_commands() -> None:
     )
 
     scanner = ContextScanner(
-        project_root=Path("F:/EduNova"),
+        project_root=Path.cwd(),
         scope="agent-kernel",
         process_runner=runner,
     )
@@ -144,8 +144,8 @@ def test_scanner_uses_project_root_for_git_commands() -> None:
         ("git", "status", "--short"),
     ]
     assert runner.working_directories == [
-        Path("F:/EduNova"),
-        Path("F:/EduNova"),
+        Path.cwd(),
+        Path.cwd(),
     ]
 
 
@@ -164,7 +164,7 @@ def test_scanner_does_not_execute_destructive_git_commands() -> None:
     )
 
     scanner = ContextScanner(
-        project_root=Path("F:/EduNova"),
+        project_root=Path.cwd(),
         scope="agent-kernel",
         process_runner=runner,
     )
@@ -203,7 +203,7 @@ def test_scanner_reports_git_failure_as_risk() -> None:
     )
 
     scanner = ContextScanner(
-        project_root=Path("F:/EduNova"),
+        project_root=Path.cwd(),
         scope="agent-kernel",
         process_runner=runner,
     )
@@ -232,12 +232,12 @@ def test_scanner_preserves_project_scope() -> None:
     )
 
     scanner = ContextScanner(
-        project_root=Path("F:/EduNova"),
+        project_root=Path.cwd(),
         scope="academic-records",
         process_runner=runner,
     )
 
     context = scanner.scan()
 
-    assert context.project_root == Path("F:/EduNova")
+    assert context.project_root == Path.cwd()
     assert context.scope == "academic-records"
