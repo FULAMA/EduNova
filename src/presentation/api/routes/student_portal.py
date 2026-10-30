@@ -53,7 +53,7 @@ def link_student_account(
         raise HTTPException(status_code=409, detail="Ce compte ou cet eleve est deja associe.") from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return {status="linked"}
+    return {"status": "linked"}
 
 
 @router.get(
@@ -114,7 +114,7 @@ def list_my_academic_periods(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return [
-        {id=str(period["id"]), "name": str(period["name"]) if period["name"] is not None else None}
+        {"id": str(period["id"]), "name": str(period["name"]) if period["name"] is not None else None}
         for period in use_case.execute_detailed(profile.student.id, tenant.tenant_id)
     ]
 
