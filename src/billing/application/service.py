@@ -157,16 +157,22 @@ class BillingService:
     @staticmethod
     def calculate_balances(summary: BillingSummary) -> tuple[CurrencyBalance, ...]:
         totals: dict[Currency, dict[str, Decimal]] = {}
+        eligible_charge_ids: set[UUID] = set()
         for charge in summary.charges:
             if charge.status == "CANCELLED":
                 continue
+            eligible_charge_ids.add(charge.id)
             bucket = totals.setdefault(charge.amount.currency, {
                 "charged": Decimal("0.00"), "paid": Decimal("0.00")
             })
             bucket["charged"] += charge.amount.amount
 
         for payment in summary.payments:
-            if payment.status != "CONFIRMED" or payment.receipt_status == "REVERSED":
+            if (
+                payment.status != "CONFIRMED"
+                or payment.receipt_status == "REVERSED"
+                or payment.charge_id not in eligible_charge_ids
+            ):
                 continue
             bucket = totals.setdefault(payment.amount.currency, {
                 "charged": Decimal("0.00"), "paid": Decimal("0.00")
