@@ -291,9 +291,9 @@ def test_sqlite_assignment_concurrent_activations(tmp_path: Path):
 # Tests End-to-End Use Cases with SQLite and Concurrency (Lot 4)
 # =========================================================================
 
-from src.academic.application.exceptions import ActiveConflictError
-from src.academic.application.use_cases.change_academic_year_status import ChangeAcademicYearStatus
-from src.academic.application.use_cases.change_student_assignment_status import ChangeStudentAssignmentStatus
+from src.academic.application.exceptions import ActiveConflictError  # noqa: E402
+from src.academic.application.use_cases.change_academic_year_status import ChangeAcademicYearStatus  # noqa: E402
+from src.academic.application.use_cases.change_student_assignment_status import ChangeStudentAssignmentStatus  # noqa: E402
 
 
 def test_use_case_sequential_conflict_raises_active_conflict_error(tmp_path: Path):
@@ -452,17 +452,17 @@ def test_use_case_assignment_concurrent_activations_end_to_end(tmp_path: Path):
 # Tests HTTP 409 Translation on Isolated FastAPI TestClient
 # =========================================================================
 
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-from src.presentation.api.routes.academic_years import router as academic_years_router
-from src.presentation.api.routes.student_assignments import router as student_assignments_router
-from src.presentation.api.dependencies import (
+from fastapi import FastAPI  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+from src.presentation.api.routes.academic_years import router as academic_years_router  # noqa: E402
+from src.presentation.api.routes.student_assignments import router as student_assignments_router  # noqa: E402
+from src.presentation.api.dependencies import (  # noqa: E402
     get_change_academic_year_status_use_case,
     get_change_student_assignment_status_use_case,
 )
-from src.presentation.api.dependencies.auth import get_tenant_context, require_role, get_current_user
-from src.shared.application.context.tenant_context import TenantContext
-from src.identity.application.dto.authenticated_user import AuthenticatedUser
+from src.presentation.api.dependencies.auth import get_tenant_context, get_current_user  # noqa: E402
+from src.shared.application.context.tenant_context import TenantContext  # noqa: E402
+from src.identity.application.dto.authenticated_user import AuthenticatedUser  # noqa: E402
 
 
 def test_http_409_translation_for_both_errors(tmp_path: Path):
