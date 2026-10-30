@@ -5,24 +5,30 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "edunova"
 version = "0.1.0"
-description = "SaaS ERP Ã©ducatif multi-tenant"
+description = "SaaS ERP éducatif multi-tenant"
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "argon2-cffi==25.1.0",
     "fastapi==0.141.1",
-    "PyJWT==2.13.0",
+    "PyJWT==2.15.0",
     "PyOTP==2.10.0",
     "pydantic==2.13.5",
+    "google-auth>=2.0,<3",
+    "fpdf2>=2.7,<3",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "bandit==1.7.5",
+    "bandit==1.9.4",
+    "httpx2==2.16.0",
+    "groq>=0.11,<2",
     "mypy==2.3.1",
+    "openai>=1.0,<3",
     "pip-audit==2.10.1",
-    "pytest==7.4.3",
+    "pytest==9.0.3",
     "pytest-cov==4.1.0",
     "ruff==0.1.6",
+    "types-fpdf2>=2.7,<3",
 ]
 
 [tool.pytest.ini_options]
@@ -36,6 +42,7 @@ target-version = "py312"
 python_version = "3.13"
 explicit_package_bases = true
 mypy_path = "."
+
 [tool.bandit]
 exclude_dirs = ["tests", ".venv", "venv"]
 
