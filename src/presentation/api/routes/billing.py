@@ -43,14 +43,14 @@ def _payment_response(payment) -> PaymentResponse:
 def _fee_type_response(item) -> FeeTypeResponse:
     return FeeTypeResponse(id=item.id, name=item.name, description=item.description, category=item.category,
                            amount=item.amount.amount, currency=item.amount.currency,
-                           academic_period_id=item.academic_period_id, applicability=item.applicability,
+                           academic_period_id=item.academic_period_id, target_class_id=item.target_class_id, applicability=item.applicability,
                            status=item.status, version=item.version, created_by=item.created_by,
                            created_at=item.created_at, updated_at=item.updated_at)
 
 
 def _fee_assignment_response(item) -> FeeAssignmentResponse:
     return FeeAssignmentResponse(id=item.id, fee_type_id=item.fee_type_id, fee_type_version=item.fee_type_version,
-                                 student_id=item.student_id, academic_period_id=item.academic_period_id,
+                                 student_id=item.student_id, academic_period_id=item.academic_period_id, snapshot_class_id=item.snapshot_class_id,
                                  charge_id=item.charge_id, amount=item.amount.amount, currency=item.amount.currency,
                                  created_by=item.created_by, created_at=item.created_at)
 
@@ -92,7 +92,9 @@ def list_fee_types(service: BillingService = Depends(get_billing_service), tenan
 @router.post("/fee-types", response_model=FeeTypeResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_finance_manager_role())])
 def create_fee_type(data: FeeTypeCreateRequest, service: BillingService = Depends(get_billing_service), tenant: TenantContext = Depends(get_tenant_context), current_user: AuthenticatedUser = Depends(get_current_user)):
     try:
-        item = service.create_fee_type(tenant.tenant_id, data.name, data.description, data.category, data.amount, data.currency, data.academic_period_id, data.applicability, current_user.id)
+        item = service.create_fee_type(tenant.tenant_id, data.name, data.description, data.category, data.amount, data.currency, data.academic_period_id, data.applicability, current_user.id, data.target_class_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return _fee_type_response(item)
