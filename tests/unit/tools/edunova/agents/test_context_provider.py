@@ -1,5 +1,4 @@
 ﻿from pathlib import Path
-from uuid import uuid4
 
 from tools.edunova.agents.context import EngineeringContext
 from tools.edunova.agents.provider import AgentProvider
