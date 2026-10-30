@@ -271,3 +271,57 @@ def test_student_portal_protects_attendance_with_role_and_token_checks() -> None
     invalid = TestClient(create_app(container))
     invalid.headers["Authorization"] = "Bearer not-a-valid-token"
     assert invalid.get(f"/me/student/attendance/{period_id}").status_code == 401
+
+
+def test_student_link_requires_existing_active_student_membership() -> None:
+    container = ApplicationContainer(database_path=":memory:")
+    admin = User(uuid4(), "admin-link-validation@example.test", "hash", "ADMIN")
+    inactive_student = User(uuid4(), "inactive-link@example.test", "hash", "STUDENT", is_active=False)
+    teacher = User(uuid4(), "teacher-link@example.test", "hash", "TEACHER")
+    inactive_membership_student = User(uuid4(), "inactive-membership@example.test", "hash", "STUDENT")
+    valid_student = User(uuid4(), "valid-link@example.test", "hash", "STUDENT")
+    for user in (admin, inactive_student, teacher, inactive_membership_student, valid_student):
+        container._user_repository().save(user)
+    seed_membership(container, admin.id, role="ADMIN")
+    seed_membership(container, inactive_student.id, role="STUDENT")
+    seed_membership(container, teacher.id, role="TEACHER")
+    seed_membership(container, inactive_membership_student.id, active=False, role="STUDENT")
+    seed_membership(container, valid_student.id, role="STUDENT")
+
+    student_id = uuid4()
+    with container._database.connect() as connection:
+        connection.execute(
+            "INSERT INTO students VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (str(student_id), str(TEST_TENANT_ID), "Eleve", "Controle", None, None, 1),
+        )
+
+    client = client_for(container, admin)
+    missing = client.post("/student-links", json={
+        "user_id": str(uuid4()), "student_id": str(student_id),
+    })
+    inactive = client.post("/student-links", json={
+        "user_id": str(inactive_student.id), "student_id": str(student_id),
+    })
+    wrong_role = client.post("/student-links", json={
+        "user_id": str(teacher.id), "student_id": str(student_id),
+    })
+
+    no_membership_user = User(uuid4(), "no-membership@example.test", "hash", "STUDENT")
+    container._user_repository().save(no_membership_user)
+    no_membership = client.post("/student-links", json={
+        "user_id": str(no_membership_user.id), "student_id": str(student_id),
+    })
+    inactive_membership = client.post("/student-links", json={
+        "user_id": str(inactive_membership_student.id), "student_id": str(student_id),
+    })
+
+    valid = client.post("/student-links", json={
+        "user_id": str(valid_student.id), "student_id": str(student_id),
+    })
+
+    assert missing.status_code == 409
+    assert inactive.status_code == 409
+    assert wrong_role.status_code == 409
+    assert no_membership.status_code == 409
+    assert inactive_membership.status_code == 409
+    assert valid.status_code == 201
