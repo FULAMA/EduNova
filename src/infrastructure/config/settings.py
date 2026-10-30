@@ -58,14 +58,14 @@ class Settings:
                 )
 
         if environment in _PRODUCTION_ENVIRONMENTS:
+            if jwt_secret.lower() in _FORBIDDEN_JWT_SECRETS:
+                raise ValueError(
+                    "EDUNOVA_JWT_SECRET ne peut pas utiliser une valeur faible ou connue."
+                )
             if len(jwt_secret) < _MINIMUM_JWT_SECRET_LENGTH:
                 raise ValueError(
                     "EDUNOVA_JWT_SECRET doit contenir au moins "
                     f"{_MINIMUM_JWT_SECRET_LENGTH} caracteres en staging/production."
-                )
-            if jwt_secret.lower() in _FORBIDDEN_JWT_SECRETS:
-                raise ValueError(
-                    "EDUNOVA_JWT_SECRET ne peut pas utiliser une valeur faible ou connue."
                 )
 
         access_token_expire_minutes = int(
