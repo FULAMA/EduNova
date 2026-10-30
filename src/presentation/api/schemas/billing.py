@@ -23,6 +23,7 @@ class FeeTypeCreateRequest(BaseModel):
     currency: Currency
     academic_period_id: UUID | None = None
     applicability: str = "ESTABLISHMENT"
+    target_class_id: UUID | None = None
 
 
 class ChargeResponse(BaseModel):
@@ -83,6 +84,7 @@ class FeeTypeResponse(BaseModel):
     amount: Decimal
     currency: Currency
     academic_period_id: UUID | None
+    target_class_id: UUID | None
     applicability: str
     status: str
     version: int
@@ -102,6 +104,7 @@ class FeeAssignmentResponse(BaseModel):
     fee_type_version: int
     student_id: UUID
     academic_period_id: UUID | None
+    snapshot_class_id: UUID | None
     charge_id: UUID
     amount: Decimal
     currency: Currency
