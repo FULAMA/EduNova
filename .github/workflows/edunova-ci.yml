@@ -30,7 +30,7 @@ jobs:
         run: mypy --explicit-package-bases src
 
       - name: Ruff
-        run: ruff check src
+        run: ruff check src tests
 
       - name: Bandit
         run: bandit -r src -ll
