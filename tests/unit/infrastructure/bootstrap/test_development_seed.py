@@ -41,7 +41,7 @@ def test_development_seed_is_rejected_in_production(monkeypatch):
     monkeypatch.setenv("EDUNOVA_ENVIRONMENT", "production")
     monkeypatch.setenv("EDUNOVA_DEV_SEED", "true")
     monkeypatch.setenv("EDUNOVA_DEV_SEED_PASSWORD", "DevPassword@2026")
-    monkeypatch.setenv("EDUNOVA_JWT_SECRET", "production-secret-key-32-bytes")
+    monkeypatch.setenv("EDUNOVA_JWT_SECRET", "production-secret-key-with-at-least-32-characters")
     monkeypatch.setenv(
         "EDUNOVA_CORS_ALLOWED_ORIGINS",
         "https://app.example.com",

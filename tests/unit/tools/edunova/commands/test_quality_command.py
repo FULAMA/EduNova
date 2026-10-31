@@ -74,8 +74,8 @@ def test_quality_command_runs_all_quality_checks() -> None:
     assert result.exit_code == 0
 
     assert runner.commands == [
-        tool_command("ruff", ["check", "src", "tools/edunova"]),
-        [sys.executable, "-m", "mypy", "src", "tools/edunova"],
+        tool_command("ruff", ["check", "src"]),
+        [sys.executable, "-m", "mypy", "src"],
         expected_pytest_command(),
     ]
     assert runner.working_directories == [Path.cwd()] * 3
@@ -101,7 +101,7 @@ def test_quality_command_stops_on_failed_check() -> None:
     assert result.message == "ruff found an error"
 
     assert runner.commands == [
-        tool_command("ruff", ["check", "src", "tools/edunova"]),
+        tool_command("ruff", ["check", "src"]),
     ]
 
 

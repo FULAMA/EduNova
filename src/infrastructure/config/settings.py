@@ -4,6 +4,18 @@ from dataclasses import dataclass
 
 
 _DEVELOPMENT_JWT_SECRET = secrets.token_urlsafe(32)
+_ALLOWED_ENVIRONMENTS = frozenset({"development", "test", "staging", "production"})
+_PRODUCTION_ENVIRONMENTS = frozenset({"staging", "production"})
+_MINIMUM_JWT_SECRET_LENGTH = 32
+_FORBIDDEN_JWT_SECRETS = frozenset({
+    "secret",
+    "changeme",
+    "change-me",
+    "change-this-secret-in-production",
+    "edunova-development-secret",
+    "your-secret-key",
+    "your-secret-key-here",
+})
 
 
 @dataclass(frozen=True)
@@ -26,6 +38,11 @@ class Settings:
             "development",
         ).strip().lower()
 
+        if environment not in _ALLOWED_ENVIRONMENTS:
+            raise ValueError(
+                "EDUNOVA_ENVIRONMENT doit etre development, test, staging ou production."
+            )
+
         jwt_secret = os.getenv(
             "EDUNOVA_JWT_SECRET",
             "",
@@ -37,7 +54,18 @@ class Settings:
             else:
                 raise ValueError(
                     "EDUNOVA_JWT_SECRET doit etre defini "
-                    "en environnement de production."
+                    "en environnement staging ou production."
+                )
+
+        if environment in _PRODUCTION_ENVIRONMENTS:
+            if jwt_secret.lower() in _FORBIDDEN_JWT_SECRETS:
+                raise ValueError(
+                    "EDUNOVA_JWT_SECRET ne peut pas utiliser une valeur faible ou connue."
+                )
+            if len(jwt_secret) < _MINIMUM_JWT_SECRET_LENGTH:
+                raise ValueError(
+                    "EDUNOVA_JWT_SECRET doit contenir au moins "
+                    f"{_MINIMUM_JWT_SECRET_LENGTH} caracteres en staging/production."
                 )
 
         access_token_expire_minutes = int(
@@ -136,9 +164,9 @@ class Settings:
                 "Au moins une origine CORS doit etre configuree."
             )
 
-        if environment == "production" and "*" in cors_allowed_origins:
+        if environment in _PRODUCTION_ENVIRONMENTS and "*" in cors_allowed_origins:
             raise ValueError(
-                "L origine CORS '*' est interdite en production."
+                "L origine CORS '*' est interdite en staging/production."
             )
 
         return cls(

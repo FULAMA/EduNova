@@ -199,8 +199,6 @@ def test_agent_forbids_semantic_inference_from_directory_and_git_evidence():
 
 
 def test_prompt_limits_explicit_file_evidence_to_that_file():
-    from tools.edunova.agents.conversational import ConversationalAgent
-
     source = Path(
         "tools/edunova/agents/conversational.py"
     )

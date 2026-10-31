@@ -206,7 +206,7 @@ def prepare_deliberation(
         raise HTTPException(status_code=status_code, detail=str(exc)) from exc
     return DeliberationResponse(
         student_id=result.student_id,
-        academic_period_id=result.academic_period_id,
+        academic_period_id=academic_period_id,
         record_version=result.record_version or 0,
         average=result.average,
         failed_subjects=result.failed_subjects,
@@ -249,9 +249,12 @@ def validate_deliberation(
             else status.HTTP_400_BAD_REQUEST
         )
         raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+    validated_period_id = result.academic_period_id
+    if validated_period_id is None:
+        raise HTTPException(status_code=500, detail="La période de délibération est manquante.")
     return DeliberationResponse(
         student_id=result.student_id,
-        academic_period_id=result.academic_period_id,
+        academic_period_id=validated_period_id,
         record_version=result.record_version or 0,
         average=result.average,
         failed_subjects=result.failed_subjects,

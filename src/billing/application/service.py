@@ -26,6 +26,7 @@ class FeeType:
     category: str
     amount: Money
     academic_period_id: UUID | None
+    target_class_id: UUID | None
     applicability: str
     status: str
     version: int
@@ -42,6 +43,7 @@ class FeeAssignment:
     fee_type_version: int
     student_id: UUID
     academic_period_id: UUID | None
+    snapshot_class_id: UUID | None
     charge_id: UUID
     amount: Money
     created_by: UUID
@@ -107,12 +109,20 @@ class BillingService:
 
     def create_fee_type(self, tenant_id: UUID, name: str, description: str, category: str,
                         amount: Decimal, currency: Currency, academic_period_id: UUID | None,
-                        applicability: str, actor_id: UUID) -> FeeType:
+                        applicability: str, actor_id: UUID, target_class_id: UUID | None = None) -> FeeType:
         if not name.strip() or not category.strip():
             raise ValueError("Le nom et la categorie sont obligatoires.")
         if applicability not in {"ESTABLISHMENT", "CLASS", "STUDENT"}:
             raise ValueError("Regle d applicabilite invalide.")
-        return self._repository.create_fee_type(tenant_id, name.strip(), description.strip(), category.strip(), Money(amount, currency), academic_period_id, applicability, actor_id)
+        if applicability == "CLASS" and target_class_id is None:
+            raise ValueError("Une classe cible est obligatoire pour un frais CLASS.")
+        if applicability != "CLASS" and target_class_id is not None:
+            raise ValueError("Une classe cible est reservee aux frais CLASS.")
+        return self._repository.create_fee_type(
+            tenant_id, name.strip(), description.strip(), category.strip(),
+            Money(amount, currency), academic_period_id, applicability, actor_id,
+            target_class_id,
+        )
 
     def list_fee_types(self, tenant_id: UUID) -> tuple[FeeType, ...]:
         return self._repository.list_fee_types(tenant_id)

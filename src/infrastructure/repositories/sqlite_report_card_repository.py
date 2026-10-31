@@ -74,6 +74,9 @@ class SQLiteReportCardRepository(ReportCardRepository):
             raise ValueError("Un remplacement exige deux versions coherentes.")
         if replacement.previous_report_card_id != previous.id or replacement.report_version != previous.report_version + 1:
             raise ValueError("La nouvelle version du bulletin est incoherente.")
+        if replacement.issued_at is None or replacement.issued_by is None:
+            raise ValueError("Un bulletin emis doit avoir un auteur et une date.")
+        created_at = replacement.created_at or datetime.utcnow()
         with self._database.connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             cursor = connection.execute(
@@ -94,7 +97,7 @@ class SQLiteReportCardRepository(ReportCardRepository):
                     replacement.deliberation_version, replacement.record_version,
                     replacement.report_version, replacement.status.value,
                     json.dumps(replacement.snapshot, sort_keys=True), replacement.snapshot_hash,
-                    replacement.created_at.isoformat(), replacement.issued_at.isoformat(),
+                    created_at.isoformat(), replacement.issued_at.isoformat(),
                     str(replacement.issued_by), str(replacement.previous_report_card_id),
                 ))
             except Exception as exc:

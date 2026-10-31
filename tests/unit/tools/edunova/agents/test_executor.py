@@ -1,6 +1,4 @@
-﻿from abc import ABC, abstractmethod
-
-from tools.edunova.agents.provider import AgentProvider
+﻿from tools.edunova.agents.provider import AgentProvider
 from tools.edunova.agents.result import AgentResult
 from tools.edunova.agents.role import AgentRole
 from tools.edunova.agents.orchestration.executor import (
