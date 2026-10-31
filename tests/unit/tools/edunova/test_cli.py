@@ -1,4 +1,6 @@
-﻿from pathlib import Path
+﻿import subprocess
+from collections.abc import Sequence
+from pathlib import Path
 
 from tools.edunova.__main__ import main as module_main
 from tools.edunova.cli import main
@@ -10,15 +12,15 @@ class FakeProcessRunner(ProcessRunner):
     def __init__(self) -> None:
         self.commands: list[list[str]] = []
 
-    def run(self, command: list[str], cwd=None):
-        self.commands.append(command)
+    def run(self, command: Sequence[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        self.commands.append(list(command))
 
-        class FakeResult:
-            returncode = 0
-            stdout = "fake tests passed"
-            stderr = ""
-
-        return FakeResult()
+        return subprocess.CompletedProcess(
+            args=list(command),
+            returncode=0,
+            stdout="fake tests passed",
+            stderr="",
+        )
 
 
 def expected_pytest_command() -> list[str]:
@@ -85,8 +87,12 @@ def test_cli_main_help_option_prints_help(
 
 
 def test_cli_command_help_does_not_execute_workflow(capsys) -> None:
-    class FailingRunner:
-        def run(self, *args, **kwargs):
+    class FailingRunner(ProcessRunner):
+        def run(
+            self,
+            command: Sequence[str],
+            cwd: Path | None = None,
+        ) -> subprocess.CompletedProcess[str]:
             raise AssertionError("command runner must not be called for help")
 
     exit_code = main(["work", "--help"], process_runner=FailingRunner())
@@ -100,7 +106,7 @@ def test_cli_reports_missing_executable_without_traceback(
     capsys,
 ) -> None:
     class MissingExecutableRunner(FakeProcessRunner):
-        def run(self, command: list[str], cwd=None):
+        def run(self, command: Sequence[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
             raise FileNotFoundError(2, "tool unavailable", command[0])
 
     exit_code = main(
@@ -119,7 +125,7 @@ def test_cli_reports_value_error_without_traceback(
     capsys,
 ) -> None:
     class InvalidCommandRunner(FakeProcessRunner):
-        def run(self, command: list[str], cwd=None):
+        def run(self, command: Sequence[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
             raise ValueError("invalid invocation")
 
     exit_code = main(
@@ -138,7 +144,7 @@ def test_cli_reports_unexpected_error_without_details(
     capsys,
 ) -> None:
     class UnexpectedRunner(FakeProcessRunner):
-        def run(self, command: list[str], cwd=None):
+        def run(self, command: Sequence[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
             raise RuntimeError("secret-token=do-not-print")
 
     exit_code = main(
@@ -156,13 +162,13 @@ def test_cli_reports_unexpected_error_without_details(
 
 def test_cli_redacts_secret_from_process_stdout(capsys) -> None:
     class LeakingRunner(FakeProcessRunner):
-        def run(self, command: list[str], cwd=None):
-            class FakeResult:
-                returncode = 1
-                stdout = "pytest failed: Bearer stdout-secret-token"
-                stderr = ""
-
-            return FakeResult()
+        def run(self, command: Sequence[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+            return subprocess.CompletedProcess(
+                args=list(command),
+                returncode=1,
+                stdout="pytest failed: Bearer stdout-secret-token",
+                stderr="",
+            )
 
     exit_code = main(["run_tests"], process_runner=LeakingRunner())
     captured = capsys.readouterr()
@@ -174,13 +180,13 @@ def test_cli_redacts_secret_from_process_stdout(capsys) -> None:
 
 def test_cli_redacts_secret_from_process_stderr(capsys) -> None:
     class LeakingRunner(FakeProcessRunner):
-        def run(self, command: list[str], cwd=None):
-            class FakeResult:
-                returncode = 1
-                stdout = ""
-                stderr = "pytest failed: password=stderr-secret-value"
-
-            return FakeResult()
+        def run(self, command: Sequence[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+            return subprocess.CompletedProcess(
+                args=list(command),
+                returncode=1,
+                stdout="",
+                stderr="pytest failed: password=stderr-secret-value",
+            )
 
     exit_code = main(["run_tests"], process_runner=LeakingRunner())
     captured = capsys.readouterr()
@@ -213,7 +219,7 @@ def test_cli_reports_interruption_with_shell_exit_code(
     capsys,
 ) -> None:
     class InterruptedRunner(FakeProcessRunner):
-        def run(self, command: list[str], cwd=None):
+        def run(self, command: Sequence[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
             raise KeyboardInterrupt
 
     exit_code = main(
@@ -255,15 +261,15 @@ def test_cli_diagnose_prints_step_statuses_and_returns_summary_code(
     capsys,
 ) -> None:
     class DiagnosticRunner(FakeProcessRunner):
-        def run(self, command: list[str], cwd=None):
-            self.commands.append(command)
+        def run(self, command: Sequence[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+            self.commands.append(list(command))
 
-            class FakeResult:
-                returncode = 0
-                stdout = "" if command[0] == "git" else "passed"
-                stderr = ""
-
-            return FakeResult()
+            return subprocess.CompletedProcess(
+                args=list(command),
+                returncode=0,
+                stdout="" if command[0] == "git" else "passed",
+                stderr="",
+            )
 
     runner = DiagnosticRunner()
     exit_code = main(["diagnose"], process_runner=runner)
