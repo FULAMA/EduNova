@@ -1,4 +1,6 @@
-﻿import pytest
+﻿from collections.abc import Sequence
+
+import pytest
 
 from tools.edunova.core.command_registry import CommandRegistry
 from tools.edunova.core.command_service import CommandService
@@ -11,7 +13,7 @@ class FakeService(CommandService):
     def __init__(self) -> None:
         self.executed_commands: list[str] = []
 
-    def execute(self, name: str, args: tuple[str, ...] = ()) -> CommandResult:
+    def execute(self, name: str, args: Sequence[str] = ()) -> CommandResult:
         self.executed_commands.append(name)
 
         return CommandResult(
