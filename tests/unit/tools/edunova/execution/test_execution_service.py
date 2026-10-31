@@ -2,9 +2,13 @@
 
 import subprocess
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 
 from tools.edunova.execution.action import ExecutionAction
+from tools.edunova.execution.local_confirmation import LocalApprovalConfirmation, LocalOperationSummary
+from tools.edunova.execution.policy import ExecutionPolicy
+from tools.edunova.infrastructure.process_runner import ProcessRunner
 from tools.edunova.execution.audit import ExecutionAuditRecord
 from tools.edunova.execution.audit_sink import ExecutionAuditSink
 from tools.edunova.execution.capability import ExecutionCapability
@@ -16,7 +20,7 @@ from tools.edunova.execution.service import ExecutionService
 from tools.edunova.execution.task_registry import ExecutionTaskRegistry
 
 
-class FakePolicy:
+class FakePolicy(ExecutionPolicy):
     def __init__(self, decision: ExecutionDecision | None = None, error: Exception | None = None) -> None:
         self.decision = decision or ExecutionDecision(
             ExecutionDecisionType.ALLOW, "policy permits", "test", False
@@ -29,12 +33,12 @@ class FakePolicy:
         return self.decision
 
 
-class FakeRunner:
+class FakeRunner(ProcessRunner):
     def __init__(self, returncode: int = 0) -> None:
         self.calls: list[tuple[tuple[str, ...], Path | None]] = []
         self.returncode = returncode
 
-    def run(self, command: tuple[str, ...], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+    def run(self, command: Sequence[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
         self.calls.append((tuple(command), cwd))
         return subprocess.CompletedProcess(command, self.returncode, "out", "")
 
@@ -77,7 +81,7 @@ def make_service(
     policy: FakePolicy | None = None,
     runner: FakeRunner | None = None,
     registry: ExecutionTaskRegistry | None = None,
-    confirmation=None,
+    confirmation: LocalApprovalConfirmation | None = None,
 ) -> tuple[ExecutionService, FakeRunner, FakeAuditSink]:
     actual_runner = runner or FakeRunner()
     audit = FakeAuditSink()
@@ -128,7 +132,7 @@ def test_unknown_task_is_denied_audited_and_never_runs() -> None:
 
 def test_legacy_raw_argv_is_not_a_registered_task() -> None:
     service, runner, audit = make_service()
-    result = service.execute(make_request(), ["python", "-c", "raise SystemExit(9)"])
+    result = service.execute(make_request(), ["python", "-c", "raise SystemExit(9)"])  # type: ignore[arg-type]  # raw argv remains intentionally rejected
     assert result.executed is False
     assert runner.calls == []
     assert audit.records[0].decision is ExecutionDecisionType.DENY
@@ -231,16 +235,14 @@ def test_process_exit_code_is_preserved_and_recorded() -> None:
 class ConfirmOperation:
     def __init__(self, approve: bool) -> None:
         self.approve = approve
-        self.operations = []
+        self.operations: list[LocalOperationSummary] = []
 
-    def confirm(self, operation) -> bool:
+    def confirm(self, operation: LocalOperationSummary) -> bool:
         self.operations.append(operation)
         return self.approve
 
 
 def test_local_confirmation_is_bound_to_resolved_task_details() -> None:
-    from tools.edunova.execution.local_confirmation import LocalOperationSummary
-
     review = ExecutionDecision(ExecutionDecisionType.REVIEW, "review", "test", True)
     confirmation = ConfirmOperation(True)
     runner = FakeRunner()
