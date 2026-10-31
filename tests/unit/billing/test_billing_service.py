@@ -1,4 +1,5 @@
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 from uuid import UUID, uuid4
 
@@ -260,3 +261,47 @@ def test_fee_assignment_rejects_inactive_student():
 
     with pytest.raises(LookupError, match="Eleve actif"):
         service.assign_fee_type(TENANT, fee.id, student_id, None, actor_id)
+
+
+
+def test_concurrent_cashiers_cannot_overpay_the_same_charge(tmp_path):
+    database_path = tmp_path / "billing-concurrency.db"
+    database = SQLiteDatabase(database_path)
+    database.initialize()
+    student_id = uuid4()
+    with database.connect() as connection:
+        connection.execute(
+            "INSERT INTO students (id, tenant_id, first_name, last_name, email, active) VALUES (?, ?, ?, ?, ?, 1)",
+            (str(student_id), str(TENANT), "Grace", "Hopper", None),
+        )
+
+    charge = BillingService(SQLiteBillingRepository(database)).create_charge(
+        TENANT, student_id, "Annual fees", Decimal("100.00"), Currency.USD, None
+    )
+    services = [
+        BillingService(SQLiteBillingRepository(SQLiteDatabase(database_path)))
+        for _ in range(2)
+    ]
+
+    def submit_payment(index: int) -> str:
+        try:
+            services[index].record_payment(
+                TENANT, charge.id, Decimal("60.00"), Currency.USD,
+                f"cashier-payment-{index}", uuid4(),
+            )
+            return "accepted"
+        except ValueError as exc:
+            assert "solde" in str(exc)
+            return "rejected"
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        outcomes = list(executor.map(submit_payment, (0, 1)))
+
+    assert sorted(outcomes) == ["accepted", "rejected"]
+    with database.connect() as connection:
+        total = connection.execute(
+            "SELECT SUM(CAST(amount AS NUMERIC)) FROM billing_payments "
+            "WHERE tenant_id = ? AND charge_id = ? AND status = 'CONFIRMED'",
+            (str(TENANT), str(charge.id)),
+        ).fetchone()[0]
+    assert Decimal(str(total)) == Decimal("60.00")
