@@ -7,7 +7,7 @@ from src.infrastructure.persistence.migrations.versions import (
     migration_025_billing_corrections,
     migration_035_billing_reversal_integrity,
     migration_036_billing_receipt_immutability,
-    migration_037_billing_counter_entry_integrity,
+    migration_037_billing_counter_entry_consistency,
     migration_038_billing_payment_immutability,
 )
 
