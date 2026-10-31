@@ -32,15 +32,24 @@ Les tests ne sont volontairement pas ajoutés au périmètre MyPy dans ce change
 
 Le typage des tests et des doubles fera l'objet d'une décision séparée, après analyse du volume d'erreurs et de la valeur de cette contrainte. Il ne faut pas confondre le passage des tests pytest avec une vérification MyPy des fichiers de tests.
 
-## Validation
+## Validation CI
 
-- Modification publiée sur la branche `fix/mypy-test-double-contracts`.
-- Exécution CI déclenchée par le push : résultat à vérifier dans GitHub Actions.
-- Aucune exécution MyPy distante n'est considérée comme réussie tant que le workflow n'a pas terminé.
-- Les 505 tests locaux communiqués par le propriétaire du dépôt restent un résultat distinct.
+Le workflow GitHub Actions #281, associé au commit `b6ea6a9f4e93584ab036b6551d0cbc3728c50dfc`, est terminé avec la conclusion **success**.
+
+Étapes confirmées réussies :
+
+- Compilation ;
+- MyPy sur `src tools/edunova` ;
+- Ruff ;
+- Bandit ;
+- pip-audit (étape non bloquante) ;
+- Tests complets ;
+- Détection des changements domaine/migrations.
+
+Workflow : https://github.com/FULAMA/EduNova/actions/runs/41250482987
 
 ## Protection
 
 - Aucun changement métier, DDD, migration ou base de données.
 - Aucune modification de `main`.
-- PR #14 maintenue en brouillon jusqu'à validation CI et revue finale.
+- PR #14 maintenue en brouillon jusqu'à revue finale et approbation.
