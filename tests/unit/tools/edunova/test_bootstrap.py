@@ -1,3 +1,5 @@
+import subprocess
+from collections.abc import Sequence
 from pathlib import Path
 
 from tools.edunova.bootstrap import CliBootstrap
@@ -10,15 +12,15 @@ class FakeProcessRunner(ProcessRunner):
     def __init__(self) -> None:
         self.commands: list[list[str]] = []
 
-    def run(self, command: list[str], cwd=None):
-        self.commands.append(command)
+    def run(self, command: Sequence[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        self.commands.append(list(command))
 
-        class FakeResult:
-            returncode = 0
-            stdout = "fake tests passed"
-            stderr = ""
-
-        return FakeResult()
+        return subprocess.CompletedProcess(
+            args=list(command),
+            returncode=0,
+            stdout="fake tests passed",
+            stderr="",
+        )
 
 
 def expected_pytest_command() -> list[str]:
