@@ -109,5 +109,41 @@ def test_assign_subject_to_class_rejects_invalid_coefficient(application_contain
 
     assert response.status_code == 422
 
+def test_assign_subject_to_class_rejects_teacher(application_container):
+    app = create_app(application_container)
+    user = User(
+        id=uuid4(),
+        email="teacher-assign-subject@edunova.com",
+        password_hash="hashed-password",
+        role="TEACHER",
+    )
+    application_container._user_repository().save(user)
+    seed_membership(
+        application_container,
+        user.id,
+        tenant_id=TEST_TENANT_ID,
+        role="TEACHER",
+    )
+    token = JwtService(secret_key=TEST_JWT_SECRET).create_access_token(
+        user_id=user.id,
+        role="TEACHER",
+        tenant_id=TEST_TENANT_ID,
+    )
+    client = TestClient(app)
+    response = client.post(
+        f"/classes/{uuid4()}/subjects",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"subject_id": str(uuid4()), "coefficient": 4},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Acces interdit."
 
+
+def test_assign_subject_to_class_rejects_unauthenticated_request(application_container):
+    app = create_app(application_container)
+    response = TestClient(app).post(
+        f"/classes/{uuid4()}/subjects",
+        json={"subject_id": str(uuid4()), "coefficient": 4},
+    )
+    assert response.status_code == 401
 
