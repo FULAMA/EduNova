@@ -34,8 +34,7 @@ def test_command_execute_returns_command_result() -> None:
 
 
 def test_command_requires_execute_implementation() -> None:
-    class IncompleteCommand(Command):
-        name = "incomplete"
+    incomplete_type = type("IncompleteCommand", (Command,), {"name": "incomplete"})
 
     with pytest.raises(TypeError):
-        IncompleteCommand()
+        incomplete_type()
