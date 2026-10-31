@@ -102,6 +102,7 @@ def test_rejects_counter_entry_when_receipt_is_not_issued() -> None:
     connection = _connection()
     # This represents a legacy/inconsistent state; the trigger must fail closed.
     connection.execute("DROP TRIGGER trg_billing_receipts_immutable_update")
+    connection.execute("DROP TRIGGER trg_billing_receipt_reversal_link")
     connection.execute(
         "UPDATE billing_receipts SET status = 'REVERSED', reversed_by_entry_id = 'legacy-entry' "
         "WHERE tenant_id = 'tenant-1' AND payment_id = 'payment-1'"
