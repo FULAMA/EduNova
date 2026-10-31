@@ -97,7 +97,7 @@ def test_rejects_class_snapshot_added_by_update() -> None:
            VALUES ('assignment-1', 'tenant-1', 'fee-1', 'STUDENT')"""
     )
 
-    with pytest.raises(sqlite3.IntegrityError, match="immutable"):
+    with pytest.raises(sqlite3.IntegrityError, match="snapshot class must match snapshot applicability"):
         connection.execute(
             """UPDATE billing_fee_assignments SET snapshot_class_id = 'class-1'
                WHERE tenant_id = 'tenant-1' AND id = 'assignment-1'"""
