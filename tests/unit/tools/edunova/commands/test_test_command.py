@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from pathlib import Path
 import subprocess
 import sys
@@ -15,10 +16,10 @@ class FakeProcessRunner(ProcessRunner):
 
     def run(
         self,
-        command: list[str],
+        command: Sequence[str],
         cwd: Path | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        self.commands.append(command)
+        self.commands.append(list(command))
         self.working_directories.append(cwd)
         return self._result
 
