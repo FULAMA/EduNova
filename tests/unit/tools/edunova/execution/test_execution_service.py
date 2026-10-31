@@ -6,18 +6,21 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from tools.edunova.execution.action import ExecutionAction
-from tools.edunova.execution.local_confirmation import LocalApprovalConfirmation, LocalOperationSummary
-from tools.edunova.execution.policy import ExecutionPolicy
-from tools.edunova.infrastructure.process_runner import ProcessRunner
 from tools.edunova.execution.audit import ExecutionAuditRecord
 from tools.edunova.execution.audit_sink import ExecutionAuditSink
 from tools.edunova.execution.capability import ExecutionCapability
 from tools.edunova.execution.decision import ExecutionDecision, ExecutionDecisionType
+from tools.edunova.execution.local_confirmation import (
+    LocalApprovalConfirmation,
+    LocalOperationSummary,
+)
+from tools.edunova.execution.policy import ExecutionPolicy
 from tools.edunova.execution.request import ExecutionRequest
 from tools.edunova.execution.risk import ExecutionRisk
 from tools.edunova.execution.scope import ExecutionScope
 from tools.edunova.execution.service import ExecutionService
 from tools.edunova.execution.task_registry import ExecutionTaskRegistry
+from tools.edunova.infrastructure.process_runner import ProcessRunner
 
 
 class FakePolicy(ExecutionPolicy):
