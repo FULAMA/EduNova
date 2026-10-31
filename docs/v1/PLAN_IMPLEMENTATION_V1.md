@@ -156,3 +156,14 @@ Avant toute migration ou modification de schéma :
 - Les contrôles CI existants restent verts.
 
 La Tranche 1 sera livrée comme une PR isolée après audit du code existant. La PR #14, qui porte des corrections qualité distinctes, reste indépendante et non fusionnée.
+
+
+### Résultat de l'audit de référence — 2026-11-01
+
+Le rapport [AUDIT_AUTONOMIE_SCOLAIRE_CALENDRIER_2026-11-01.md](../reports/AUDIT_AUTONOMIE_SCOLAIRE_CALENDRIER_2026-11-01.md) établit les constats suivants :
+
+- D1-A est déjà protégé par `AcademicYearStatus.ACTIVE`, le cas d'usage d'activation et l'index unique partiel `uq_academic_year_active` de la migration 020. Ne pas réimplémenter ni renommer ce statut.
+- D2-C nécessite un contrat de permissions métier granulaire ; les routes observées sont encore protégées par `require_role("ADMIN")`.
+- D3-B n'est pas implémenté : le modèle `AcademicPeriod` ne distingue pas les calendriers/programmes et le cas d'usage ne contrôle pas les chevauchements.
+- Les périodes historiques sans calendrier ne seront pas affectées automatiquement à un calendrier.
+- La suite de la Tranche 1 commence par le modèle métier explicite `AcademicCalendar`, puis les ports, cas d'usage, adaptateurs, routes et tests. Une migration additive ne viendra qu'après validation sur base temporaire.
