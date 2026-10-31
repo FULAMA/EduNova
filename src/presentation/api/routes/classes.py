@@ -51,6 +51,7 @@ def list_academic_classes(
     "/{class_id}/subjects",
     response_model=AssignSubjectToClassResponseSchema,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role("ADMIN"))],
 )
 def assign_subject_to_class(
     class_id: UUID,
