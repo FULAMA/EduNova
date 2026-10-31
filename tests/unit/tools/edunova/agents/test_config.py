@@ -60,7 +60,7 @@ def test_provider_config_is_immutable() -> None:
     config = ProviderConfig(name="gemini")
 
     try:
-        config.enabled = False
+        setattr(config, "enabled", False)
     except AttributeError:
         pass
     else:
