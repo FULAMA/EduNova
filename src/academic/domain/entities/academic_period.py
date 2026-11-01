@@ -11,12 +11,15 @@ class AcademicPeriod:
     start_date: date
     end_date: date
     academic_year_id: UUID | None = None
+    academic_calendar_id: UUID | None = None
 
     def __post_init__(self):
         if self.tenant_id is None:
             raise ValueError("Le tenant est obligatoire.")
         if self.academic_year_id is not None and not isinstance(self.academic_year_id, UUID):
             raise TypeError("L'identifiant de l'annee scolaire doit etre un UUID.")
+        if self.academic_calendar_id is not None and not isinstance(self.academic_calendar_id, UUID):
+            raise TypeError("L'identifiant du calendrier doit etre un UUID.")
 
         if not self.name.strip():
             raise ValueError(
