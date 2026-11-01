@@ -28,7 +28,7 @@ class SQLiteAcademicPeriodRepository(AcademicPeriodRepository):
     def find_by_id(self, period_id: UUID, tenant_id: UUID) -> AcademicPeriod | None:
         with self._database.connect() as connection:
             row = connection.execute(
-                "SELECT id, tenant_id, name, start_date, end_date, academic_year_id FROM academic_periods "
+                "SELECT id, tenant_id, name, start_date, end_date, academic_year_id, academic_calendar_id FROM academic_periods "
                 "WHERE id = ? AND tenant_id = ?", (str(period_id), str(tenant_id)),
             ).fetchone()
         if row is None:
