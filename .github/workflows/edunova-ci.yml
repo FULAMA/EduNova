@@ -7,7 +7,7 @@ on:
     branches: ["**"]
 
 concurrency:
-  group: edunova-${{ github.event.pull_request.number || github.ref }}
+  group: edunova-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
