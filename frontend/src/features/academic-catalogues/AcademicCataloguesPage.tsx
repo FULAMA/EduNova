@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 
 import { ApiError } from '../../shared/api/client'
 import { createAcademicCalendar, createAcademicPeriod, createSubject, listAcademicCalendars, listAcademicPeriods, listSubjects, updateSubject, type AcademicCalendar, type AcademicPeriod, type Subject } from './academic-catalogue.service'
-import { listAcademicYears, type AcademicYear } from '../enrollments/enrollment.service'
+import { activateAcademicYear, closeAcademicYear, createAcademicYear, listAcademicYears, type AcademicYear } from '../enrollments/enrollment.service'
 import './AcademicCataloguesPage.css'
 
 function errorText(error: unknown): string {
@@ -30,6 +30,9 @@ export default function AcademicCataloguesPage() {
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
   const [coefficient, setCoefficient] = useState('1')
+  const [yearLabel, setYearLabel] = useState('')
+  const [yearStart, setYearStart] = useState('')
+  const [yearEnd, setYearEnd] = useState('')
   const [periodYearId, setPeriodYearId] = useState('')
   const [periodCalendarId, setPeriodCalendarId] = useState('')
   const [calendarName, setCalendarName] = useState('')
@@ -69,6 +72,24 @@ export default function AcademicCataloguesPage() {
       await load()
     } catch (reason) { setError(errorText(reason)) }
   }
+  const submitYear = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); setError(''); setNotice('')
+    try {
+      await createAcademicYear({ label: yearLabel.trim(), start_date: yearStart, end_date: yearEnd })
+      setYearLabel(''); setYearStart(''); setYearEnd('')
+      setNotice('Année scolaire créée en brouillon. Activez-la explicitement pour la rendre opérationnelle.')
+      await load()
+    } catch (reason) { setError(errorText(reason)) }
+  }
+  const changeYearStatus = async (year: AcademicYear, action: 'activate' | 'close') => {
+    setError(''); setNotice('')
+    try {
+      if (action === 'activate') await activateAcademicYear(year.id)
+      else await closeAcademicYear(year.id)
+      setNotice(action === 'activate' ? `Année ${year.label} activée.` : `Année ${year.label} clôturée.`)
+      await load()
+    } catch (reason) { setError(errorText(reason)) }
+  }
   const submitCalendar = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setError(''); setNotice('')
     try {
@@ -103,6 +124,17 @@ export default function AcademicCataloguesPage() {
         <label>Coefficient<input required type="number" min="0.01" step="any" value={coefficient} readOnly={Boolean(editing)} onChange={(event) => setCoefficient(event.target.value)} aria-describedby={editing ? 'coefficient-help' : undefined} /></label>
         {editing ? <span id="coefficient-help" className="catalogues-help">Le coefficient existant est conservé lors de la modification.</span> : null}
         <div className="catalogues-form__actions"><button type="submit">{editing ? 'Enregistrer' : 'Créer la matière'}</button>{editing && <button type="button" className="catalogues-secondary" onClick={resetForm}>Annuler</button>}</div>
+      </form>
+    </section>
+    <section className="catalogues-card" aria-labelledby="years-title">
+      <div className="catalogues-card__heading"><div><h2 id="years-title">Années scolaires</h2><p>Une seule année peut être active à la fois dans un établissement. La clôture est définitive ; elle bloque les modifications ordinaires.</p></div></div>
+      {loading ? <p role="status" aria-busy="true">Chargement des années scolaires…</p> : years.length ? <div className="catalogues-table-scroll"><table><thead><tr><th>Libellé</th><th>Début</th><th>Fin</th><th>Statut</th><th>Actions</th></tr></thead><tbody>{years.map((year) => <tr key={year.id}><td>{year.label}</td><td>{year.start_date}</td><td>{year.end_date}</td><td>{year.status === 'ACTIVE' ? 'Active' : year.status === 'CLOSED' ? 'Clôturée' : 'Brouillon'}</td><td>{year.status === 'DRAFT' ? <button type="button" onClick={() => void changeYearStatus(year, 'activate')}>Activer</button> : year.status === 'ACTIVE' ? <button type="button" className="catalogues-secondary" onClick={() => void changeYearStatus(year, 'close')}>Clôturer</button> : '—'}</td></tr>)}</tbody></table></div> : !loadError ? <p className="catalogues-empty">Aucune année scolaire n’est enregistrée.</p> : null}
+      <form className="catalogues-form" onSubmit={(event) => void submitYear(event)}>
+        <h3>Créer une année scolaire</h3>
+        <label>Libellé (YYYY-YYYY)<input required minLength={9} maxLength={9} pattern="[0-9]{4}-[0-9]{4}" value={yearLabel} onChange={(event) => setYearLabel(event.target.value)} placeholder="2026-2027" /></label>
+        <label>Date de début<input required type="date" value={yearStart} onChange={(event) => setYearStart(event.target.value)} /></label>
+        <label>Date de fin<input required type="date" min={yearStart || undefined} value={yearEnd} onChange={(event) => setYearEnd(event.target.value)} /></label>
+        <div className="catalogues-form__actions"><button type="submit">Créer l’année</button></div>
       </form>
     </section>
     <section className="catalogues-card" aria-labelledby="calendars-title">
