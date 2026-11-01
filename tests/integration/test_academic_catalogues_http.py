@@ -190,3 +190,25 @@ def test_academic_calendar_is_tenant_scoped_and_name_is_unique_case_insensitivel
     duplicate = client.post("/academic-calendars", json={"name": "primaire"})
     assert duplicate.status_code == 409
     assert client.post("/academic-calendars", json={"name": " "}).status_code == 422
+
+
+def test_academic_year_lifecycle_allows_only_one_active_year_and_closes_explicitly():
+    client, _, _ = client_for()
+    first = client.post("/academic-years", json={
+        "label": "2026-2027", "start_date": "2026-09-01", "end_date": "2027-06-30",
+    })
+    second = client.post("/academic-years", json={
+        "label": "2027-2028", "start_date": "2027-09-01", "end_date": "2028-06-30",
+    })
+    assert first.status_code == 201
+    assert second.status_code == 201
+
+    assert client.post(f"/academic-years/{first.json()['id']}/activate").status_code == 200
+    conflict = client.post(f"/academic-years/{second.json()['id']}/activate")
+    assert conflict.status_code == 409
+
+    closed = client.post(f"/academic-years/{first.json()['id']}/close")
+    assert closed.status_code == 200
+    assert closed.json()["status"] == "CLOSED"
+    assert client.post(f"/academic-years/{second.json()['id']}/activate").status_code == 200
+    assert client.post(f"/academic-years/{first.json()['id']}/close").status_code == 400
