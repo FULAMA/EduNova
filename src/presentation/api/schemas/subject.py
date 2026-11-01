@@ -38,6 +38,6 @@ class AcademicPeriodInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     academic_year_id: UUID
     academic_calendar_id: UUID
-    name = Field(min_length=1, max_length=100)
+    name: str = Field(min_length=1, max_length=100)
     start_date: date
     end_date: date
