@@ -26,12 +26,12 @@ from tests.support.academic_eligibility import eligible_result_repositories
 
 
 
-def authenticate_test_client(container, client):
+def authenticate_test_client(container, client, role="ADMIN"):
     user = User(
         id=uuid4(),
-        email=f"presentation-admin-{uuid4()}@edunova.com",
+        email=f"presentation-{role.lower()}-{uuid4()}@edunova.com",
         password_hash="hashed-password",
-        role="ADMIN",
+        role=role,
     )
 
     container._user_repository().save(user)
@@ -40,14 +40,14 @@ def authenticate_test_client(container, client):
         container,
         user.id,
         tenant_id=TEST_TENANT_ID,
-        role="ADMIN",
+        role=role,
     )
 
     jwt_service = JwtService(secret_key=TEST_JWT_SECRET)
 
     token = jwt_service.create_access_token(
         user_id=user.id,
-        role="ADMIN",
+        role=role,
         tenant_id=TEST_TENANT_ID,
     )
 
@@ -428,3 +428,21 @@ def test_school_profile_api_records_authenticated_actor_and_tenant_scope(applica
     assert audit["before_state"] is None
     assert '"display_name": "Établissement Exemple"' in audit["after_state"]
 
+
+
+def test_school_profile_rejects_non_authorized_membership_role(application_container, api_client):
+    authenticate_test_client(application_container, api_client, role="PROF")
+    response = api_client.put(
+        "/school-profile",
+        json={
+            "legal_name": "Établissement Non Autorisé",
+            "display_name": "Non Autorisé",
+        },
+    )
+    assert response.status_code == 403
+
+    with application_container._database.connect() as connection:
+        count = connection.execute("SELECT COUNT(*) FROM school_profiles").fetchone()[0]
+        audit_count = connection.execute("SELECT COUNT(*) FROM school_profile_audit").fetchone()[0]
+    assert count == 0
+    assert audit_count == 0
