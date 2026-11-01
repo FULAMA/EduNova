@@ -54,6 +54,8 @@ from src.presentation.api.dependencies import (
     get_update_subject_use_case,
     get_list_academic_periods_use_case,
     get_create_academic_period_use_case,
+    get_create_academic_calendar_use_case,
+    get_list_academic_calendars_use_case,
     get_list_academic_classes_use_case,
     get_create_academic_year_use_case,
     get_list_academic_years_use_case,
@@ -241,6 +243,8 @@ def create_app(
     app.dependency_overrides[get_update_subject_use_case] = container.update_subject
     app.dependency_overrides[get_list_academic_periods_use_case] = container.list_academic_periods
     app.dependency_overrides[get_create_academic_period_use_case] = container.create_academic_period
+    app.dependency_overrides[get_create_academic_calendar_use_case] = container.create_academic_calendar
+    app.dependency_overrides[get_list_academic_calendars_use_case] = container.list_academic_calendars
     app.dependency_overrides[get_list_academic_classes_use_case] = container.list_academic_classes
     app.dependency_overrides[get_create_academic_year_use_case] = container.create_academic_year
     app.dependency_overrides[get_list_academic_years_use_case] = container.list_academic_years
