@@ -395,3 +395,34 @@ def test_add_subject_result_rejects_invalid_coefficient(application_container, a
     finally:
         api_client.app.dependency_overrides.pop(get_add_subject_result_use_case, None)
 
+
+
+
+def test_school_profile_api_records_authenticated_actor_and_tenant_scope(application_container, api_client):
+    authenticate_test_client(application_container, api_client)
+    response = api_client.put(
+        "/school-profile",
+        json={
+            "legal_name": "Établissement Exemple ASBL",
+            "display_name": "Établissement Exemple",
+            "address": "Kinshasa",
+            "phone": "+243000000",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["display_name"] == "Établissement Exemple"
+
+    read_response = api_client.get("/school-profile")
+    assert read_response.status_code == 200
+    assert read_response.json()["legal_name"] == "Établissement Exemple ASBL"
+
+    with application_container._database.connect() as connection:
+        audit = connection.execute(
+            "SELECT tenant_id, actor_user_id, action, before_state, after_state FROM school_profile_audit"
+        ).fetchone()
+    assert audit is not None
+    assert audit["tenant_id"] == str(TEST_TENANT_ID)
+    assert audit["action"] == "CREATE"
+    assert audit["before_state"] is None
+    assert '"display_name": "Établissement Exemple"' in audit["after_state"]
+
