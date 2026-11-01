@@ -79,6 +79,8 @@ from src.tenancy.application.interfaces.tenant_repository import TenantRepositor
 from src.tenancy.application.interfaces.membership_repository import MembershipRepository
 from src.presentation.api.container import ApplicationContainer
 from src.billing.application.service import BillingService
+from src.school.application.use_cases.get_school_profile import GetSchoolProfile
+from src.school.application.use_cases.update_school_profile import UpdateSchoolProfile
 
 
 _container: ApplicationContainer | None = None
@@ -319,3 +321,11 @@ def get_create_academic_calendar_use_case() -> CreateAcademicCalendar:
 
 def get_list_academic_calendars_use_case() -> ListAcademicCalendars:
     return get_container().list_academic_calendars()
+
+ 
+def get_school_profile_use_case() -> GetSchoolProfile:
+    return get_container().get_school_profile()
+
+
+def update_school_profile_use_case() -> UpdateSchoolProfile:
+    return get_container().update_school_profile()
