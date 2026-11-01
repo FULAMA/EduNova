@@ -85,6 +85,8 @@ from src.presentation.api.dependencies import (
     get_list_student_report_cards_use_case,
     get_student_report_card_use_case,
     get_correct_report_card_use_case,
+    get_school_profile_use_case,
+    update_school_profile_use_case,
 )
 
 from src.presentation.api.routes.academic_records import (
@@ -104,6 +106,7 @@ from src.presentation.api.routes.attendance import router as attendance_router
 from src.presentation.api.routes.billing import router as billing_router
 from src.presentation.api.routes.student_portal import router as student_portal_router
 from src.presentation.api.routes.report_cards import router as report_cards_router
+from src.presentation.api.routes.school_profile import router as school_profile_router
 
 
 def create_app(
@@ -376,5 +379,8 @@ def create_app(
     app.include_router(billing_router)
     app.include_router(student_portal_router)
     app.include_router(report_cards_router)
+    app.dependency_overrides[get_school_profile_use_case] = container.get_school_profile
+    app.dependency_overrides[update_school_profile_use_case] = container.update_school_profile
+    app.include_router(school_profile_router)
 
     return app

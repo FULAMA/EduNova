@@ -1,4 +1,4 @@
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 
 from src.academic.application.interfaces.student_academic_record_repository import (
@@ -26,12 +26,12 @@ from tests.support.academic_eligibility import eligible_result_repositories
 
 
 
-def authenticate_test_client(container, client):
+def authenticate_test_client(container, client, role="ADMIN", tenant_id=TEST_TENANT_ID):
     user = User(
         id=uuid4(),
-        email=f"presentation-admin-{uuid4()}@edunova.com",
+        email=f"presentation-{role.lower()}-{uuid4()}@edunova.com",
         password_hash="hashed-password",
-        role="ADMIN",
+        role=role,
     )
 
     container._user_repository().save(user)
@@ -39,16 +39,16 @@ def authenticate_test_client(container, client):
     seed_membership(
         container,
         user.id,
-        tenant_id=TEST_TENANT_ID,
-        role="ADMIN",
+        tenant_id=tenant_id,
+        role=role,
     )
 
     jwt_service = JwtService(secret_key=TEST_JWT_SECRET)
 
     token = jwt_service.create_access_token(
         user_id=user.id,
-        role="ADMIN",
-        tenant_id=TEST_TENANT_ID,
+        role=role,
+        tenant_id=tenant_id,
     )
 
     client.headers.update(
@@ -56,6 +56,7 @@ def authenticate_test_client(container, client):
             "Authorization": f"Bearer {token}",
         }
     )
+    return user.id
 
 
 class FakeAcademicRecordRepository(StudentAcademicRecordRepository):
@@ -395,3 +396,163 @@ def test_add_subject_result_rejects_invalid_coefficient(application_container, a
     finally:
         api_client.app.dependency_overrides.pop(get_add_subject_result_use_case, None)
 
+
+
+
+def test_school_profile_api_records_authenticated_actor_and_tenant_scope(application_container, api_client):
+    actor_id = authenticate_test_client(application_container, api_client)
+    response = api_client.put(
+        "/school-profile",
+        json={
+            "legal_name": "Établissement Exemple ASBL",
+            "display_name": "Établissement Exemple",
+            "address": "Kinshasa",
+            "phone": "+243000000",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["display_name"] == "Établissement Exemple"
+
+    read_response = api_client.get("/school-profile")
+    assert read_response.status_code == 200
+    assert read_response.json()["legal_name"] == "Établissement Exemple ASBL"
+
+    with application_container._database.connect() as connection:
+        audit = connection.execute(
+            "SELECT tenant_id, actor_user_id, action, before_state, after_state FROM school_profile_audit"
+        ).fetchone()
+    assert audit is not None
+    assert audit["tenant_id"] == str(TEST_TENANT_ID)
+    assert audit["actor_user_id"] == str(actor_id)
+    assert audit["action"] == "CREATE"
+    assert audit["before_state"] is None
+    assert '"display_name": "Établissement Exemple"' in audit["after_state"]
+
+
+
+def test_school_profile_rejects_non_authorized_membership_role(application_container, api_client):
+    authenticate_test_client(application_container, api_client, role="PROF")
+    read_response = api_client.get("/school-profile")
+    assert read_response.status_code == 403
+
+    response = api_client.put(
+        "/school-profile",
+        json={
+            "legal_name": "Établissement Non Autorisé",
+            "display_name": "Non Autorisé",
+        },
+    )
+    assert response.status_code == 403
+
+    with application_container._database.connect() as connection:
+        count = connection.execute("SELECT COUNT(*) FROM school_profiles").fetchone()[0]
+        audit_count = connection.execute("SELECT COUNT(*) FROM school_profile_audit").fetchone()[0]
+    assert count == 0
+    assert audit_count == 0
+
+
+
+def test_school_profile_api_isolates_profiles_between_tenants(application_container, api_client):
+    authenticate_test_client(application_container, api_client, tenant_id=TEST_TENANT_ID)
+    tenant_a_response = api_client.put(
+        "/school-profile",
+        json={
+            "legal_name": "École A ASBL",
+            "display_name": "École A",
+        },
+    )
+    assert tenant_a_response.status_code == 200
+
+    tenant_b_id = UUID("00000000-0000-0000-0000-000000000002")
+    authenticate_test_client(
+        application_container, api_client, tenant_id=tenant_b_id
+    )
+
+    read_response = api_client.get("/school-profile")
+    assert read_response.status_code == 200
+    assert read_response.json() is None
+
+    tenant_b_response = api_client.put(
+        "/school-profile",
+        json={
+            "legal_name": "École B ASBL",
+            "display_name": "École B",
+        },
+    )
+    assert tenant_b_response.status_code == 200
+
+    with application_container._database.connect() as connection:
+        profiles = connection.execute(
+            "SELECT tenant_id, display_name FROM school_profiles ORDER BY tenant_id"
+        ).fetchall()
+        audit_rows = connection.execute(
+            "SELECT tenant_id, action FROM school_profile_audit ORDER BY occurred_at, rowid"
+        ).fetchall()
+
+    assert [(row["tenant_id"], row["display_name"]) for row in profiles] == [
+        (str(TEST_TENANT_ID), "École A"),
+        (str(tenant_b_id), "École B"),
+    ]
+    assert [row["tenant_id"] for row in audit_rows].count(str(TEST_TENANT_ID)) == 1
+    assert [row["tenant_id"] for row in audit_rows].count(str(tenant_b_id)) == 1
+
+
+
+def test_school_profile_rejects_invalid_data_without_persisting_or_auditing(application_container, api_client):
+    authenticate_test_client(application_container, api_client)
+
+    blank_name_response = api_client.put(
+        "/school-profile",
+        json={
+            "legal_name": "Établissement Exemple ASBL",
+            "display_name": "   ",
+        },
+    )
+    assert blank_name_response.status_code == 422
+
+    invalid_email_response = api_client.put(
+        "/school-profile",
+        json={
+            "legal_name": "Établissement Exemple ASBL",
+            "display_name": "Établissement Exemple",
+            "email": "adresse-invalide",
+        },
+    )
+    assert invalid_email_response.status_code == 422
+
+    with application_container._database.connect() as connection:
+        profile_count = connection.execute(
+            "SELECT COUNT(*) FROM school_profiles"
+        ).fetchone()[0]
+        audit_count = connection.execute(
+            "SELECT COUNT(*) FROM school_profile_audit"
+        ).fetchone()[0]
+
+    assert profile_count == 0
+    assert audit_count == 0
+
+
+
+def test_school_profile_allows_direction_membership(application_container, api_client):
+    authenticate_test_client(application_container, api_client, role="DIRECTION")
+
+    response = api_client.put(
+        "/school-profile",
+        json={
+            "legal_name": "Établissement Direction ASBL",
+            "display_name": "Établissement Direction",
+        },
+    )
+    assert response.status_code == 200
+
+    read_response = api_client.get("/school-profile")
+    assert read_response.status_code == 200
+    assert read_response.json()["display_name"] == "Établissement Direction"
+
+    with application_container._database.connect() as connection:
+        audit = connection.execute(
+            "SELECT actor_user_id, action FROM school_profile_audit"
+        ).fetchone()
+
+    assert audit is not None
+    assert audit["action"] == "CREATE"
