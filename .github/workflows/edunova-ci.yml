@@ -42,6 +42,25 @@ jobs:
       - name: Tests complets
         run: pytest -q --basetemp=.pytest_tmp
 
+      - name: Installer Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Installer les dépendances frontend
+        working-directory: frontend
+        run: npm ci
+
+      - name: Tests frontend
+        working-directory: frontend
+        run: npm test
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
       - name: Détection REVIEW (migrations / domaine)
         if: github.event_name == 'pull_request'
         shell: pwsh
