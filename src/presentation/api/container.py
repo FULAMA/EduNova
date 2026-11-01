@@ -382,7 +382,7 @@ class ApplicationContainer:
         return ListAcademicPeriods(self._academic_period_repository())
 
     def create_academic_period(self) -> CreateAcademicPeriod:
-        return CreateAcademicPeriod(self._academic_period_repository(), self._academic_year_repository())
+        return CreateAcademicPeriod(self._academic_period_repository(), self._academic_year_repository(), self._academic_calendar_repository())
 
     def list_eligible_student_periods(self) -> ListEligibleStudentPeriods:
         return ListEligibleStudentPeriods(
