@@ -495,3 +495,38 @@ def test_school_profile_api_isolates_profiles_between_tenants(application_contai
     ]
     assert [row["tenant_id"] for row in audit_rows].count(str(TEST_TENANT_ID)) == 1
     assert [row["tenant_id"] for row in audit_rows].count(str(tenant_b_id)) == 1
+
+
+
+def test_school_profile_rejects_invalid_data_without_persisting_or_auditing(application_container, api_client):
+    authenticate_test_client(application_container, api_client)
+
+    blank_name_response = api_client.put(
+        "/school-profile",
+        json={
+            "legal_name": "Établissement Exemple ASBL",
+            "display_name": "   ",
+        },
+    )
+    assert blank_name_response.status_code == 422
+
+    invalid_email_response = api_client.put(
+        "/school-profile",
+        json={
+            "legal_name": "Établissement Exemple ASBL",
+            "display_name": "Établissement Exemple",
+            "email": "adresse-invalide",
+        },
+    )
+    assert invalid_email_response.status_code == 422
+
+    with application_container._database.connect() as connection:
+        profile_count = connection.execute(
+            "SELECT COUNT(*) FROM school_profiles"
+        ).fetchone()[0]
+        audit_count = connection.execute(
+            "SELECT COUNT(*) FROM school_profile_audit"
+        ).fetchone()[0]
+
+    assert profile_count == 0
+    assert audit_count == 0
