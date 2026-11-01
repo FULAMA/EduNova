@@ -21,8 +21,9 @@ class MigrationRunner:
         migration: MigrationFunction | None = None,
     ) -> None:
         if isinstance(version_or_migration, Migration):
-            self._migrations[version_or_migration.version] = (
-                version_or_migration.upgrade
+            self._register_migration(
+                version_or_migration.version,
+                version_or_migration.upgrade,
             )
             return
 
@@ -31,7 +32,18 @@ class MigrationRunner:
                 "Une fonction de migration est obligatoire."
             )
 
-        self._migrations[version_or_migration] = migration
+        self._register_migration(version_or_migration, migration)
+
+    def _register_migration(
+        self,
+        version: str,
+        migration: MigrationFunction,
+    ) -> None:
+        if version in self._migrations:
+            raise ValueError(
+                f"La version de migration {version!r} est déjà enregistrée."
+            )
+        self._migrations[version] = migration
 
     def register_module(self, module) -> None:
         self.register(
