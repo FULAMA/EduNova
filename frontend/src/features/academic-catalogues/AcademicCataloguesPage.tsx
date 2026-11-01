@@ -50,7 +50,7 @@ export default function AcademicCataloguesPage() {
       setPeriods(periodRows)
       setYears(yearRows)
       setCalendars(calendarRows)
-      setPeriodYearId((current) => current || yearRows.find((year) => year.status !== 'CLOSED')?.id || '')
+      setPeriodYearId((current) => yearRows.some((year) => year.id === current && year.status !== 'CLOSED') ? current : yearRows.find((year) => year.status !== 'CLOSED')?.id || '')
       setPeriodCalendarId((current) => current || calendarRows.find((calendar) => calendar.is_active)?.id || '')
       setLoadError(false)
     } catch (reason) { setLoadError(true); setError(errorText(reason)) } finally { setLoading(false) }
