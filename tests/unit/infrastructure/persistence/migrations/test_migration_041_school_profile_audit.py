@@ -34,3 +34,32 @@ def test_school_profile_audit_rejects_unknown_tenant_when_foreign_keys_enabled()
                 (id, tenant_id, actor_user_id, action, after_state)
             VALUES ('event-1', 'unknown', 'user-1', 'CREATE', '{}')
         """)
+
+
+
+def test_school_profile_audit_rejects_unknown_actions_and_inconsistent_snapshots():
+    connection = sqlite3.connect(":memory:")
+    connection.execute("CREATE TABLE tenants (id TEXT PRIMARY KEY)")
+    connection.execute("INSERT INTO tenants (id) VALUES ('tenant-a')")
+    upgrade(connection)
+
+    with pytest.raises(sqlite3.IntegrityError):
+        connection.execute("""
+            INSERT INTO school_profile_audit
+                (id, tenant_id, actor_user_id, action, after_state)
+            VALUES ('event-invalid-action', 'tenant-a', 'user-1', 'DELETE', '{}')
+        """)
+
+    with pytest.raises(sqlite3.IntegrityError):
+        connection.execute("""
+            INSERT INTO school_profile_audit
+                (id, tenant_id, actor_user_id, action, before_state, after_state)
+            VALUES ('event-invalid-create', 'tenant-a', 'user-1', 'CREATE', '{}', '{}')
+        """)
+
+    with pytest.raises(sqlite3.IntegrityError):
+        connection.execute("""
+            INSERT INTO school_profile_audit
+                (id, tenant_id, actor_user_id, action, after_state)
+            VALUES ('event-invalid-update', 'tenant-a', 'user-1', 'UPDATE', '{}')
+        """)
