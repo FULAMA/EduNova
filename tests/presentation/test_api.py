@@ -530,3 +530,29 @@ def test_school_profile_rejects_invalid_data_without_persisting_or_auditing(appl
 
     assert profile_count == 0
     assert audit_count == 0
+
+
+
+def test_school_profile_allows_direction_membership(application_container, api_client):
+    authenticate_test_client(application_container, api_client, role="DIRECTION")
+
+    response = api_client.put(
+        "/school-profile",
+        json={
+            "legal_name": "Établissement Direction ASBL",
+            "display_name": "Établissement Direction",
+        },
+    )
+    assert response.status_code == 200
+
+    read_response = api_client.get("/school-profile")
+    assert read_response.status_code == 200
+    assert read_response.json()["display_name"] == "Établissement Direction"
+
+    with application_container._database.connect() as connection:
+        audit = connection.execute(
+            "SELECT actor_user_id, action FROM school_profile_audit"
+        ).fetchone()
+
+    assert audit is not None
+    assert audit["action"] == "CREATE"
