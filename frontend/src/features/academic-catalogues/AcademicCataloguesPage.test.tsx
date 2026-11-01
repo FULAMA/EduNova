@@ -169,7 +169,7 @@ describe('AcademicCataloguesPage', () => {
     act(() => root.render(createElement(AcademicCataloguesPage)))
     await settle()
     const yearSection = host.querySelector('[aria-labelledby="years-title"]')!
-    const buttons = [...yearSection.querySelectorAll('tbody button')]
+    const buttons = [...yearSection.querySelectorAll<HTMLButtonElement>('tbody button')]
     expect(buttons.map((button) => button.textContent)).toEqual(['Clôturer', 'Activer'])
     await act(async () => { buttons[1].click(); await Promise.resolve(); await Promise.resolve() })
     expect(yearActivate).toHaveBeenCalledWith('y2')
