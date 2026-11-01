@@ -59,3 +59,34 @@ def upgrade(connection: Connection) -> None:
             SELECT RAISE(ABORT, 'academic period calendar must belong to the same tenant');
         END
     """)
+
+    connection.execute("""
+        CREATE TRIGGER IF NOT EXISTS trg_academic_period_calendar_no_overlap_insert
+        BEFORE INSERT ON academic_periods
+        WHEN NEW.academic_calendar_id IS NOT NULL AND EXISTS (
+            SELECT 1 FROM academic_periods existing
+            WHERE existing.tenant_id = NEW.tenant_id
+              AND existing.academic_calendar_id = NEW.academic_calendar_id
+              AND NEW.start_date <= existing.end_date
+              AND existing.start_date <= NEW.end_date
+        )
+        BEGIN
+            SELECT RAISE(ABORT, 'academic periods cannot overlap within the same calendar');
+        END
+    """)
+    connection.execute("""
+        CREATE TRIGGER IF NOT EXISTS trg_academic_period_calendar_no_overlap_update
+        BEFORE UPDATE OF tenant_id, academic_calendar_id, start_date, end_date
+        ON academic_periods
+        WHEN NEW.academic_calendar_id IS NOT NULL AND EXISTS (
+            SELECT 1 FROM academic_periods existing
+            WHERE existing.id <> NEW.id
+              AND existing.tenant_id = NEW.tenant_id
+              AND existing.academic_calendar_id = NEW.academic_calendar_id
+              AND NEW.start_date <= existing.end_date
+              AND existing.start_date <= NEW.end_date
+        )
+        BEGIN
+            SELECT RAISE(ABORT, 'academic periods cannot overlap within the same calendar');
+        END
+    """)
