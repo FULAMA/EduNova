@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { clearSession, saveSession } from '../auth/services/auth.storage'
-import { createAcademicPeriod, createSubject, listAcademicPeriods, listSubjects, updateSubject } from './academic-catalogue.service'
+import { createAcademicCalendar, createAcademicPeriod, createSubject, listAcademicCalendars, listAcademicPeriods, listSubjects, updateSubject } from './academic-catalogue.service'
 
 describe('academic catalogue service', () => {
   afterEach(() => { vi.restoreAllMocks(); clearSession() })
@@ -32,9 +32,21 @@ describe('academic catalogue service', () => {
       id: 'p1', name: 'Trimestre 1', academic_year_id: 'year-1', start_date: '2026-09-01', end_date: '2026-12-20',
     }), { status: 201 }))
     await expect(createAcademicPeriod({
-      academic_year_id: 'year-1', name: 'Trimestre 1', start_date: '2026-09-01', end_date: '2026-12-20',
+      academic_year_id: 'year-1', academic_calendar_id: 'calendar-1', name: 'Trimestre 1', start_date: '2026-09-01', end_date: '2026-12-20',
     })).resolves.toMatchObject({ academic_year_id: 'year-1' })
     expect(fetchMock.mock.calls[0][0]).toContain('/academic-catalogues/periods')
-    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({ academic_year_id: 'year-1' })
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({ academic_year_id: 'year-1', academic_calendar_id: 'calendar-1' })
+  })
+
+  it('lists and creates calendars through authenticated tenant API contracts', async () => {
+    saveSession({ accessToken: 'token', refreshToken: 'refresh', email: 'admin@test', tenantId: 'tenant' })
+    const calendar = { id: 'c1', tenant_id: 'tenant', name: 'Primaire', description: null, is_active: true }
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify([calendar]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(calendar), { status: 201 }))
+    await expect(listAcademicCalendars()).resolves.toEqual([calendar])
+    await expect(createAcademicCalendar({ name: 'Primaire' })).resolves.toMatchObject({ id: 'c1' })
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/academic-calendars')
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: 'POST' })
   })
 })
