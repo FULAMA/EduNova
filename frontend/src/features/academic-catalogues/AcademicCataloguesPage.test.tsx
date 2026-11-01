@@ -3,17 +3,19 @@ import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createAcademicPeriod, createSubject, listAcademicPeriods, listSubjects, updateSubject } from './academic-catalogue.service'
+import { createAcademicCalendar, createAcademicPeriod, createSubject, listAcademicCalendars, listAcademicPeriods, listSubjects, updateSubject } from './academic-catalogue.service'
 import { listAcademicYears } from '../enrollments/enrollment.service'
 import AcademicCataloguesPage from './AcademicCataloguesPage'
 
 vi.mock('./academic-catalogue.service', () => ({
-  createAcademicPeriod: vi.fn(), createSubject: vi.fn(), listAcademicPeriods: vi.fn(), listSubjects: vi.fn(), updateSubject: vi.fn(),
+  createAcademicCalendar: vi.fn(), createAcademicPeriod: vi.fn(), createSubject: vi.fn(), listAcademicCalendars: vi.fn(), listAcademicPeriods: vi.fn(), listSubjects: vi.fn(), updateSubject: vi.fn(),
 }))
 vi.mock('../enrollments/enrollment.service', () => ({ listAcademicYears: vi.fn() }))
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 const subjectList = vi.mocked(listSubjects)
 const periodCreate = vi.mocked(createAcademicPeriod)
+const calendarCreate = vi.mocked(createAcademicCalendar)
+const calendarList = vi.mocked(listAcademicCalendars)
 const periodList = vi.mocked(listAcademicPeriods)
 const subjectCreate = vi.mocked(createSubject)
 const subjectUpdate = vi.mocked(updateSubject)
@@ -25,8 +27,10 @@ async function settle() { await act(async () => { await Promise.resolve(); await
 describe('AcademicCataloguesPage', () => {
   beforeEach(() => {
     subjectList.mockResolvedValue([])
-    periodCreate.mockResolvedValue({ id: 'p2', name: 'Trimestre 2', start_date: '2027-01-01', end_date: '2027-03-31', academic_year_id: 'y1' })
-    periodList.mockResolvedValue([{ id: 'p1', name: 'Trimestre 1', start_date: '2026-09-01', end_date: '2026-12-20' }])
+    calendarCreate.mockResolvedValue({ id: 'c2', tenant_id: 'tenant-1', name: 'Secondaire', description: null, is_active: true })
+    calendarList.mockResolvedValue([{ id: 'c1', tenant_id: 'tenant-1', name: 'Primaire', description: null, is_active: true }])
+    periodCreate.mockResolvedValue({ id: 'p2', name: 'Trimestre 2', start_date: '2027-01-01', end_date: '2027-03-31', academic_year_id: 'y1', academic_calendar_id: 'c1' })
+    periodList.mockResolvedValue([{ id: 'p1', name: 'Trimestre 1', start_date: '2026-09-01', end_date: '2026-12-20', academic_calendar_id: 'c1' }])
     vi.mocked(listAcademicYears).mockResolvedValue([{ id: 'y1', label: '2026-2027', start_date: '2026-09-01', end_date: '2027-06-30', status: 'ACTIVE' }])
     subjectCreate.mockResolvedValue({ id: 's1', name: 'Biologie', code: 'BIO', coefficient: 2, active: true })
     subjectUpdate.mockResolvedValue({ id: 's1', name: 'Biologie', code: 'BIO', coefficient: 2, active: true })
@@ -39,7 +43,7 @@ describe('AcademicCataloguesPage', () => {
     await settle()
     expect(host.textContent).toContain('Aucune matière')
     expect(host.textContent).toContain('Trimestre 1')
-    expect(host.querySelectorAll('.catalogues-card')).toHaveLength(2)
+    expect(host.querySelectorAll('.catalogues-card')).toHaveLength(3)
     expect(host.querySelector('.catalogues-form')).not.toBeNull()
   })
 
@@ -105,7 +109,7 @@ describe('AcademicCataloguesPage', () => {
   it('creates a period linked to the selected school year', async () => {
     act(() => root.render(createElement(AcademicCataloguesPage)))
     await settle()
-    const periodForm = host.querySelectorAll('form')[1]
+    const periodForm = host.querySelector('[aria-labelledby="periods-title"] form') as HTMLFormElement
     const inputs = periodForm.querySelectorAll('input')
     await act(async () => {
       const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
@@ -115,6 +119,26 @@ describe('AcademicCataloguesPage', () => {
       await Promise.resolve()
     })
     await act(async () => { periodForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await Promise.resolve(); await Promise.resolve() })
-    expect(periodCreate).toHaveBeenCalledWith({ academic_year_id: 'y1', name: 'Trimestre 2', start_date: '2027-01-01', end_date: '2027-03-31' })
+    expect(periodCreate).toHaveBeenCalledWith({ academic_year_id: 'y1', academic_calendar_id: 'c1', name: 'Trimestre 2', start_date: '2027-01-01', end_date: '2027-03-31' })
+  })
+})
+
+
+describe('academic calendar management', () => {
+  it('creates a calendar and refreshes the persisted calendar list', async () => {
+    calendarList.mockResolvedValueOnce([]).mockResolvedValueOnce([{ id: 'c2', tenant_id: 'tenant-1', name: 'Secondaire', description: null, is_active: true }])
+    act(() => root.render(createElement(AcademicCataloguesPage)))
+    await settle()
+    const calendarForm = host.querySelector('[aria-labelledby="calendars-title"] form') as HTMLFormElement
+    const inputs = calendarForm.querySelectorAll('input')
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+      setter?.call(inputs[0], 'Secondaire'); inputs[0].dispatchEvent(new Event('input', { bubbles: true }))
+      setter?.call(inputs[1], 'Cycle du secondaire'); inputs[1].dispatchEvent(new Event('input', { bubbles: true }))
+      await Promise.resolve()
+    })
+    await act(async () => { calendarForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await Promise.resolve(); await Promise.resolve() })
+    expect(calendarCreate).toHaveBeenCalledWith({ name: 'Secondaire', description: 'Cycle du secondaire' })
+    expect(calendarList).toHaveBeenCalledTimes(2)
   })
 })
