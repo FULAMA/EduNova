@@ -9,7 +9,7 @@ class UpdateSchoolProfile:
         self._profiles = profiles
 
     def execute(
-        self, tenant_id: UUID, legal_name: str, display_name: str,
+        self, tenant_id: UUID, actor_user_id: UUID, legal_name: str, display_name: str,
         address: str | None = None, phone: str | None = None,
         email: str | None = None, website: str | None = None,
         logo_url: str | None = None,
@@ -19,4 +19,4 @@ class UpdateSchoolProfile:
             address=address, phone=phone, email=email, website=website,
             logo_url=logo_url,
         )
-        return self._profiles.save(profile)
+        return self._profiles.save(profile, actor_user_id)
