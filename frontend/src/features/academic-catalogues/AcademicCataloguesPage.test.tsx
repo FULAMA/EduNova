@@ -127,10 +127,7 @@ describe('AcademicCataloguesPage', () => {
     await act(async () => { periodForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await Promise.resolve(); await Promise.resolve() })
     expect(periodCreate).toHaveBeenCalledWith({ academic_year_id: 'y1', academic_calendar_id: 'c1', name: 'Trimestre 2', start_date: '2027-01-01', end_date: '2027-03-31' })
   })
-})
 
-
-describe('academic calendar management', () => {
   it('creates a calendar and refreshes the persisted calendar list', async () => {
     calendarList.mockResolvedValueOnce([]).mockResolvedValueOnce([{ id: 'c2', tenant_id: 'tenant-1', name: 'Secondaire', description: null, is_active: true }])
     act(() => root.render(createElement(AcademicCataloguesPage)))
@@ -147,10 +144,7 @@ describe('academic calendar management', () => {
     expect(calendarCreate).toHaveBeenCalledWith({ name: 'Secondaire', description: 'Cycle du secondaire' })
     expect(calendarList).toHaveBeenCalledTimes(2)
   })
-})
 
-
-describe('academic year management', () => {
   it('creates a draft school year from the configuration form', async () => {
     act(() => root.render(createElement(AcademicCataloguesPage)))
     await settle()
