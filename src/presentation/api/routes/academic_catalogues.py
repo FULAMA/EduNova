@@ -85,7 +85,7 @@ def create_period(
 ):
     try:
         return use_case.execute(tenant.tenant_id, data.academic_year_id, data.name,
-                                data.start_date, data.end_date)
+                                data.start_date, data.end_date, data.academic_calendar_id)
     except sqlite3.IntegrityError as exc:
         raise HTTPException(status_code=409, detail="Cette periode existe deja pour cette annee scolaire.") from exc
     except ValueError as exc:
