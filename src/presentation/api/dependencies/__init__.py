@@ -1,4 +1,6 @@
 from src.academic.application.use_cases.add_subject_result import AddSubjectResult
+from src.academic.application.use_cases.create_academic_calendar import CreateAcademicCalendar
+from src.academic.application.use_cases.list_academic_calendars import ListAcademicCalendars
 from src.academic.application.use_cases.analyze_academic_risk import (
     AnalyzeAcademicRisk,
 )
@@ -309,10 +311,6 @@ def get_verify_login_two_factor_use_case() -> VerifyLoginTwoFactor:
 
 def get_verify_two_factor_use_case() -> VerifyTwoFactor:
     return get_container().verify_two_factor()
-
-
-from src.academic.application.use_cases.create_academic_calendar import CreateAcademicCalendar
-from src.academic.application.use_cases.list_academic_calendars import ListAcademicCalendars
 
 
 def get_create_academic_calendar_use_case() -> CreateAcademicCalendar:
