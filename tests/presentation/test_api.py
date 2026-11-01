@@ -1,4 +1,4 @@
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 
 from src.academic.application.interfaces.student_academic_record_repository import (
@@ -26,7 +26,7 @@ from tests.support.academic_eligibility import eligible_result_repositories
 
 
 
-def authenticate_test_client(container, client, role="ADMIN"):
+def authenticate_test_client(container, client, role="ADMIN", tenant_id=TEST_TENANT_ID):
     user = User(
         id=uuid4(),
         email=f"presentation-{role.lower()}-{uuid4()}@edunova.com",
@@ -39,7 +39,7 @@ def authenticate_test_client(container, client, role="ADMIN"):
     seed_membership(
         container,
         user.id,
-        tenant_id=TEST_TENANT_ID,
+        tenant_id=tenant_id,
         role=role,
     )
 
@@ -48,7 +48,7 @@ def authenticate_test_client(container, client, role="ADMIN"):
     token = jwt_service.create_access_token(
         user_id=user.id,
         role=role,
-        tenant_id=TEST_TENANT_ID,
+        tenant_id=tenant_id,
     )
 
     client.headers.update(
@@ -446,3 +446,49 @@ def test_school_profile_rejects_non_authorized_membership_role(application_conta
         audit_count = connection.execute("SELECT COUNT(*) FROM school_profile_audit").fetchone()[0]
     assert count == 0
     assert audit_count == 0
+
+
+
+def test_school_profile_api_isolates_profiles_between_tenants(application_container, api_client):
+    authenticate_test_client(application_container, api_client, tenant_id=TEST_TENANT_ID)
+    tenant_a_response = api_client.put(
+        "/school-profile",
+        json={
+            "legal_name": "École A ASBL",
+            "display_name": "École A",
+        },
+    )
+    assert tenant_a_response.status_code == 200
+
+    tenant_b_id = UUID("00000000-0000-0000-0000-000000000002")
+    authenticate_test_client(
+        application_container, api_client, tenant_id=tenant_b_id
+    )
+
+    read_response = api_client.get("/school-profile")
+    assert read_response.status_code == 200
+    assert read_response.json() is None
+
+    tenant_b_response = api_client.put(
+        "/school-profile",
+        json={
+            "legal_name": "École B ASBL",
+            "display_name": "École B",
+        },
+    )
+    assert tenant_b_response.status_code == 200
+
+    with application_container._database.connect() as connection:
+        profiles = connection.execute(
+            "SELECT tenant_id, display_name FROM school_profiles ORDER BY tenant_id"
+        ).fetchall()
+        audit_rows = connection.execute(
+            "SELECT tenant_id, action FROM school_profile_audit ORDER BY occurred_at, rowid"
+        ).fetchall()
+
+    assert [(row["tenant_id"], row["display_name"]) for row in profiles] == [
+        (str(TEST_TENANT_ID), "École A"),
+        (str(tenant_b_id), "École B"),
+    ]
+    assert [row["tenant_id"] for row in audit_rows].count(str(TEST_TENANT_ID)) == 1
+    assert [row["tenant_id"] for row in audit_rows].count(str(tenant_b_id)) == 1
