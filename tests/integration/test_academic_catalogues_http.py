@@ -81,24 +81,31 @@ def test_catalogue_creation_rejects_invalid_fields():
     }).status_code == 422
 
 
+def create_calendar(client, name: str = "Calendrier principal"):
+    response = client.post("/academic-calendars", json={"name": name})
+    assert response.status_code == 201, response.text
+    return response.json()["id"]
+
+
 def test_period_creation_requires_tenant_year_and_dates_inside_school_year():
     client, _, _ = client_for()
+    calendar_id = create_calendar(client)
     year = client.post("/academic-years", json={
         "label": "2026-2027", "start_date": "2026-09-01", "end_date": "2027-06-30",
     })
     assert year.status_code == 201
     period = client.post("/academic-catalogues/periods", json={
-        "academic_year_id": year.json()["id"], "name": "Trimestre 1",
+        "academic_year_id": year.json()["id"], "academic_calendar_id": calendar_id, "name": "Trimestre 1",
         "start_date": "2026-09-01", "end_date": "2026-12-20",
     })
     assert period.status_code == 201
     assert period.json()["academic_year_id"] == year.json()["id"]
     assert client.post("/academic-catalogues/periods", json={
-        "academic_year_id": str(uuid4()), "name": "Autre tenant",
+        "academic_year_id": str(uuid4()), "academic_calendar_id": calendar_id, "name": "Autre tenant",
         "start_date": "2026-09-01", "end_date": "2026-12-20",
     }).status_code == 400
     assert client.post("/academic-catalogues/periods", json={
-        "academic_year_id": year.json()["id"], "name": "Hors dates",
+        "academic_year_id": year.json()["id"], "academic_calendar_id": calendar_id, "name": "Hors dates",
         "start_date": "2025-09-01", "end_date": "2025-12-20",
     }).status_code == 400
 
@@ -117,6 +124,7 @@ def test_academic_record_returns_real_subject_and_period_labels():
     year = client.post("/academic-years", json={
         "label": "2026-2027", "start_date": "2026-09-01", "end_date": "2027-06-30",
     }).json()
+    calendar_id = create_calendar(client)
     assert client.post(f"/academic-years/{year['id']}/activate").status_code == 200
     class_id = uuid4()
     SQLiteAcademicClassRepository(container._database).save(AcademicClass(class_id, TEST_TENANT_ID, "6e"))
@@ -126,7 +134,7 @@ def test_academic_record_returns_real_subject_and_period_labels():
     assert draft.status_code == 201
     assert client.post(f"/student-assignments/{draft.json()['id']}/activate").status_code == 200
     created_period = client.post("/academic-catalogues/periods", json={
-        "academic_year_id": year["id"], "name": "Semestre 1",
+        "academic_year_id": year["id"], "academic_calendar_id": calendar_id, "name": "Semestre 1",
         "start_date": "2026-09-01", "end_date": "2027-01-31",
     })
     assert created_period.status_code == 201
@@ -144,3 +152,63 @@ def test_academic_record_returns_real_subject_and_period_labels():
     assert record["academic_period_name"] == "Semestre 1"
     assert record["subject_results"][0]["subject_name"] == "Physique"
     assert periods == [{"id": str(period_id), "name": "Semestre 1"}]
+
+
+def test_period_overlap_is_rejected_within_calendar_but_allowed_between_calendars():
+    client, _, _ = client_for()
+    year = client.post("/academic-years", json={
+        "label": "2026-2027", "start_date": "2026-09-01", "end_date": "2027-06-30",
+    }).json()
+    calendar_a = create_calendar(client, "Calendrier primaire")
+    calendar_b = create_calendar(client, "Calendrier secondaire")
+
+    first = client.post("/academic-catalogues/periods", json={
+        "academic_year_id": year["id"], "academic_calendar_id": calendar_a,
+        "name": "Période A1", "start_date": "2026-09-01", "end_date": "2026-12-20",
+    })
+    assert first.status_code == 201, first.text
+
+    overlapping_same_calendar = client.post("/academic-catalogues/periods", json={
+        "academic_year_id": year["id"], "academic_calendar_id": calendar_a,
+        "name": "Période A2", "start_date": "2026-12-20", "end_date": "2027-02-01",
+    })
+    assert overlapping_same_calendar.status_code == 400
+
+    overlapping_other_calendar = client.post("/academic-catalogues/periods", json={
+        "academic_year_id": year["id"], "academic_calendar_id": calendar_b,
+        "name": "Période B1", "start_date": "2026-10-01", "end_date": "2027-01-15",
+    })
+    assert overlapping_other_calendar.status_code == 201, overlapping_other_calendar.text
+
+
+def test_academic_calendar_is_tenant_scoped_and_name_is_unique_case_insensitively():
+    client, _, _ = client_for()
+    created = client.post("/academic-calendars", json={"name": "Primaire"})
+    assert created.status_code == 201
+    assert client.get("/academic-calendars").status_code == 200
+    assert len(client.get("/academic-calendars").json()) == 1
+    duplicate = client.post("/academic-calendars", json={"name": "primaire"})
+    assert duplicate.status_code == 409
+    assert client.post("/academic-calendars", json={"name": " "}).status_code == 422
+
+
+def test_academic_year_lifecycle_allows_only_one_active_year_and_closes_explicitly():
+    client, _, _ = client_for()
+    first = client.post("/academic-years", json={
+        "label": "2026-2027", "start_date": "2026-09-01", "end_date": "2027-06-30",
+    })
+    second = client.post("/academic-years", json={
+        "label": "2027-2028", "start_date": "2027-09-01", "end_date": "2028-06-30",
+    })
+    assert first.status_code == 201
+    assert second.status_code == 201
+
+    assert client.post(f"/academic-years/{first.json()['id']}/activate").status_code == 200
+    conflict = client.post(f"/academic-years/{second.json()['id']}/activate")
+    assert conflict.status_code == 409
+
+    closed = client.post(f"/academic-years/{first.json()['id']}/close")
+    assert closed.status_code == 200
+    assert closed.json()["status"] == "CLOSED"
+    assert client.post(f"/academic-years/{second.json()['id']}/activate").status_code == 200
+    assert client.post(f"/academic-years/{first.json()['id']}/close").status_code == 400

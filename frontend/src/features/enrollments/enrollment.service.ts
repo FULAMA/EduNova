@@ -69,3 +69,10 @@ export function promoteStudent(payload: {
     body: JSON.stringify(payload),
   })
 }
+
+export function closeAcademicYear(yearId: string) {
+  return apiRequest<AcademicYear>(`/academic-years/${encodeURIComponent(yearId)}/close`, {
+    method: 'POST',
+    authenticated: true,
+  })
+}

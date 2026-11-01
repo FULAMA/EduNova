@@ -61,3 +61,18 @@ def activate_academic_year(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return AcademicYearResponse(**year.__dict__)
+
+
+@router.post("/{year_id}/close", response_model=AcademicYearResponse, dependencies=[Depends(require_role("ADMIN"))])
+def close_academic_year(
+    year_id: UUID,
+    use_case: ChangeAcademicYearStatus = Depends(get_change_academic_year_status_use_case),
+    tenant: TenantContext = Depends(get_tenant_context),
+) -> AcademicYearResponse:
+    try:
+        year = use_case.close(year_id, tenant.tenant_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except sqlite3.IntegrityError as exc:
+        raise HTTPException(status_code=400, detail="Erreur d'integrite des donnees.") from exc
+    return AcademicYearResponse(**year.__dict__)

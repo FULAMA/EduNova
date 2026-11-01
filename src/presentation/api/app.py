@@ -54,6 +54,8 @@ from src.presentation.api.dependencies import (
     get_update_subject_use_case,
     get_list_academic_periods_use_case,
     get_create_academic_period_use_case,
+    get_create_academic_calendar_use_case,
+    get_list_academic_calendars_use_case,
     get_list_academic_classes_use_case,
     get_create_academic_year_use_case,
     get_list_academic_years_use_case,
@@ -96,6 +98,7 @@ from src.presentation.api.routes.auth import router as auth_router
 from src.presentation.api.routes.classes import router as classes_router
 from src.presentation.api.routes.students import router as students_router
 from src.presentation.api.routes.academic_years import router as academic_years_router
+from src.presentation.api.routes.academic_calendars import router as academic_calendars_router
 from src.presentation.api.routes.student_assignments import router as student_assignments_router
 from src.presentation.api.routes.attendance import router as attendance_router
 from src.presentation.api.routes.billing import router as billing_router
@@ -240,6 +243,8 @@ def create_app(
     app.dependency_overrides[get_update_subject_use_case] = container.update_subject
     app.dependency_overrides[get_list_academic_periods_use_case] = container.list_academic_periods
     app.dependency_overrides[get_create_academic_period_use_case] = container.create_academic_period
+    app.dependency_overrides[get_create_academic_calendar_use_case] = container.create_academic_calendar
+    app.dependency_overrides[get_list_academic_calendars_use_case] = container.list_academic_calendars
     app.dependency_overrides[get_list_academic_classes_use_case] = container.list_academic_classes
     app.dependency_overrides[get_create_academic_year_use_case] = container.create_academic_year
     app.dependency_overrides[get_list_academic_years_use_case] = container.list_academic_years
@@ -355,6 +360,7 @@ def create_app(
     app.include_router(auth_router)
     app.include_router(students_router)
     app.include_router(academic_years_router)
+    app.include_router(academic_calendars_router)
     app.include_router(student_assignments_router)
     app.dependency_overrides[get_record_attendance_use_case] = container.record_attendance
     app.dependency_overrides[get_billing_service] = container.billing_service

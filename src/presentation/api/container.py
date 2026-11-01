@@ -65,6 +65,9 @@ from src.academic.application.use_cases.change_student_assignment_status import 
 from src.identity.application.use_cases.link_student_account import LinkStudentAccount
 from src.identity.application.use_cases.get_student_portal_profile import GetStudentPortalProfile
 from src.infrastructure.repositories.sqlite_academic_period_repository import SQLiteAcademicPeriodRepository
+from src.infrastructure.repositories.sqlite_academic_calendar_repository import SQLiteAcademicCalendarRepository
+from src.academic.application.use_cases.create_academic_calendar import CreateAcademicCalendar
+from src.academic.application.use_cases.list_academic_calendars import ListAcademicCalendars
 from src.infrastructure.repositories.sqlite_student_user_link_repository import SQLiteStudentUserLinkRepository
 from src.infrastructure.repositories.sqlite_attendance_repository import SQLiteAttendanceRepository
 from src.infrastructure.repositories.sqlite_report_card_repository import SQLiteReportCardRepository
@@ -213,6 +216,15 @@ class ApplicationContainer:
 
     def _academic_period_repository(self) -> SQLiteAcademicPeriodRepository:
         return SQLiteAcademicPeriodRepository(self._database)
+
+    def _academic_calendar_repository(self) -> SQLiteAcademicCalendarRepository:
+        return SQLiteAcademicCalendarRepository(self._database)
+
+    def create_academic_calendar(self) -> CreateAcademicCalendar:
+        return CreateAcademicCalendar(self._academic_calendar_repository())
+
+    def list_academic_calendars(self) -> ListAcademicCalendars:
+        return ListAcademicCalendars(self._academic_calendar_repository())
 
     def _attendance_repository(self) -> SQLiteAttendanceRepository:
         return SQLiteAttendanceRepository(self._database)
@@ -370,7 +382,7 @@ class ApplicationContainer:
         return ListAcademicPeriods(self._academic_period_repository())
 
     def create_academic_period(self) -> CreateAcademicPeriod:
-        return CreateAcademicPeriod(self._academic_period_repository(), self._academic_year_repository())
+        return CreateAcademicPeriod(self._academic_period_repository(), self._academic_year_repository(), self._academic_calendar_repository())
 
     def list_eligible_student_periods(self) -> ListEligibleStudentPeriods:
         return ListEligibleStudentPeriods(

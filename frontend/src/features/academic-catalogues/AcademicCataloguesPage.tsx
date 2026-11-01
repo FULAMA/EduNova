@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 
 import { ApiError } from '../../shared/api/client'
-import { createAcademicPeriod, createSubject, listAcademicPeriods, listSubjects, updateSubject, type AcademicPeriod, type Subject } from './academic-catalogue.service'
-import { listAcademicYears, type AcademicYear } from '../enrollments/enrollment.service'
+import { createAcademicCalendar, createAcademicPeriod, createSubject, listAcademicCalendars, listAcademicPeriods, listSubjects, updateSubject, type AcademicCalendar, type AcademicPeriod, type Subject } from './academic-catalogue.service'
+import { activateAcademicYear, closeAcademicYear, createAcademicYear, listAcademicYears, type AcademicYear } from '../enrollments/enrollment.service'
 import './AcademicCataloguesPage.css'
 
 function errorText(error: unknown): string {
@@ -10,7 +10,7 @@ function errorText(error: unknown): string {
     if (error.status === 401) return 'Votre session a expiré. Reconnectez-vous.'
     if (error.status === 403) return 'Votre compte ne peut pas gérer les catalogues de cet établissement.'
     if (error.status === 404) return 'La matière demandée n’existe plus. Actualisez le catalogue.'
-    if (error.status === 409) return error.message || 'Cette période existe déjà pour cette année scolaire.'
+    if (error.status === 400 || error.status === 409) return error.message || 'La demande ne peut pas être traitée.'
     if (error.status === 0) return 'Le serveur API est inaccessible.'
   }
   return 'Une erreur est survenue. Vérifiez les informations puis réessayez.'
@@ -19,6 +19,7 @@ function errorText(error: unknown): string {
 export default function AcademicCataloguesPage() {
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [periods, setPeriods] = useState<AcademicPeriod[]>([])
+  const [calendars, setCalendars] = useState<AcademicCalendar[]>([])
   const [years, setYears] = useState<AcademicYear[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -29,7 +30,13 @@ export default function AcademicCataloguesPage() {
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
   const [coefficient, setCoefficient] = useState('1')
+  const [yearLabel, setYearLabel] = useState('')
+  const [yearStart, setYearStart] = useState('')
+  const [yearEnd, setYearEnd] = useState('')
   const [periodYearId, setPeriodYearId] = useState('')
+  const [periodCalendarId, setPeriodCalendarId] = useState('')
+  const [calendarName, setCalendarName] = useState('')
+  const [calendarDescription, setCalendarDescription] = useState('')
   const [periodName, setPeriodName] = useState('')
   const [periodStart, setPeriodStart] = useState('')
   const [periodEnd, setPeriodEnd] = useState('')
@@ -38,11 +45,13 @@ export default function AcademicCataloguesPage() {
     setLoading(true)
     setError('')
     try {
-      const [subjectRows, periodRows, yearRows] = await Promise.all([listSubjects(search), listAcademicPeriods(), listAcademicYears()])
+      const [subjectRows, periodRows, yearRows, calendarRows] = await Promise.all([listSubjects(search), listAcademicPeriods(), listAcademicYears(), listAcademicCalendars()])
       setSubjects(subjectRows)
       setPeriods(periodRows)
       setYears(yearRows)
-      setPeriodYearId((current) => current || yearRows.find((year) => year.status !== 'CLOSED')?.id || '')
+      setCalendars(calendarRows)
+      setPeriodYearId((current) => yearRows.some((year) => year.id === current && year.status !== 'CLOSED') ? current : yearRows.find((year) => year.status !== 'CLOSED')?.id || '')
+      setPeriodCalendarId((current) => current || calendarRows.find((calendar) => calendar.is_active)?.id || '')
       setLoadError(false)
     } catch (reason) { setLoadError(true); setError(errorText(reason)) } finally { setLoading(false) }
   }, [search])
@@ -63,10 +72,37 @@ export default function AcademicCataloguesPage() {
       await load()
     } catch (reason) { setError(errorText(reason)) }
   }
+  const submitYear = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); setError(''); setNotice('')
+    try {
+      await createAcademicYear({ label: yearLabel.trim(), start_date: yearStart, end_date: yearEnd })
+      setYearLabel(''); setYearStart(''); setYearEnd('')
+      setNotice('Année scolaire créée en brouillon. Activez-la explicitement pour la rendre opérationnelle.')
+      await load()
+    } catch (reason) { setError(errorText(reason)) }
+  }
+  const changeYearStatus = async (year: AcademicYear, action: 'activate' | 'close') => {
+    setError(''); setNotice('')
+    try {
+      if (action === 'activate') await activateAcademicYear(year.id)
+      else await closeAcademicYear(year.id)
+      setNotice(action === 'activate' ? `Année ${year.label} activée.` : `Année ${year.label} clôturée.`)
+      await load()
+    } catch (reason) { setError(errorText(reason)) }
+  }
+  const submitCalendar = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); setError(''); setNotice('')
+    try {
+      await createAcademicCalendar({ name: calendarName.trim(), description: calendarDescription.trim() || null })
+      setCalendarName(''); setCalendarDescription('')
+      setNotice('Calendrier académique créé.')
+      await load()
+    } catch (reason) { setError(errorText(reason)) }
+  }
   const submitPeriod = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setError(''); setNotice('')
     try {
-      await createAcademicPeriod({ academic_year_id: periodYearId, name: periodName.trim(), start_date: periodStart, end_date: periodEnd })
+      await createAcademicPeriod({ academic_year_id: periodYearId, academic_calendar_id: periodCalendarId, name: periodName.trim(), start_date: periodStart, end_date: periodEnd })
       setPeriodName(''); setPeriodStart(''); setPeriodEnd('')
       setNotice('Période académique créée et rattachée à son année scolaire.')
       await load()
@@ -90,16 +126,38 @@ export default function AcademicCataloguesPage() {
         <div className="catalogues-form__actions"><button type="submit">{editing ? 'Enregistrer' : 'Créer la matière'}</button>{editing && <button type="button" className="catalogues-secondary" onClick={resetForm}>Annuler</button>}</div>
       </form>
     </section>
+    <section className="catalogues-card" aria-labelledby="years-title">
+      <div className="catalogues-card__heading"><div><h2 id="years-title">Années scolaires</h2><p>Une seule année peut être active à la fois dans un établissement. La clôture est définitive ; elle bloque les modifications ordinaires.</p></div></div>
+      {loading ? <p role="status" aria-busy="true">Chargement des années scolaires…</p> : years.length ? <div className="catalogues-table-scroll"><table><thead><tr><th>Libellé</th><th>Début</th><th>Fin</th><th>Statut</th><th>Actions</th></tr></thead><tbody>{years.map((year) => <tr key={year.id}><td>{year.label}</td><td>{year.start_date}</td><td>{year.end_date}</td><td>{year.status === 'ACTIVE' ? 'Active' : year.status === 'CLOSED' ? 'Clôturée' : 'Brouillon'}</td><td>{year.status === 'DRAFT' ? <button type="button" onClick={() => void changeYearStatus(year, 'activate')}>Activer</button> : year.status === 'ACTIVE' ? <button type="button" className="catalogues-secondary" onClick={() => void changeYearStatus(year, 'close')}>Clôturer</button> : '—'}</td></tr>)}</tbody></table></div> : !loadError ? <p className="catalogues-empty">Aucune année scolaire n’est enregistrée.</p> : null}
+      <form className="catalogues-form" onSubmit={(event) => void submitYear(event)}>
+        <h3>Créer une année scolaire</h3>
+        <label>Libellé (YYYY-YYYY)<input required minLength={9} maxLength={9} pattern="[0-9]{4}-[0-9]{4}" value={yearLabel} onChange={(event) => setYearLabel(event.target.value)} placeholder="2026-2027" /></label>
+        <label>Date de début<input required type="date" value={yearStart} onChange={(event) => setYearStart(event.target.value)} /></label>
+        <label>Date de fin<input required type="date" min={yearStart || undefined} value={yearEnd} onChange={(event) => setYearEnd(event.target.value)} /></label>
+        <div className="catalogues-form__actions"><button type="submit">Créer l’année</button></div>
+      </form>
+    </section>
+    <section className="catalogues-card" aria-labelledby="calendars-title">
+      <div className="catalogues-card__heading"><div><h2 id="calendars-title">Calendriers académiques</h2><p>Créez des calendriers indépendants par cycle ou programme. Les périodes d’un même calendrier ne peuvent pas se chevaucher ; deux calendriers distincts peuvent suivre des dates différentes.</p></div></div>
+      {loading ? <p role="status" aria-busy="true">Chargement des calendriers…</p> : calendars.length ? <div className="catalogues-table-scroll"><table><thead><tr><th>Nom</th><th>Description</th><th>État</th></tr></thead><tbody>{calendars.map((calendar) => <tr key={calendar.id}><td>{calendar.name}</td><td>{calendar.description || '—'}</td><td>{calendar.is_active ? 'Actif' : 'Inactif'}</td></tr>)}</tbody></table></div> : !loadError ? <p className="catalogues-empty">Aucun calendrier n’est enregistré.</p> : null}
+      <form className="catalogues-form" onSubmit={(event) => void submitCalendar(event)}>
+        <h3>Créer un calendrier</h3>
+        <label>Nom du calendrier<input required minLength={1} maxLength={120} value={calendarName} onChange={(event) => setCalendarName(event.target.value)} placeholder="Cycle primaire" /></label>
+        <label>Description (facultative)<input maxLength={500} value={calendarDescription} onChange={(event) => setCalendarDescription(event.target.value)} placeholder="Organisation des périodes du cycle" /></label>
+        <div className="catalogues-form__actions"><button type="submit">Créer le calendrier</button></div>
+      </form>
+    </section>
     <section className="catalogues-card" aria-labelledby="periods-title">
       <div className="catalogues-card__heading"><div><h2 id="periods-title">Périodes académiques</h2><p>Les périodes nouvelles sont rattachées explicitement à une année scolaire. Les données historiques sans rattachement restent inchangées.</p></div></div>
-      {loading ? <p role="status" aria-busy="true">Chargement des périodes…</p> : periods.length ? <div className="catalogues-table-scroll"><table><thead><tr><th>Libellé</th><th>Année scolaire</th><th>Début</th><th>Fin</th></tr></thead><tbody>{periods.map((period) => <tr key={period.id}><td>{period.name}</td><td>{years.find((year) => year.id === period.academic_year_id)?.label ?? 'Historique non rattaché'}</td><td>{period.start_date}</td><td>{period.end_date}</td></tr>)}</tbody></table></div> : !loadError ? <p className="catalogues-empty">Aucune période n’est enregistrée.</p> : null}
+      {loading ? <p role="status" aria-busy="true">Chargement des périodes…</p> : periods.length ? <div className="catalogues-table-scroll"><table><thead><tr><th>Libellé</th><th>Année scolaire</th><th>Calendrier</th><th>Début</th><th>Fin</th></tr></thead><tbody>{periods.map((period) => <tr key={period.id}><td>{period.name}</td><td>{years.find((year) => year.id === period.academic_year_id)?.label ?? 'Historique non rattaché'}</td><td>{calendars.find((calendar) => calendar.id === period.academic_calendar_id)?.name ?? 'Historique non classé'}</td><td>{period.start_date}</td><td>{period.end_date}</td></tr>)}</tbody></table></div> : !loadError ? <p className="catalogues-empty">Aucune période n’est enregistrée.</p> : null}
       <form className="catalogues-form" onSubmit={(event) => void submitPeriod(event)}>
         <h3>Créer une période</h3>
         <label>Année scolaire<select required value={periodYearId} onChange={(event) => setPeriodYearId(event.target.value)}><option value="">Sélectionner une année</option>{years.filter((year) => year.status !== 'CLOSED').map((year) => <option key={year.id} value={year.id}>{year.label}</option>)}</select></label>
+        <label>Calendrier<select required value={periodCalendarId} onChange={(event) => setPeriodCalendarId(event.target.value)}><option value="">Sélectionner un calendrier</option>{calendars.filter((calendar) => calendar.is_active).map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select></label>
         <label>Libellé<input required value={periodName} onChange={(event) => setPeriodName(event.target.value)} placeholder="Trimestre 1" /></label>
         <label>Date de début<input required type="date" value={periodStart} onChange={(event) => setPeriodStart(event.target.value)} /></label>
         <label>Date de fin<input required type="date" value={periodEnd} onChange={(event) => setPeriodEnd(event.target.value)} /></label>
-        <div className="catalogues-form__actions"><button type="submit" disabled={!periodYearId}>Créer la période</button></div>
+        <div className="catalogues-form__actions"><button type="submit" disabled={!periodYearId || !periodCalendarId}>Créer la période</button></div>
       </form>
     </section>
   </main>
