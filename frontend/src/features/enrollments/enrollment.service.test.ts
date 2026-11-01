@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { apiRequest } from '../../shared/api/client'
-import { createAcademicYear, listStudentAssignments } from './enrollment.service'
+import { closeAcademicYear, createAcademicYear, listStudentAssignments } from './enrollment.service'
 
 vi.mock('../../shared/api/client', () => ({
   apiRequest: vi.fn(),
@@ -47,6 +47,17 @@ describe('enrollment service', () => {
     expect(apiRequest).toHaveBeenCalledWith('/student-assignments/assign-1/close', {
       method: 'POST',
       authenticated: true,
+    })
+  })
+})
+
+
+describe('academic year lifecycle client', () => {
+  it('posts the explicit close action to the tenant-authenticated API', async () => {
+    vi.mocked(apiRequest).mockResolvedValue({ id: 'year-1', status: 'CLOSED' })
+    await closeAcademicYear('year/1')
+    expect(apiRequest).toHaveBeenCalledWith('/academic-years/year%2F1/close', {
+      method: 'POST', authenticated: true,
     })
   })
 })
