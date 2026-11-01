@@ -432,6 +432,9 @@ def test_school_profile_api_records_authenticated_actor_and_tenant_scope(applica
 
 def test_school_profile_rejects_non_authorized_membership_role(application_container, api_client):
     authenticate_test_client(application_container, api_client, role="PROF")
+    read_response = api_client.get("/school-profile")
+    assert read_response.status_code == 403
+
     response = api_client.put(
         "/school-profile",
         json={
