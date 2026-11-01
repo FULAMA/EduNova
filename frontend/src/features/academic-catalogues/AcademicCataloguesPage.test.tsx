@@ -4,13 +4,13 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createAcademicCalendar, createAcademicPeriod, createSubject, listAcademicCalendars, listAcademicPeriods, listSubjects, updateSubject } from './academic-catalogue.service'
-import { listAcademicYears } from '../enrollments/enrollment.service'
+import { activateAcademicYear, closeAcademicYear, createAcademicYear, listAcademicYears } from '../enrollments/enrollment.service'
 import AcademicCataloguesPage from './AcademicCataloguesPage'
 
 vi.mock('./academic-catalogue.service', () => ({
   createAcademicCalendar: vi.fn(), createAcademicPeriod: vi.fn(), createSubject: vi.fn(), listAcademicCalendars: vi.fn(), listAcademicPeriods: vi.fn(), listSubjects: vi.fn(), updateSubject: vi.fn(),
 }))
-vi.mock('../enrollments/enrollment.service', () => ({ listAcademicYears: vi.fn() }))
+vi.mock('../enrollments/enrollment.service', () => ({ activateAcademicYear: vi.fn(), closeAcademicYear: vi.fn(), createAcademicYear: vi.fn(), listAcademicYears: vi.fn() }))
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 const subjectList = vi.mocked(listSubjects)
 const periodCreate = vi.mocked(createAcademicPeriod)
@@ -19,6 +19,9 @@ const calendarList = vi.mocked(listAcademicCalendars)
 const periodList = vi.mocked(listAcademicPeriods)
 const subjectCreate = vi.mocked(createSubject)
 const subjectUpdate = vi.mocked(updateSubject)
+const yearCreate = vi.mocked(createAcademicYear)
+const yearActivate = vi.mocked(activateAcademicYear)
+const yearClose = vi.mocked(closeAcademicYear)
 let root: Root
 let host: HTMLDivElement
 
@@ -32,6 +35,9 @@ describe('AcademicCataloguesPage', () => {
     periodCreate.mockResolvedValue({ id: 'p2', name: 'Trimestre 2', start_date: '2027-01-01', end_date: '2027-03-31', academic_year_id: 'y1', academic_calendar_id: 'c1' })
     periodList.mockResolvedValue([{ id: 'p1', name: 'Trimestre 1', start_date: '2026-09-01', end_date: '2026-12-20', academic_calendar_id: 'c1' }])
     vi.mocked(listAcademicYears).mockResolvedValue([{ id: 'y1', label: '2026-2027', start_date: '2026-09-01', end_date: '2027-06-30', status: 'ACTIVE' }])
+    yearCreate.mockResolvedValue({ id: 'y2', label: '2027-2028', start_date: '2027-09-01', end_date: '2028-06-30', status: 'DRAFT' })
+    yearActivate.mockResolvedValue({ id: 'y2', label: '2027-2028', start_date: '2027-09-01', end_date: '2028-06-30', status: 'ACTIVE' })
+    yearClose.mockResolvedValue({ id: 'y1', label: '2026-2027', start_date: '2026-09-01', end_date: '2027-06-30', status: 'CLOSED' })
     subjectCreate.mockResolvedValue({ id: 's1', name: 'Biologie', code: 'BIO', coefficient: 2, active: true })
     subjectUpdate.mockResolvedValue({ id: 's1', name: 'Biologie', code: 'BIO', coefficient: 2, active: true })
     host = document.createElement('div'); document.body.append(host); root = createRoot(host)
@@ -43,7 +49,7 @@ describe('AcademicCataloguesPage', () => {
     await settle()
     expect(host.textContent).toContain('Aucune matière')
     expect(host.textContent).toContain('Trimestre 1')
-    expect(host.querySelectorAll('.catalogues-card')).toHaveLength(3)
+    expect(host.querySelectorAll('.catalogues-card')).toHaveLength(4)
     expect(host.querySelector('.catalogues-form')).not.toBeNull()
   })
 
@@ -140,5 +146,40 @@ describe('academic calendar management', () => {
     await act(async () => { calendarForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await Promise.resolve(); await Promise.resolve() })
     expect(calendarCreate).toHaveBeenCalledWith({ name: 'Secondaire', description: 'Cycle du secondaire' })
     expect(calendarList).toHaveBeenCalledTimes(2)
+  })
+})
+
+
+describe('academic year management', () => {
+  it('creates a draft school year from the configuration form', async () => {
+    act(() => root.render(createElement(AcademicCataloguesPage)))
+    await settle()
+    const form = host.querySelector('[aria-labelledby="years-title"] form') as HTMLFormElement
+    const inputs = form.querySelectorAll('input')
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+      for (const [input, value] of [[inputs[0], '2027-2028'], [inputs[1], '2027-09-01'], [inputs[2], '2028-06-30']] as const) {
+        setter?.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+      await Promise.resolve()
+    })
+    await act(async () => { form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await Promise.resolve(); await Promise.resolve() })
+    expect(yearCreate).toHaveBeenCalledWith({ label: '2027-2028', start_date: '2027-09-01', end_date: '2028-06-30' })
+  })
+
+  it('exposes explicit activation and closure actions for years', async () => {
+    vi.mocked(listAcademicYears).mockResolvedValue([
+      { id: 'y1', label: '2026-2027', start_date: '2026-09-01', end_date: '2027-06-30', status: 'ACTIVE' },
+      { id: 'y2', label: '2027-2028', start_date: '2027-09-01', end_date: '2028-06-30', status: 'DRAFT' },
+    ])
+    act(() => root.render(createElement(AcademicCataloguesPage)))
+    await settle()
+    const yearSection = host.querySelector('[aria-labelledby="years-title"]')!
+    const buttons = [...yearSection.querySelectorAll('tbody button')]
+    expect(buttons.map((button) => button.textContent)).toEqual(['Clôturer', 'Activer'])
+    await act(async () => { buttons[1].click(); await Promise.resolve(); await Promise.resolve() })
+    expect(yearActivate).toHaveBeenCalledWith('y2')
+    await act(async () => { buttons[0].click(); await Promise.resolve(); await Promise.resolve() })
+    expect(yearClose).toHaveBeenCalledWith('y1')
   })
 })
