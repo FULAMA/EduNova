@@ -64,6 +64,9 @@ from src.academic.application.use_cases.list_student_assignments import ListStud
 from src.academic.application.use_cases.change_student_assignment_status import ChangeStudentAssignmentStatus
 from src.identity.application.use_cases.link_student_account import LinkStudentAccount
 from src.identity.application.use_cases.get_student_portal_profile import GetStudentPortalProfile
+from src.infrastructure.repositories.sqlite_school_profile_repository import SQLiteSchoolProfileRepository
+from src.school.application.use_cases.get_school_profile import GetSchoolProfile
+from src.school.application.use_cases.update_school_profile import UpdateSchoolProfile
 from src.infrastructure.repositories.sqlite_academic_period_repository import SQLiteAcademicPeriodRepository
 from src.infrastructure.repositories.sqlite_academic_calendar_repository import SQLiteAcademicCalendarRepository
 from src.academic.application.use_cases.create_academic_calendar import CreateAcademicCalendar
@@ -562,3 +565,12 @@ class ApplicationContainer:
             refresh_token_repository=self._refresh_token_repository(),
             jwt_service=self._jwt_service(),
         )
+
+    def _school_profile_repository(self) -> SQLiteSchoolProfileRepository:
+        return SQLiteSchoolProfileRepository(self._database)
+
+    def get_school_profile(self) -> GetSchoolProfile:
+        return GetSchoolProfile(self._school_profile_repository())
+
+    def update_school_profile(self) -> UpdateSchoolProfile:
+        return UpdateSchoolProfile(self._school_profile_repository())
