@@ -56,6 +56,7 @@ def authenticate_test_client(container, client):
             "Authorization": f"Bearer {token}",
         }
     )
+    return user.id
 
 
 class FakeAcademicRecordRepository(StudentAcademicRecordRepository):
@@ -399,7 +400,7 @@ def test_add_subject_result_rejects_invalid_coefficient(application_container, a
 
 
 def test_school_profile_api_records_authenticated_actor_and_tenant_scope(application_container, api_client):
-    authenticate_test_client(application_container, api_client)
+    actor_id = authenticate_test_client(application_container, api_client)
     response = api_client.put(
         "/school-profile",
         json={
@@ -422,6 +423,7 @@ def test_school_profile_api_records_authenticated_actor_and_tenant_scope(applica
         ).fetchone()
     assert audit is not None
     assert audit["tenant_id"] == str(TEST_TENANT_ID)
+    assert audit["actor_user_id"] == str(actor_id)
     assert audit["action"] == "CREATE"
     assert audit["before_state"] is None
     assert '"display_name": "Établissement Exemple"' in audit["after_state"]
