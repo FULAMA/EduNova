@@ -95,3 +95,50 @@ Ce document ne :
 - n'autorise pas la fusion de cette proposition.
 
 **Étape suivante proposée :** auditer les implémentations actuelles du calcul des moyennes et de la délibération, leurs tests et leurs contrats de versionnement. Choisir ensuite un seul pilote sur la base des preuves obtenues.
+
+
+## 8. Résultats de l'inspection ciblée du code Python
+
+Les fichiers suivants ont été inspectés sur `main` : `SubjectAverageCalculator`, `AcademicAverageCalculator`, `AcademicPolicy`, `DeliberationEngine`, `Score`, `SubjectResult`, `Deliberation` et les tests unitaires associés.
+
+### Calcul de moyenne par matière
+
+`SubjectAverageCalculator.calculate` :
+- matérialise les notes en liste ;
+- rejette une liste vide ;
+- normalise chaque note via un `ScoreConverter` injecté ;
+- calcule une moyenne pondérée avec des `float` ;
+- rejette une somme de coefficients inférieure ou égale à zéro.
+
+Les tests couvrent la moyenne pondérée, la liste vide, une note unique, la normalisation d'une échelle et l'injection du convertisseur. Les tests inspectés ne démontrent pas encore une couverture complète des valeurs extrêmes, des entrées non finies et de la reproductibilité sur de grands lots.
+
+### Calcul de moyenne générale
+
+`AcademicAverageCalculator.calculate` utilise `math.fsum` pour sommer les coefficients et les moyennes pondérées. En cas de dépassement numérique, il tente un calcul avec coefficients mis à l'échelle. Les résultats par matière valident déjà une moyenne finie entre 0 et 20 et un coefficient fini strictement positif.
+
+Les tests inspectés couvrent le calcul pondéré, la liste vide, une matière et l'effet du coefficient. Aucun benchmark de référence n'a été identifié dans les fichiers inspectés. Rien ne prouve actuellement que ce calcul soit un goulot d'étranglement.
+
+### Délibération
+
+`DeliberationEngine` applique une `AcademicPolicy` fournie par injection et produit `ADMITTED`, `CONDITIONAL` ou `FAILED`. Les tests inspectés couvrent les trois décisions. La persistance et la validation versionnée se situent dans les couches applicatives/infrastructure ; elles doivent rester hors du composant natif éventuel.
+
+### Points à vérifier avant un pilote
+
+- La formule métier est versionnée au niveau du dossier/calcul, mais le service de moyenne générale inspecté reçoit seulement les résultats par matière ; il faut tracer le chemin d'injection de la politique et confirmer où la version exacte est attachée au calcul.
+- Les calculs emploient des nombres flottants. Il faut documenter les attentes exactes d'arrondi et de comparaison avant toute réimplémentation, sans changer le comportement par accident.
+- `AcademicPolicy.round_average` utilise l'arrondi natif Python `round`; les tests couvrent un cas simple mais pas les cas limites de représentation binaire ou de demi-valeurs.
+- Les tests actuels donnent des exemples métier utiles, mais il faut des tests différentiels, des cas limites et un benchmark reproductible avant de conclure qu'une implémentation Rust est plus fiable ou plus rapide.
+- Le moteur de délibération est petit et lisible ; une réécriture native n'est pas justifiée à ce stade sur la seule base de sa complexité apparente.
+
+## 9. Conclusion de l'audit et choix du pilote
+
+**Choix recommandé pour l'étape expérimentale :** isoler le calcul pur de moyenne générale comme candidat de preuve de concept, sans l'activer en production. Il est déterministe à contrat égal, reçoit des résultats déjà validés et permet une comparaison différentielle directe avec Python.
+
+Avant de coder ce pilote :
+1. renforcer et figer les tests de référence Python ;
+2. clarifier la politique d'arrondi et les invariants attendus ;
+3. mesurer des tailles de lots réalistes avec un benchmark reproductible ;
+4. implémenter le prototype Rust uniquement si la preuve de concept sert à valider l'intégration ou si les mesures révèlent un gain utile ;
+5. comparer chaque résultat Rust au résultat Python et bloquer tout écart inexpliqué.
+
+Le moteur de délibération n'est pas le premier candidat : sa logique est courte et son comportement est mieux conservé dans Python tant qu'aucune raison mesurée ne justifie de le déplacer. C ne fait pas partie du premier pilote ; il sera introduit seulement pour un besoin d'interopérabilité ou bas niveau concret.
