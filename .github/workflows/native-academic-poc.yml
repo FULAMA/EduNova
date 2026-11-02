@@ -1,0 +1,55 @@
+name: Native academic average PoC
+
+on:
+  pull_request:
+    paths:
+      - "native/academic_average/**"
+      - ".github/workflows/native-academic-poc.yml"
+  push:
+    branches:
+      - "feat/academic-average-native-poc"
+    paths:
+      - "native/academic_average/**"
+      - ".github/workflows/native-academic-poc.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  rust-and-c-abi:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Check formatting
+        run: cargo fmt --manifest-path native/academic_average/Cargo.toml -- --check
+
+      - name: Run Rust tests
+        run: cargo test --manifest-path native/academic_average/Cargo.toml
+
+      - name: Run Clippy
+        run: cargo clippy --manifest-path native/academic_average/Cargo.toml --all-targets -- -D warnings
+
+      - name: Build release library
+        run: cargo build --manifest-path native/academic_average/Cargo.toml --release
+
+      - name: Compile C ABI smoke test
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror \
+            native/academic_average/tests/c_abi_smoke.c \
+            -L native/academic_average/target/release \
+            -ledunova_academic_average \
+            -Wl,-rpath,'$ORIGIN/release' \
+            -o native/academic_average/target/c_abi_smoke
+
+      - name: Execute C ABI smoke test
+        run: native/academic_average/target/c_abi_smoke
+
+      - name: Differential tests and non-gating benchmark
+        run: python3 native/academic_average/tests/differential_and_benchmark.py native/academic_average/target/release/libedunova_academic_average.so
