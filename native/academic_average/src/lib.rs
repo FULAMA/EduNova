@@ -112,8 +112,7 @@ mod tests {
 
     #[test]
     fn calculates_weighted_average() {
-        let result =
-            weighted_average(&[14.0, 12.0, 16.0], &[4.0, 3.0, 5.0]).expect("valid input");
+        let result = weighted_average(&[14.0, 12.0, 16.0], &[4.0, 3.0, 5.0]).expect("valid input");
         assert!((result - 14.333333333333334).abs() < 1e-12);
     }
 
@@ -152,8 +151,8 @@ mod tests {
 
     #[test]
     fn compensated_sum_limits_loss_of_precision() {
-        let result =
-            weighted_average(&[20.0, 0.0, 20.0], &[1.0, 1e-16, 1.0]).expect("valid input");
+        let result = weighted_average(&[20.0, 0.0, 20.0], &[1.0, 1e-16, 1.0])
+            .expect("valid input");
         assert!((result - 20.0).abs() < 1e-12);
     }
 }
