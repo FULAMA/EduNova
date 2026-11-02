@@ -25,7 +25,7 @@ cc -std=c11 -Wall -Wextra -Werror \\
   native/academic_average/tests/c_abi_smoke.c \\
   -L native/academic_average/target/release \\
   -ledunova_academic_average \\
-  -Wl,-rpath,'$ORIGIN/../target/release' \\
+  -Wl,-rpath,'$ORIGIN/release' \\
   -o native/academic_average/target/c_abi_smoke
 native/academic_average/target/c_abi_smoke
 \`\`\`
