@@ -151,8 +151,7 @@ mod tests {
 
     #[test]
     fn compensated_sum_limits_loss_of_precision() {
-        let result = weighted_average(&[20.0, 0.0, 20.0], &[1.0, 1e-16, 1.0])
-            .expect("valid input");
+        let result = weighted_average(&[20.0, 0.0, 20.0], &[1.0, 1e-16, 1.0]).expect("valid input");
         assert!((result - 20.0).abs() < 1e-12);
     }
 }
