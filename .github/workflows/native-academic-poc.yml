@@ -50,3 +50,6 @@ jobs:
 
       - name: Execute C ABI smoke test
         run: native/academic_average/target/c_abi_smoke
+
+      - name: Differential tests and non-gating benchmark
+        run: python3 native/academic_average/tests/differential_and_benchmark.py native/academic_average/target/release/libedunova_academic_average.so
