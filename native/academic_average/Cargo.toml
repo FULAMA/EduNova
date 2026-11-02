@@ -12,4 +12,3 @@ crate-type = ["rlib", "cdylib", "staticlib"]
 [profile.release]
 lto = true
 codegen-units = 1
-panic = "abort"
