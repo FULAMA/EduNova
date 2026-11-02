@@ -1,6 +1,10 @@
+import re
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+_EMAIL_PATTERN = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 
 
 class SchoolProfileInput(BaseModel):
@@ -16,6 +20,13 @@ class SchoolProfileInput(BaseModel):
     @classmethod
     def trim_strings(cls, value: object) -> object:
         return value.strip() or None if isinstance(value, str) else value
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str | None) -> str | None:
+        if value is not None and _EMAIL_PATTERN.fullmatch(value) is None:
+            raise ValueError("Adresse e-mail invalide.")
+        return value
 
 
 class SchoolProfileResponse(BaseModel):
