@@ -138,3 +138,25 @@ Les options historiques restent affichées pour préserver la traçabilité. Les
 - D7-A constitue le défaut technique de `BUL-CALC-01` avec deux décimales, sous réserve de validation réglementaire.
 
 La Tranche 1 ne peut définir que la structure et le versionnement des profils. Elle ne peut pas fixer les matières, maxima, coefficients, périodes officielles, seuils, règles de passage, mentions ou repêchages.
+
+
+## Ratification produit du 2026-11-01
+
+Les recommandations D1 à D14 ci-dessus sont des traces historiques. Les choix désormais ratifiés par le propriétaire produit sont consignés dans [DECISIONS_RATIFIEES_AUTONOMIE_ETABLISSEMENTS_2026-11-01.md](../decisions/DECISIONS_RATIFIEES_AUTONOMIE_ETABLISSEMENTS_2026-11-01.md).
+
+| Sujet | Choix ratifié |
+|---|---|
+| Années ouvertes | D1-A : une seule année OPEN par tenant en V1 |
+| Autorisations administratives | D2-C : séparation administration technique / responsabilités métier |
+| Chevauchement des périodes | D3-B : permis entre calendriers/programmes distincts |
+| Identification et doublons | D4-A : identifiant interne et rapprochement humain |
+| Surpaiement | D5-B : crédit traçable, par devise |
+| Numérotation des reçus | D6-A : séquence par tenant et exercice |
+| Publication/correction bulletin | D7-C : direction et responsables académiques habilités |
+| Versions remplacées | D8-B : consultation par direction et responsables habilités |
+| Révocation | D9-B : possible après contrat dédié ; non implémentable avant |
+| Parent/responsable | D10-OUI : cardinalités multiples, validation habilitée et historique |
+| Migrations | D11-A : opérateur avant démarrage |
+| Frontend prioritaire | D12-A : configuration scolaire et calendrier |
+
+Ces décisions ne ferment pas les réserves réglementaires ou techniques explicitement indiquées dans le registre (notamment les contrats BUL-TECH et les valeurs officielles propres aux programmes). Toute implémentation reste soumise à l'audit du code, aux tests, à la revue de migration et à la PR.
