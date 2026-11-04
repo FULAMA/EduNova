@@ -8,7 +8,7 @@ from src.presentation.api.dependencies import (
     get_get_student_use_case,
     get_list_students_use_case,
 )
-from src.presentation.api.dependencies.auth import get_tenant_context, require_role
+from src.presentation.api.dependencies.auth import get_tenant_context, require_finance_role
 from src.presentation.api.schemas.student import StudentSummaryResponse
 from src.shared.application.context.tenant_context import TenantContext
 
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/students", tags=["Students"])
 @router.get(
     "",
     response_model=list[StudentSummaryResponse],
-    dependencies=[Depends(require_role("ADMIN"))],
+    dependencies=[Depends(require_finance_role())],
 )
 def list_students(
     use_case: ListStudents = Depends(get_list_students_use_case),
@@ -41,7 +41,7 @@ def list_students(
 @router.get(
     "/{student_id}",
     response_model=StudentSummaryResponse,
-    dependencies=[Depends(require_role("ADMIN"))],
+    dependencies=[Depends(require_finance_role())],
 )
 def get_student(
     student_id: UUID,
