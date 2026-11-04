@@ -72,6 +72,7 @@ from src.presentation.api.dependencies import (
     get_apply_student_promotion_use_case,
     get_validate_deliberation_use_case,
     get_get_student_use_case,
+    get_create_student_use_case,
     get_refresh_access_token_use_case,
     get_register_user_use_case,
     get_verify_login_two_factor_use_case,
@@ -257,6 +258,8 @@ def create_app(
         app.dependency_overrides[
             get_get_student_use_case
         ] = container.get_student
+
+    app.dependency_overrides[get_create_student_use_case] = container.create_student
 
     if assign_subject_to_class_use_case is not None:
         app.dependency_overrides[

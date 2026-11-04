@@ -1,4 +1,6 @@
-﻿from pathlib import Path
+﻿from dataclasses import replace
+from pathlib import Path
+from typing import Any
 
 from tools.edunova.agents.context_analyzer import (
     ContextAnalyzer,
@@ -8,7 +10,7 @@ from tools.edunova.agents.context import EngineeringContext
 from tools.edunova.agents.prompt_builder import EngineeringPromptBuilder
 
 
-def make_analysis(**overrides) -> EngineeringAnalysis:
+def make_analysis(**overrides: Any) -> EngineeringAnalysis:
     context = EngineeringContext(
         project_root=Path("F:/EduNova"),
         scope="test-scope",
@@ -22,18 +24,7 @@ def make_analysis(**overrides) -> EngineeringAnalysis:
     )
     analysis = ContextAnalyzer().analyze(context)
 
-    values = {
-        "scope": analysis.scope,
-        "git_branch": analysis.git_branch,
-        "changed_files": analysis.changed_files,
-        "architecture": analysis.architecture,
-        "tests": analysis.tests,
-        "decisions": analysis.decisions,
-        "risks": analysis.risks,
-        "is_clean": analysis.is_clean,
-    }
-    values.update(overrides)
-    return EngineeringAnalysis(**values)
+    return replace(analysis, **overrides)
 
 
 def test_build_contains_engineering_context_sections() -> None:

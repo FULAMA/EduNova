@@ -59,3 +59,9 @@ h6 {
 p {
   margin: 0;
 }
+
+table td,
+table th {
+  font-variant-numeric: tabular-nums;
+}
+

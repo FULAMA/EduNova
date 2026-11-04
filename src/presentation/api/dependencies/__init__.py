@@ -20,6 +20,7 @@ from src.academic.application.use_cases.correct_academic_record import (
 from src.academic.application.use_cases.list_students import ListStudents
 from src.academic.application.use_cases.list_student_academic_periods import ListStudentAcademicPeriods
 from src.academic.application.use_cases.get_student import GetStudent
+from src.academic.application.use_cases.create_student import CreateStudent
 from src.academic.application.use_cases.list_subjects import ListSubjects
 from src.academic.application.use_cases.create_subject import CreateSubject
 from src.academic.application.use_cases.update_subject import UpdateSubject
@@ -149,6 +150,10 @@ def get_list_students_use_case() -> ListStudents:
 
 def get_get_student_use_case() -> GetStudent:
     return get_container().get_student()
+
+
+def get_create_student_use_case() -> CreateStudent:
+    return get_container().create_student()
 
 
 def get_list_student_academic_periods_use_case() -> ListStudentAcademicPeriods:

@@ -1,4 +1,6 @@
 import subprocess
+from collections.abc import Sequence
+from pathlib import Path
 
 from tools.edunova.commands.security import SecurityCommand
 from tools.edunova.core.result import Status
@@ -15,13 +17,14 @@ class FakeProcessRunner(ProcessRunner):
 
     def run(
         self,
-        command: list[str],
-        cwd=None,
+        command: Sequence[str],
+        cwd: Path | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        self.commands.append(command)
-        self.calls.append((command, cwd))
+        argv = list(command)
+        self.commands.append(argv)
+        self.calls.append((argv, cwd))
         return subprocess.CompletedProcess(
-            args=command,
+            args=argv,
             returncode=self.returncode,
             stdout=self.output,
             stderr="",

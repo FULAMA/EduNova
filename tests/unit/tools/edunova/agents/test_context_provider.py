@@ -36,7 +36,7 @@ def test_engineering_context_is_immutable() -> None:
     )
 
     try:
-        context.scope = "other"
+        setattr(context, "scope", "other")
     except AttributeError:
         pass
     else:

@@ -151,7 +151,7 @@ export default function AttendancePage() {
 
   return (
     <main className="attendance-page">
-      <header><p>Etablissement</p><h1>Presences et absences</h1><p>Les taux sont recalcules par l API a partir des releves persistés.</p></header>
+      <header><p>Établissement</p><h1>Présences et absences</h1><p>Les taux sont recalcules par l API a partir des releves persistés.</p></header>
       {loading ? <p className="attendance-page__status" role="status" aria-busy="true">Chargement des donnees...</p> : null}
       {error ? <div className="attendance-page__alert" role="alert"><span>{error}</span><button type="button" onClick={() => void load()}>Reessayer</button></div> : null}
       <section className="attendance-page__section attendance-page__section--form" aria-labelledby="attendance-form-title">

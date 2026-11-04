@@ -91,6 +91,17 @@ def test_non_admin_cannot_list_students():
     assert response.json()["detail"] == "Acces interdit."
 
 
+def test_finance_roles_can_list_students():
+    for role in ("DIRECTION", "ACCOUNTANT", "CASHIER"):
+        client, container, _ = create_client(role=role)
+        student_id = insert_student(container)
+
+        response = client.get("/students")
+
+        assert response.status_code == 200
+        assert response.json()[0]["id"] == str(student_id)
+
+
 def test_inactive_membership_cannot_list_students():
     client, container, user = create_client()
     with container._database.connect() as connection:
@@ -180,6 +191,90 @@ def test_non_admin_cannot_get_student_detail():
 
     assert response.status_code == 403
     assert response.json()["detail"] == "Acces interdit."
+
+
+def test_finance_roles_can_get_student_detail():
+    client, container, _ = create_client(role="CASHIER")
+    student_id = insert_student(container)
+
+    response = client.get(f"/students/{student_id}")
+
+    assert response.status_code == 200
+    assert response.json()["id"] == str(student_id)
+
+
+def test_admin_creates_student_in_active_tenant():
+    client, _, _ = create_client()
+
+    response = client.post(
+        "/students",
+        json={
+            "first_name": "Grace",
+            "last_name": "Hopper",
+            "email": "grace@example.test",
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["first_name"] == "Grace"
+    assert payload["last_name"] == "Hopper"
+    assert payload["email"] == "grace@example.test"
+    assert payload["active"] is True
+
+    listed = client.get("/students")
+    assert listed.status_code == 200
+    assert listed.json()[0]["id"] == payload["id"]
+
+
+def test_direction_can_create_student():
+    client, _, _ = create_client(role="DIRECTION")
+
+    response = client.post(
+        "/students",
+        json={"first_name": "Marie", "last_name": "Curie"},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["first_name"] == "Marie"
+
+
+def test_cashier_cannot_create_student():
+    client, _, _ = create_client(role="CASHIER")
+
+    response = client.post(
+        "/students",
+        json={"first_name": "Alan", "last_name": "Turing"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Acces interdit."
+
+
+def test_create_student_rejects_blank_name():
+    client, _, _ = create_client()
+
+    response = client.post(
+        "/students",
+        json={"first_name": "   ", "last_name": "Hopper"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Le prenom ne peut pas etre vide."
+
+
+def test_created_student_stays_in_creator_tenant():
+    client, container, _ = create_client()
+    created = client.post(
+        "/students",
+        json={"first_name": "Ada", "last_name": "Lovelace"},
+    )
+    insert_student(container, uuid4())
+
+    listed = client.get("/students")
+
+    assert created.status_code == 201
+    assert listed.json() == [created.json()]
 
 
 def test_inactive_membership_cannot_get_student_detail():

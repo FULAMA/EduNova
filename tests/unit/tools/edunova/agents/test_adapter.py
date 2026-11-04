@@ -84,10 +84,8 @@ def test_adapter_executor_keeps_provider_abstraction() -> None:
 def test_adapter_cannot_be_instantiated_without_generate() -> None:
     try:
 
-        class InvalidAdapter(ProviderAdapter):
-            pass
-
-        InvalidAdapter()
+        invalid_adapter_type = type("InvalidAdapter", (ProviderAdapter,), {})
+        invalid_adapter_type()
     except TypeError:
         pass
     else:

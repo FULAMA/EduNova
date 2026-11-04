@@ -6,8 +6,9 @@ from unittest.mock import Mock
 from tools.edunova.execution.action import ExecutionAction
 from tools.edunova.execution.capability import ExecutionCapability
 from tools.edunova.execution.default_policy import DefaultExecutionPolicy
-from tools.edunova.execution.decision import ExecutionDecisionType
+from tools.edunova.execution.decision import ExecutionDecision, ExecutionDecisionType
 from tools.edunova.execution.memory_audit_sink import InMemoryExecutionAuditSink
+from tools.edunova.execution.policy import ExecutionPolicy
 from tools.edunova.execution.request import ExecutionRequest
 from tools.edunova.execution.risk import ExecutionRisk
 from tools.edunova.execution.scope import ExecutionScope
@@ -38,10 +39,8 @@ def test_reviewed_operation_is_not_executable_without_local_confirmation_ui() ->
     runner = Mock()
     sink = InMemoryExecutionAuditSink()
 
-    class ReviewPolicy:
-        def evaluate(self, request: ExecutionRequest):
-            from tools.edunova.execution.decision import ExecutionDecision
-
+    class ReviewPolicy(ExecutionPolicy):
+        def evaluate(self, request: ExecutionRequest) -> ExecutionDecision:
             return ExecutionDecision(
                 ExecutionDecisionType.REVIEW,
                 "explicit review required",

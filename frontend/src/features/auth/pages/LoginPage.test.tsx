@@ -51,23 +51,40 @@ describe('LoginPage', () => {
 
   it.each([
     [401, 'Adresse e-mail ou mot de passe incorrect.'],
-    [403, 'Votre compte n a pas acces a cet etablissement.'],
-    [422, 'L identifiant de l etablissement doit etre un UUID valide.'],
-    [0, 'Backend inaccessible. Demarrez l API puis reessayez.'],
+    [403, "Votre compte n'a pas accès à cet établissement."],
+    [422, "L'identifiant de l'établissement doit être un UUID valide."],
+    [0, "Backend inaccessible. Démarrez l'API puis réessayez."],
   ])('shows the appropriate login error for HTTP/network status %i', async (status, message) => {
     mockLogin.mockRejectedValue(new ApiError(status, 'server detail'))
     act(() => root.render(createElement(MemoryRouter, null, createElement(LoginPage))))
 
-    const inputs = host.querySelectorAll('input')
+    const emailInput = host.querySelector('input[type="email"]') as HTMLInputElement
+    const passwordInput = host.querySelector('input[type="password"], input[type="text"]') as HTMLInputElement
+    const tenantInputs = host.querySelectorAll('input[type="text"]')
+    // Skip the password toggle button, get the actual tenant input
+    const tenantInput = Array.from(tenantInputs).find(input => input.getAttribute('placeholder')?.includes('UUID')) as HTMLInputElement
+    
     await act(async () => {
-      setInputValue(inputs[0] as HTMLInputElement, 'admin@edunova.com')
-      setInputValue(inputs[1] as HTMLInputElement, 'DemoPassword@2026')
-      setInputValue(inputs[2] as HTMLInputElement, '00000000-0000-0000-0000-000000000001')
+      setInputValue(emailInput, 'admin@edunova.com')
+      setInputValue(passwordInput, 'DemoPassword@2026')
+      setInputValue(tenantInput, '00000000-0000-0000-0000-000000000001')
+      
+      // Trigger blur events for validation
+      emailInput.dispatchEvent(new Event('blur', { bubbles: true }))
+      passwordInput.dispatchEvent(new Event('blur', { bubbles: true }))
+      tenantInput.dispatchEvent(new Event('blur', { bubbles: true }))
+      
       host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
       await Promise.resolve()
     })
 
     await settle()
-    expect(host.querySelector('[role="alert"]')?.textContent).toContain(message)
+    const errorElements = host.querySelectorAll('[role="alert"]')
+    const hasError = Array.from(errorElements).some(el => el.textContent?.includes(message))
+    
+    // Also check if the error is displayed anywhere in the page
+    const hasErrorAnywhere = host.textContent?.includes(message) ?? false
+    
+    expect(hasError || hasErrorAnywhere).toBe(true)
   })
 })

@@ -9,6 +9,12 @@ const API_BASE_URL = (
   import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 ).replace(/\/$/, '')
 
+const MSG_UNREACHABLE = 'Le serveur API est inaccessible.'
+const MSG_SESSION_EXPIRED = 'La session a expiré. Veuillez vous reconnecter.'
+const MSG_REFRESH_UNAVAILABLE =
+  'Le renouvellement de session est temporairement indisponible.'
+const MSG_SERVER_ERROR = 'Le serveur est indisponible. Réessayez plus tard.'
+
 export type ApiRequestOptions = RequestInit & {
   authenticated?: boolean
 }
@@ -119,6 +125,15 @@ async function refreshSession(): Promise<RefreshResult> {
   }
 }
 
+function validationMessage(payload: unknown): string | null {
+  const detail = (payload as { detail?: unknown } | null)?.detail
+  if (!Array.isArray(detail)) return null
+  const messages = detail
+    .map((item) => (item && typeof item === 'object' ? (item as { msg?: unknown }).msg : null))
+    .filter((msg): msg is string => typeof msg === 'string')
+  return messages.length > 0 ? `Données invalides : ${messages.join(' ; ')}` : null
+}
+
 function errorMessage(payload: unknown): string {
   if (
     payload &&
@@ -128,85 +143,67 @@ function errorMessage(payload: unknown): string {
     return (payload as { detail: string }).detail
   }
 
-  return 'Le serveur est indisponible. Réessayez plus tard.'
+  return validationMessage(payload) ?? MSG_SERVER_ERROR
+}
+
+/**
+ * Envoie la requête, tente un refresh sur 401 authentifié, rejoue une fois,
+ * et lève ApiError si la réponse finale n'est pas OK.
+ * Retourne une Response dont le corps n'a pas été consommé.
+ */
+async function authorizedFetch(
+  path: string,
+  options: ApiRequestOptions,
+): Promise<Response> {
+  const { authenticated = false, ...requestOptions } = options
+  const send = async (): Promise<Response> => {
+    try {
+      return await fetch(`${API_BASE_URL}${path}`, {
+        ...requestOptions,
+        headers: requestHeaders(options, authenticated),
+      })
+    } catch {
+      throw new ApiError(0, MSG_UNREACHABLE)
+    }
+  }
+
+  let response = await send()
+
+  if (response.status === 401 && authenticated) {
+    const refreshResult = await refreshSession()
+    if (refreshResult === 'refreshed') {
+      response = await send()
+    } else if (refreshResult === 'unavailable') {
+      throw new ApiError(0, MSG_REFRESH_UNAVAILABLE)
+    } else if (!getSession()) {
+      throw new ApiError(401, MSG_SESSION_EXPIRED)
+    }
+  }
+
+  if (!response.ok) {
+    if (response.status === 401 && authenticated) {
+      notifySessionExpired()
+      throw new ApiError(401, MSG_SESSION_EXPIRED)
+    }
+
+    throw new ApiError(response.status, errorMessage(await parseResponse(response)))
+  }
+
+  return response
 }
 
 export async function apiRequest<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
-  const { authenticated = false, ...requestOptions } = options
-  const request = async (): Promise<Response> => {
-    try {
-      return await fetch(`${API_BASE_URL}${path}`, {
-        ...requestOptions,
-        headers: requestHeaders(options, authenticated),
-      })
-    } catch {
-      throw new ApiError(0, 'Le serveur API est inaccessible.')
-    }
-  }
-
-  let response = await request()
-
-  if (response.status === 401 && authenticated) {
-    const refreshResult = await refreshSession()
-    if (refreshResult === 'refreshed') {
-      response = await request()
-    } else if (refreshResult === 'unavailable') {
-      throw new ApiError(
-        0,
-        'Le renouvellement de session est temporairement indisponible.',
-      )
-    } else if (!getSession()) {
-      throw new ApiError(401, 'La session a expiré. Veuillez vous reconnecter.')
-    }
-  }
-
-  const payload = await parseResponse(response)
-
-  if (!response.ok) {
-    if (response.status === 401 && authenticated) {
-      notifySessionExpired()
-      throw new ApiError(401, 'La session a expiré. Veuillez vous reconnecter.')
-    }
-
-    throw new ApiError(response.status, errorMessage(payload))
-  }
-
-  return payload as T
+  const response = await authorizedFetch(path, options)
+  return (await parseResponse(response)) as T
 }
 
 export async function apiRequestBlob(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<Blob> {
-  const { authenticated = false, ...requestOptions } = options
-  const request = async (): Promise<Response> => {
-    try {
-      return await fetch(`${API_BASE_URL}${path}`, {
-        ...requestOptions,
-        headers: requestHeaders(options, authenticated),
-      })
-    } catch {
-      throw new ApiError(0, 'Le serveur API est inaccessible.')
-    }
-  }
-
-  let response = await request()
-  if (response.status === 401 && authenticated) {
-    const refreshResult = await refreshSession()
-    if (refreshResult === 'refreshed') response = await request()
-    else if (refreshResult === 'unavailable') throw new ApiError(0, 'Le renouvellement de session est temporairement indisponible.')
-    else if (!getSession()) throw new ApiError(401, 'La session a expire. Veuillez vous reconnecter.')
-  }
-  if (!response.ok) {
-    const payload = await parseResponse(response)
-    if (response.status === 401 && authenticated) {
-      notifySessionExpired()
-      throw new ApiError(401, 'La session a expire. Veuillez vous reconnecter.')
-    }
-    throw new ApiError(response.status, errorMessage(payload))
-  }
+  const response = await authorizedFetch(path, options)
   return response.blob()
 }

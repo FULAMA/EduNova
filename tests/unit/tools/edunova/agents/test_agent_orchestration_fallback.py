@@ -1,4 +1,5 @@
 ﻿from tools.edunova.agents.orchestration.config import ProviderConfig
+from tools.edunova.agents.provider import AgentProvider
 from tools.edunova.agents.orchestration.factory_registry import (
     ProviderFactoryRegistry,
 )
@@ -9,11 +10,6 @@ from tools.edunova.agents.orchestration.router import AgentRouter
 from tools.edunova.agents.orchestration.service import AgentOrchestrationService
 from tools.edunova.agents.result import AgentResult
 from tools.edunova.agents.role import AgentRole
-
-
-class FakeProvider:
-    def __init__(self, name: str) -> None:
-        self.name = name
 
 
 class FakeAdapter:
@@ -36,7 +32,7 @@ def create_service(results: dict[str, AgentResult]):
     providers = ProviderRegistry()
 
     for name in results:
-        providers.register(FakeProvider(name))
+        providers.register(AgentProvider(name=name))
         providers.register_config(
             ProviderConfig(
                 name=name,

@@ -8,6 +8,8 @@ import { ApiError } from '../../../../shared/api/client'
 import { addStudentSubjectResult, createStudentAcademicRecord, getStudent, getStudentAcademicHistory, getStudentAcademicRecord, getStudentDeliberation, listEligibleStudentPeriods, listEligibleStudentSubjects, listStudents, validateStudentAcademicRecord, validateStudentDeliberation } from '../../services/student.service'
 import StudentsPage from '../StudentsPage/StudentsPage'
 import StudentDetailPage from './StudentDetailPage'
+import type { AuthenticatedUser } from '../../../auth/services/auth.service'
+import { CurrentUserContext } from '../../../auth/components/current-user.context'
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 vi.mock('../../services/student.service', () => ({ addStudentSubjectResult: vi.fn(), correctStudentAcademicRecord: vi.fn(), createStudentAcademicRecord: vi.fn(), getStudent: vi.fn(), getStudentAcademicHistory: vi.fn(), getStudentAcademicRecord: vi.fn(), getStudentDeliberation: vi.fn(), listEligibleStudentPeriods: vi.fn(), listEligibleStudentSubjects: vi.fn(), listStudents: vi.fn(), validateStudentAcademicRecord: vi.fn(), validateStudentDeliberation: vi.fn() }))
@@ -25,15 +27,21 @@ const mockValidateDeliberation = vi.mocked(validateStudentDeliberation)
 let root: Root
 let host: HTMLDivElement
 
+const adminUser: AuthenticatedUser = {
+  id: 'u1', email: 'admin@example.test', role: 'ADMIN', is_active: true, two_factor_enabled: false,
+}
+
 function renderAt(path: string) {
   host = document.createElement('div')
   document.body.append(host)
   root = createRoot(host)
   act(() => root.render(createElement(MemoryRouter, { initialEntries: [path] },
-    createElement(Routes, null,
-      createElement(Route, { path: '/app/students', element: createElement(StudentsPage) }),
-      createElement(Route, { path: '/app/students/:studentId', element: createElement(StudentDetailPage) }),
-    ),
+    createElement(CurrentUserContext.Provider, { value: adminUser },
+      createElement(Routes, null,
+        createElement(Route, { path: '/app/students', element: createElement(StudentsPage) }),
+        createElement(Route, { path: '/app/students/:studentId', element: createElement(StudentDetailPage) }),
+      ),
+    )
   )))
   return host
 }

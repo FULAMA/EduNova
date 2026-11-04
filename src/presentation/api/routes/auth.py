@@ -28,10 +28,15 @@ from src.presentation.api.dependencies import (
     get_login_user_use_case,
     get_login_with_google_use_case,
     get_link_google_identity_use_case,
+    get_membership_repository,
     get_refresh_access_token_use_case,
     get_register_user_use_case,
     get_verify_login_two_factor_use_case,
     get_verify_two_factor_use_case,
+)
+from src.shared.application.context.tenant_context import TenantContext
+from src.tenancy.application.interfaces.membership_repository import (
+    MembershipRepository,
 )
 
 from src.presentation.api.schemas.enable_two_factor_response import (
@@ -389,11 +394,23 @@ def verify_login_two_factor(
 )
 def get_me(
     current_user: AuthenticatedUser = Depends(get_current_user),
+    tenant_context: TenantContext = Depends(get_tenant_context),
+    membership_repository: MembershipRepository = Depends(get_membership_repository),
 ):
+    membership = membership_repository.find_by_user_and_tenant(
+        current_user.id,
+        tenant_context.tenant_id,
+    )
+    if membership is None or not membership.active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acces tenant refuse.",
+        )
+
     return MeResponse(
         id=current_user.id,
         email=current_user.email,
-        role=current_user.role,
+        role=membership.role,
         is_active=current_user.is_active,
         two_factor_enabled=current_user.two_factor_enabled,
     )

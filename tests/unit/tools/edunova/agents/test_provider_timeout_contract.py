@@ -1,4 +1,5 @@
 ﻿from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -16,7 +17,7 @@ from tools.edunova.agents.providers.qwen import (
 
 class RecordingCompletions:
     def __init__(self) -> None:
-        self.kwargs = None
+        self.kwargs: dict[str, Any] | None = None
 
     def create(self, **kwargs):
         self.kwargs = kwargs
@@ -68,6 +69,7 @@ def test_adapter_passes_configured_timeout(
     )
 
     assert result.success is True
+    assert client.completions.kwargs is not None
     assert client.completions.kwargs["timeout"] == 7
 
 
@@ -98,4 +100,5 @@ def test_provider_factory_propagates_configured_timeout(
     )
 
     assert result.success is True
+    assert client.completions.kwargs is not None
     assert client.completions.kwargs["timeout"] == 17

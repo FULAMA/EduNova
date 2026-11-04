@@ -61,7 +61,7 @@ describe('Topbar account controls', () => {
     const page = renderTopbar()
 
     expect(page.textContent).toContain('marie@example.test')
-    expect(page.textContent).toContain('ADMIN')
+    expect(page.textContent).toContain('Administrateur')
     expect(page.querySelector('[aria-label="Notifications"]')).toBeNull()
   })
 

@@ -378,3 +378,58 @@ def test_runner_ignores_modules_without_migration_contract():
 
     assert "001" in runner._migrations
 
+
+def test_runner_rejects_duplicate_version_and_preserves_first_function():
+    connection = sqlite3.connect(":memory:")
+    runner = MigrationRunner(connection)
+    calls = []
+
+    runner.register("001", lambda connection: calls.append("first"))
+
+    with pytest.raises(ValueError, match="déjà enregistrée"):
+        runner.register("001", lambda connection: calls.append("second"))
+
+    runner.run()
+
+    assert calls == ["first"]
+
+
+def test_runner_rejects_duplicate_migration_objects_and_preserves_first():
+    connection = sqlite3.connect(":memory:")
+    runner = MigrationRunner(connection)
+    calls = []
+
+    runner.register(Migration("001", lambda connection: calls.append("first")))
+
+    with pytest.raises(ValueError, match="déjà enregistrée"):
+        runner.register(Migration("001", lambda connection: calls.append("second")))
+
+    runner.run()
+
+    assert calls == ["first"]
+
+
+def test_runner_rejects_duplicate_modules_and_preserves_first():
+    from types import SimpleNamespace
+
+    connection = sqlite3.connect(":memory:")
+    runner = MigrationRunner(connection)
+    calls = []
+
+    first = SimpleNamespace(
+        version="001",
+        upgrade=lambda connection: calls.append("first"),
+    )
+    second = SimpleNamespace(
+        version="001",
+        upgrade=lambda connection: calls.append("second"),
+    )
+
+    runner.register_module(first)
+
+    with pytest.raises(ValueError, match="déjà enregistrée"):
+        runner.register_module(second)
+
+    runner.run()
+
+    assert calls == ["first"]
