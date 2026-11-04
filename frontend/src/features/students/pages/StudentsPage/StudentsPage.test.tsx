@@ -6,6 +6,8 @@ import StudentsPage from './StudentsPage'
 import { MemoryRouter } from 'react-router-dom'
 import { createRoot, type Root } from 'react-dom/client'
 import { act, createElement } from 'react'
+import type { AuthenticatedUser } from '../../../auth/services/auth.service'
+import { CurrentUserContext } from '../../../auth/components/current-user.context'
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -14,11 +16,21 @@ const mockedListStudents = vi.mocked(listStudents)
 let root: Root
 let host: HTMLDivElement
 
+const adminUser: AuthenticatedUser = {
+  id: 'u1', email: 'admin@example.test', role: 'ADMIN', is_active: true, two_factor_enabled: false,
+}
+
 function renderPage() {
   host = document.createElement('div')
   document.body.append(host)
   root = createRoot(host)
-  act(() => root.render(createElement(MemoryRouter, null, createElement(StudentsPage))))
+  act(() => root.render(
+    createElement(MemoryRouter, null,
+      createElement(CurrentUserContext.Provider, { value: adminUser },
+        createElement(StudentsPage)
+      )
+    )
+  ))
   return host
 }
 
@@ -74,8 +86,8 @@ describe('StudentsPage', () => {
       .mockResolvedValueOnce([{ id: '1', firstName: 'Ada', lastName: 'Lovelace', email: null, status: 'active' }])
     const page = renderPage()
     await settle()
-    const button = page.querySelector('button')!
-    act(() => button.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+    const retryButton = page.querySelector('[role="alert"] button')!
+    act(() => retryButton.dispatchEvent(new MouseEvent('click', { bubbles: true })))
     await settle()
     expect(page.textContent).toContain('Ada Lovelace')
   })
