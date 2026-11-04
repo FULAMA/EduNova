@@ -75,7 +75,7 @@ describe('AttendancePage', () => {
     const page = renderPage()
     await settle()
 
-    expect(page.textContent).toContain('Presences et absences')
+    expect(page.textContent).toContain('Présences et absences')
     expect(page.textContent).toContain('75%')
     expect(page.textContent).toContain('LOW')
     expect(page.textContent).toContain('Aucun releve pour cette periode.')

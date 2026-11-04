@@ -1,18 +1,13 @@
-﻿.stat-card {
+.stat-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   min-width: 0;
   padding: var(--space-5);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-
-  transition:
-    transform 160ms ease,
-    border-color 160ms ease,
-    box-shadow 160ms ease;
+  transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .stat-card:hover {
@@ -21,32 +16,36 @@
   box-shadow: var(--shadow-md);
 }
 
+.stat-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .stat-card__label {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
 .stat-card__value {
   color: var(--color-text);
-  font-size: 1.75rem;
-  line-height: 1.1;
+  font-size: var(--font-size-3xl);
+  line-height: var(--line-height-tight);
   font-weight: 700;
-  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
 .stat-card__description {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .stat-card {
-    transition: none;
-  }
-
   .stat-card:hover {
     transform: none;
   }

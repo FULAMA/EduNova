@@ -1,10 +1,12 @@
-import { apiRequest } from '../../shared/api/client'
+import { apiRequest, apiRequestBlob } from '../../shared/api/client'
 
 export type Currency = 'USD' | 'CDF'
 export type Charge = { id: string; student_id: string; description: string; amount: string; currency: Currency; due_date: string | null; status: string }
 export type Payment = { id: string; charge_id: string; student_id: string; amount: string; currency: Currency; status: string; recorded_at: string; receipt_number: string; receipt_status: string }
 export type BillingSummary = { charges: Charge[]; payments: Payment[] }
-export type FeeType = { id: string; name: string; description: string; category: string; amount: string; currency: Currency; academic_period_id: string | null; applicability: string; status: string; version: number; created_by: string; created_at: string; updated_at: string }
+export type FeeType = { id: string; name: string; description: string; category: string; amount: string; currency: Currency; academic_period_id: string | null; target_class_id: string | null; applicability: string; status: string; version: number; created_by: string; created_at: string; updated_at: string }
+export type FeeAssignment = { id: string; fee_type_id: string; fee_type_version: number; student_id: string; academic_period_id: string | null; snapshot_class_id: string | null; charge_id: string; amount: string; currency: Currency; created_by: string; created_at: string }
+export type CounterEntry = { id: string; original_payment_id: string; amount: string; currency: Currency; reason: string; recorded_by: string; recorded_at: string }
 
 export function getBillingSummary(studentId: string): Promise<BillingSummary> {
   return apiRequest(`/billing/students/${encodeURIComponent(studentId)}/summary`, { authenticated: true })
@@ -19,7 +21,7 @@ export function recordPayment(payload: { charge_id: string; amount: string; curr
 }
 
 export function correctPayment(paymentId: string, reason: string) {
-  return apiRequest(`/billing/payments/${encodeURIComponent(paymentId)}/correction`, { method: 'POST', authenticated: true, body: JSON.stringify({ reason }) })
+  return apiRequest<CounterEntry>(`/billing/payments/${encodeURIComponent(paymentId)}/correction`, { method: 'POST', authenticated: true, body: JSON.stringify({ reason }) })
 }
 
 export function listFeeTypes(): Promise<FeeType[]> {
@@ -35,6 +37,9 @@ export function updateFeeTypeStatus(id: string, status: 'PUBLISHED' | 'ARCHIVED'
 }
 
 export function assignFeeType(id: string, studentId: string) {
-  return apiRequest(`/billing/fee-types/${encodeURIComponent(id)}/assign`, { method: 'POST', authenticated: true, body: JSON.stringify({ student_id: studentId }) })
+  return apiRequest<FeeAssignment>(`/billing/fee-types/${encodeURIComponent(id)}/assign`, { method: 'POST', authenticated: true, body: JSON.stringify({ student_id: studentId }) })
 }
 
+export function downloadReceiptPdf(receiptNumber: string): Promise<Blob> {
+  return apiRequestBlob(`/billing/receipts/${encodeURIComponent(receiptNumber)}/pdf`, { authenticated: true })
+}

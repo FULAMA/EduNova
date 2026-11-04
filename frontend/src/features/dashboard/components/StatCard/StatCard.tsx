@@ -8,9 +8,13 @@ type StatCardProps = {
 export function StatCard({ metric }: StatCardProps) {
   return (
     <article className="stat-card">
-      <p className="stat-card__label">{metric.label}</p>
+      <div className="stat-card__header">
+        <span className="stat-card__label">{metric.label}</span>
+      </div>
       <strong className="stat-card__value">{metric.value}</strong>
       <p className="stat-card__description">{metric.description}</p>
     </article>
   )
 }
+
+export default StatCard

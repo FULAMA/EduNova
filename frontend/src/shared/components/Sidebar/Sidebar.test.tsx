@@ -35,7 +35,7 @@ describe('Sidebar', () => {
       'Élèves',
       'Classes',
       'Inscriptions',
-      'Presences',
+      'Présences',
       'Finances',
       'Configuration scolaire',
     ])

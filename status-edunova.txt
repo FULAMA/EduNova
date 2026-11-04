@@ -1,0 +1,39 @@
+﻿ M frontend/src/app/router/HomePage.tsx
+ M frontend/src/app/router/routes.tsx
+ M frontend/src/features/attendance/AttendancePage.test.tsx
+ M frontend/src/features/attendance/AttendancePage.tsx
+ M frontend/src/features/dashboard/components/StatCard/StatCard.css
+ D frontend/src/features/dashboard/data/dashboard-resource-state.data.ts
+ D frontend/src/features/dashboard/data/dashboard-summary.data.ts
+ D frontend/src/features/dashboard/data/recent-activities.data.ts
+ M frontend/src/features/dashboard/pages/DashboardPage.css
+ M frontend/src/features/finance/FeeCatalogPanel.tsx
+ M frontend/src/features/finance/FinancePage.css
+ M frontend/src/features/finance/FinancePage.tsx
+ M frontend/src/features/finance/finance.service.ts
+ M frontend/src/features/students/pages/StudentPortalPage/StudentPortalPage.tsx
+ M frontend/src/shared/api/client.ts
+ M frontend/src/shared/components/AppShell/AppShell.tsx
+ M frontend/src/shared/components/Sidebar/Sidebar.css
+ M frontend/src/shared/components/Sidebar/Sidebar.test.tsx
+ M frontend/src/shared/components/Sidebar/Sidebar.tsx
+ M frontend/src/shared/components/Topbar/Topbar.css
+ M frontend/src/shared/styles/globals.css
+?? frontend/docs/
+?? frontend/src/features/auth/components/RequireRole.test.tsx
+?? frontend/src/features/auth/components/RequireRole.tsx
+?? frontend/src/features/auth/permissions.fees.test.ts
+?? frontend/src/features/auth/permissions.test.ts
+?? frontend/src/features/auth/permissions.ts
+?? frontend/src/features/enrollments/enrollment.errors.test.ts
+?? frontend/src/features/enrollments/enrollment.errors.ts
+?? frontend/src/features/finance/FeeCatalogPanel.test.tsx
+?? frontend/src/features/finance/FinancePage.test.tsx
+?? frontend/src/features/finance/finance.errors.test.ts
+?? frontend/src/features/finance/finance.errors.ts
+?? frontend/src/shared/api/client.blob.test.ts
+?? frontend/src/shared/api/client.errors.test.ts
+?? frontend/src/shared/components/ConfirmBar/
+?? frontend/src/shared/components/Sidebar/Sidebar.roles.test.tsx
+?? frontend/src/shared/utils/
+?? status-edunova.txt

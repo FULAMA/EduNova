@@ -1,4 +1,4 @@
-﻿.sidebar {
+.sidebar {
   position: relative;
   z-index: 30;
 
@@ -11,7 +11,7 @@
 
   background: var(--color-surface);
   border-right: var(--border-width) solid var(--color-border);
-  box-shadow: 2px 0 12px rgba(24, 33, 38, 0.025);
+  box-shadow: none;
 }
 
 .sidebar__brand {
@@ -39,13 +39,14 @@
   border-radius: var(--radius-md);
 
   color: var(--color-primary);
-  font-weight: 600;
+  font-weight: 700;
+  font-size: var(--font-size-lg);
 }
 
 .sidebar__name {
   color: var(--color-text);
   font-size: var(--font-size-lg);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .sidebar__close {
@@ -62,10 +63,10 @@
 
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
-  font-weight: 600;
+  font-weight: 700;
 
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 
 .sidebar__list {
@@ -85,7 +86,7 @@
 
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
 
   padding: 0 var(--space-3);
 
@@ -110,7 +111,7 @@
 .sidebar__item:hover {
   background: var(--color-surface-subtle);
   color: var(--color-text);
-  transform: translateX(2px);
+  transform: none;
 }
 
 .sidebar__item:focus-visible {
@@ -121,8 +122,16 @@
 .sidebar__item--active {
   background: var(--color-primary-soft);
   color: var(--color-primary);
-  font-weight: 500;
+  font-weight: 600;
   box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.sidebar__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  font-size: 16px;
 }
 
 .sidebar__indicator {
@@ -137,6 +146,10 @@
 
 .sidebar__item--active .sidebar__indicator {
   background: currentColor;
+}
+
+.sidebar__label {
+  flex: 1;
 }
 
 .sidebar__footer {
@@ -181,11 +194,11 @@
   }
 
   .sidebar__close {
-    width: 36px;
-    height: 36px;
-
     display: grid;
     place-items: center;
+
+    width: 36px;
+    height: 36px;
 
     margin-left: auto;
 
@@ -248,5 +261,21 @@
 
   .sidebar__item:hover {
     transform: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar__name {
+    font-size: var(--font-size-md);
+  }
+
+  .sidebar__item {
+    padding: 0 var(--space-2);
+    font-size: var(--font-size-sm);
+  }
+
+  .sidebar__icon {
+    width: 18px;
+    font-size: 14px;
   }
 }

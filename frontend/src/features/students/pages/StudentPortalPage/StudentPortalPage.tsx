@@ -210,7 +210,7 @@ export default function StudentPortalPage() {
               </table>
             )}
             <section aria-labelledby="student-attendance-title">
-              <h3 id="student-attendance-title">Presences et absences</h3>
+              <h3 id="student-attendance-title">Présences et absences</h3>
               {attendanceStatus === 'loading' && <p aria-busy="true">Chargement des presences...</p>}
               {attendanceStatus === 'error' && <p role="alert">Les presences sont temporairement indisponibles.</p>}
               {attendanceStatus === 'success' && attendance && (
