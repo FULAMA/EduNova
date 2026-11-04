@@ -18,7 +18,7 @@ function errorText(reason: unknown): string {
 export default function FinancePage() {
   const [students, setStudents] = useState<Student[]>([])
   const [studentId, setStudentId] = useState('')
-  const [summary, setSummary] = useState<BillingSummary>({ charges: [], payments: [] })
+  const [summary, setSummary] = useState<BillingSummary>({ charges: [], payments: [], balances: [] })
   const [description, setDescription] = useState('')
   const [chargeAmount, setChargeAmount] = useState('')
   const [chargeCurrency, setChargeCurrency] = useState<Currency>('USD')
@@ -32,7 +32,7 @@ export default function FinancePage() {
   const [correctionReason, setCorrectionReason] = useState('')
 
   async function loadSummary(id: string) {
-    if (!id) { setSummary({ charges: [], payments: [] }); return }
+    if (!id) { setSummary({ charges: [], payments: [], balances: [] }); return }
     setSummary(await getBillingSummary(id))
   }
 
@@ -69,12 +69,43 @@ export default function FinancePage() {
     catch (reason) { setError(errorText(reason)) } finally { setSubmitting(false) }
   }
 
+  const financialTotals = (['USD', 'CDF'] as const).map((currency) => {
+    const charges = summary.charges.filter((charge) => charge.currency === currency)
+    const balances = summary.balances.filter((balance) => charges.some((charge) => charge.id === balance.charge_id))
+    return {
+      currency,
+      billed: charges.reduce((sum, charge) => sum + Number(charge.amount), 0),
+      paid: balances.reduce((sum, balance) => sum + Number(balance.total_paid), 0),
+      remaining: balances.reduce((sum, balance) => sum + Number(balance.remaining), 0),
+    }
+  }).filter((total) => total.billed > 0)
+
   return <main className="finance-page">
     <FeeCatalogPanel />
     <header><p>Gestion financière</p><h1>Frais, paiements et reçus</h1><p>Les devises USD et CDF restent séparées, sans conversion automatique.</p></header>
     {loading ? <p role="status" aria-busy="true">Chargement des élèves...</p> : null}
     {error ? <p role="alert">{error}</p> : null}
     <label className="finance-page__student">Élève<select required value={studentId} onChange={(event) => { setStudentId(event.target.value); void loadSummary(event.target.value) }}>{students.map((student) => <option key={student.id} value={student.id}>{student.firstName} {student.lastName}</option>)}</select></label>
+    <section aria-labelledby="finance-overview-title">
+      <h2 id="finance-overview-title">Situation financière</h2>
+      {financialTotals.length === 0 ? <p role="status">Aucun frais à réconcilier pour cet élève.</p> : <div className="finance-page__totals">
+        {financialTotals.map((total) => <article key={total.currency} className="finance-page__currency">
+          <h3>{total.currency}</h3>
+          <dl>
+            <div><dt>Total facturé</dt><dd>{total.billed.toFixed(2)} {total.currency}</dd></div>
+            <div><dt>Total encaissé net</dt><dd>{total.paid.toFixed(2)} {total.currency}</dd></div>
+            <div><dt>Solde restant</dt><dd>{total.remaining.toFixed(2)} {total.currency}</dd></div>
+          </dl>
+        </article>)}
+      </div>}
+      <h3>Détail par frais</h3>
+      {summary.charges.length === 0 ? <p>Aucun frais enregistré.</p> : <ul className="finance-page__balances">
+        {summary.charges.map((charge) => {
+          const balance = summary.balances.find((item) => item.charge_id === charge.id)
+          return <li key={charge.id}><span>{charge.description}</span><span>Payé : {balance?.total_paid ?? '0.00'} {charge.currency}</span><strong>Reste : {balance?.remaining ?? charge.amount} {charge.currency}</strong></li>
+        })}
+      </ul>}
+    </section>
     <section><h2>Créer des frais</h2><form onSubmit={submitCharge}><input required aria-label="Description" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Description" /><input required aria-label="Montant des frais" type="number" min="0.01" step="0.01" value={chargeAmount} onChange={(event) => setChargeAmount(event.target.value)} /><select aria-label="Devise des frais" value={chargeCurrency} onChange={(event) => setChargeCurrency(event.target.value as Currency)}><option>USD</option><option>CDF</option></select><button disabled={submitting || !studentId}>Créer</button></form></section>
     <section><h2>Enregistrer un paiement</h2>{summary.charges.length === 0 ? <p role="status">Aucun frais pour cet élève.</p> : <form onSubmit={submitPayment}><select required aria-label="Frais" value={paymentChargeId} onChange={(event) => setPaymentChargeId(event.target.value)}><option value="">Choisir des frais</option>{summary.charges.map((charge) => <option key={charge.id} value={charge.id}>{charge.description} - {charge.amount} {charge.currency}</option>)}</select><input required aria-label="Montant du paiement" type="number" min="0.01" step="0.01" value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} /><input required aria-label="Clé d idempotence" value={paymentKey} onChange={(event) => setPaymentKey(event.target.value)} placeholder="Référence unique" /><button disabled={submitting || !paymentChargeId}>Enregistrer</button></form>}</section>
     <section><h2>Historique des paiements</h2>{summary.payments.length === 0 ? <p role="status">Aucun paiement enregistré.</p> : <ul>{summary.payments.map((payment) => <li key={payment.id}>{payment.amount} {payment.currency} · reçu {payment.receipt_number}</li>)}</ul>}</section>

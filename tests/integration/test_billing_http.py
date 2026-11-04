@@ -49,6 +49,7 @@ def test_billing_payment_is_idempotent_and_summary_is_tenant_scoped():
     assert summary.status_code == 200
     assert len(summary.json()["charges"]) == 1
     assert len(summary.json()["payments"]) == 1
+    assert summary.json()["balances"] == [{"charge_id": charge.json()["id"], "total_paid": "40.00", "remaining": "60.00"}]
 
 
 def test_billing_correction_preserves_payment_and_marks_receipt_reversed():
@@ -66,6 +67,7 @@ def test_billing_correction_preserves_payment_and_marks_receipt_reversed():
     summary = client.get(f"/billing/students/{student_id}/summary").json()
     assert summary["payments"][0]["id"] == payment["id"]
     assert summary["payments"][0]["receipt_status"] == "REVERSED"
+    assert summary["balances"] == [{"charge_id": charge["id"], "total_paid": "0.00", "remaining": "100.00"}]
     replacement = client.post("/billing/payments", json={
         "charge_id": charge["id"], "amount": "40.00", "currency": "USD", "idempotency_key": "replacement-1",
     })
@@ -171,6 +173,8 @@ def test_decimal_payment_parts_exactly_cover_charge():
 
     assert first.status_code == 200
     assert second.status_code == 200
+    summary = client.get(f"/billing/students/{student_id}/summary").json()
+    assert summary["balances"] == [{"charge_id": charge_id, "total_paid": "0.30", "remaining": "0.00"}]
 
 
 

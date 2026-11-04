@@ -71,9 +71,16 @@ class CounterEntryResponse(BaseModel):
     recorded_at: datetime
 
 
+class ChargeBalanceResponse(BaseModel):
+    charge_id: UUID
+    total_paid: Decimal
+    remaining: Decimal
+
+
 class BillingSummaryResponse(BaseModel):
     charges: list[ChargeResponse]
     payments: list[PaymentResponse]
+    balances: list[ChargeBalanceResponse]
 
 
 class FeeTypeResponse(BaseModel):

@@ -2,7 +2,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from src.billing.application.service import BillingSummary, Charge, CounterEntry, FeeAssignment, FeeType, Payment
+from src.billing.application.service import BillingSummary, Charge, ChargeBalance, CounterEntry, FeeAssignment, FeeType, Payment
 from src.billing.domain.money import Currency, Money
 from src.infrastructure.persistence.database import SQLiteDatabase
 
@@ -265,7 +265,27 @@ class SQLiteBillingRepository:
                 WHERE p.tenant_id = ? AND p.student_id = ? ORDER BY p.recorded_at, p.id""",
                 (str(tenant_id), str(student_id)),
             ).fetchall()
-        return BillingSummary(tuple(self._charge(row) for row in charges), tuple(self._payment(row) for row in payments))
+            confirmed_by_charge: dict[str, Decimal] = {}
+            for row in payments:
+                if row["status"] == "CONFIRMED":
+                    key = row["charge_id"]
+                    confirmed_by_charge[key] = confirmed_by_charge.get(key, Decimal("0.00")) + Decimal(str(row["amount"]))
+            reversed_by_charge: dict[str, Decimal] = {}
+            counter_entries = connection.execute(
+                """SELECT p.charge_id, e.amount FROM billing_counter_entries e
+                JOIN billing_payments p ON p.tenant_id = e.tenant_id AND p.id = e.original_payment_id
+                WHERE e.tenant_id = ? AND p.student_id = ?""",
+                (str(tenant_id), str(student_id)),
+            ).fetchall()
+            for row in counter_entries:
+                key = row["charge_id"]
+                reversed_by_charge[key] = reversed_by_charge.get(key, Decimal("0.00")) + Decimal(str(row["amount"]))
+            balances = []
+            for charge_row in charges:
+                charge_id = charge_row["id"]
+                paid = confirmed_by_charge.get(charge_id, Decimal("0.00")) - reversed_by_charge.get(charge_id, Decimal("0.00"))
+                balances.append(ChargeBalance(UUID(charge_id), paid, Decimal(str(charge_row["amount"])) - paid))
+        return BillingSummary(tuple(self._charge(row) for row in charges), tuple(self._payment(row) for row in payments), tuple(balances))
 
     def reverse_payment(self, tenant_id: UUID, payment_id: UUID, reason: str, actor_id: UUID) -> CounterEntry:
         with self._database.connect() as connection:

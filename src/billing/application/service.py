@@ -77,9 +77,17 @@ class CounterEntry:
 
 
 @dataclass(frozen=True)
+class ChargeBalance:
+    charge_id: UUID
+    total_paid: Decimal
+    remaining: Decimal
+
+
+@dataclass(frozen=True)
 class BillingSummary:
     charges: tuple[Charge, ...]
     payments: tuple[Payment, ...]
+    balances: tuple[ChargeBalance, ...]
 
 
 class BillingService:
