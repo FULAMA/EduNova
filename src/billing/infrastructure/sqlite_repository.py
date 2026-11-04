@@ -206,15 +206,25 @@ class SQLiteBillingRepository:
                     raise ValueError("La cle d idempotence est deja utilisee avec une autre operation.")
                 return self._payment(existing)
 
-            paid = connection.execute(
-                "SELECT COALESCE((SELECT SUM(CAST(p.amount AS DECIMAL)) FROM billing_payments p "
-                "WHERE p.charge_id = ? AND p.tenant_id = ? AND p.status = 'CONFIRMED'), 0) "
-                "- COALESCE((SELECT SUM(CAST(e.amount AS DECIMAL)) FROM billing_counter_entries e "
+            payment_rows = connection.execute(
+                "SELECT amount FROM billing_payments "
+                "WHERE charge_id = ? AND tenant_id = ? AND status = 'CONFIRMED'",
+                (str(charge_id), str(tenant_id)),
+            ).fetchall()
+            counter_entry_rows = connection.execute(
+                "SELECT e.amount FROM billing_counter_entries e "
                 "JOIN billing_payments p ON p.tenant_id = e.tenant_id AND p.id = e.original_payment_id "
-                "WHERE p.charge_id = ? AND e.tenant_id = ?), 0) AS total",
-                (str(charge_id), str(tenant_id), str(charge_id), str(tenant_id)),
-            ).fetchone()["total"]
-            remaining = Decimal(str(charge_row["amount"])) - Decimal(str(paid))
+                "WHERE p.charge_id = ? AND e.tenant_id = ?",
+                (str(charge_id), str(tenant_id)),
+            ).fetchall()
+            paid = sum(
+                (Decimal(str(row["amount"])) for row in payment_rows),
+                Decimal("0.00"),
+            ) - sum(
+                (Decimal(str(row["amount"])) for row in counter_entry_rows),
+                Decimal("0.00"),
+            )
+            remaining = Decimal(str(charge_row["amount"])) - paid
             if money.amount > remaining:
                 raise ValueError("Le paiement depasse le solde restant.")
 
