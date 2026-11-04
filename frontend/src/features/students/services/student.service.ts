@@ -38,6 +38,24 @@ export async function listStudents(): Promise<Student[]> {
   return students.map(toStudent)
 }
 
+export async function createStudent(payload: {
+  firstName: string
+  lastName: string
+  email?: string
+}): Promise<Student> {
+  const student = await apiRequest<StudentSummaryResponse>('/students', {
+    method: 'POST',
+    authenticated: true,
+    body: JSON.stringify({
+      first_name: payload.firstName,
+      last_name: payload.lastName,
+      email: payload.email?.trim() ? payload.email.trim() : null,
+    }),
+  })
+
+  return toStudent(student)
+}
+
 export async function getStudent(studentId: string): Promise<Student> {
   const student = await apiRequest<StudentSummaryResponse>(
     `/students/${encodeURIComponent(studentId)}`,

@@ -8,12 +8,13 @@ export type AppModule =
   | 'academic-catalogues'
 
 const FINANCE_ROLES = ['ADMIN', 'DIRECTION', 'ACCOUNTANT', 'CASHIER'] as const
+const STUDENT_DIRECTORY_ROLES = ['ADMIN', 'DIRECTION'] as const
 
 // Miroir de require_role() côté backend. Le backend reste l'autorité :
 // cette matrice sert uniquement à ne pas proposer des écrans voués au 403.
 const MODULE_ROLES: Record<AppModule, readonly string[]> = {
   dashboard: ['ADMIN', 'DIRECTION', 'ACCOUNTANT', 'CASHIER', 'STUDENT'],
-  students: ['ADMIN'],
+  students: STUDENT_DIRECTORY_ROLES,
   classes: ['ADMIN'],
   enrollments: ['ADMIN'],
   attendance: ['ADMIN'],
@@ -30,4 +31,8 @@ const FEE_CATALOG_MANAGERS: readonly string[] = ['ADMIN', 'DIRECTION']
 // Miroir de FINANCE_MANAGEMENT_ROLES (backend) : création, publication, archivage, attribution.
 export function canManageFeeCatalog(role: string | undefined): boolean {
   return role !== undefined && FEE_CATALOG_MANAGERS.includes(role)
+}
+
+export function canManageStudents(role: string | undefined): boolean {
+  return role !== undefined && STUDENT_DIRECTORY_ROLES.includes(role)
 }

@@ -103,6 +103,30 @@ def test_get_me_rejects_unknown_user():
     assert response.status_code == 401
 
 
+def test_get_me_returns_membership_role_not_user_table_role():
+    client, container = create_test_environment()
+
+    user = User(
+        id=uuid4(),
+        email="cashier@edunova.com",
+        password_hash="hashed-password",
+        role="ADMIN",
+        is_active=True,
+    )
+    container._user_repository().save(user)
+    seed_membership(container, user.id, role="CASHIER")
+    token = create_access_token(user)
+
+    response = client.get(
+        "/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["role"] == "CASHIER"
+    assert response.json()["email"] == user.email
+
+
 def test_get_me_rejects_inactive_user():
     client, container = create_test_environment()
 

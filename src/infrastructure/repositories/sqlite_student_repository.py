@@ -4,6 +4,7 @@ from src.academic.application.dto.student_summary import StudentSummary
 from src.academic.application.interfaces.student_repository import (
     StudentRepository,
 )
+from src.academic.domain.entities.student import Student
 from src.infrastructure.persistence.database import SQLiteDatabase
 
 
@@ -59,3 +60,22 @@ class SQLiteStudentRepository(StudentRepository):
             email=row["email"],
             active=bool(row["active"]),
         )
+
+    def save(self, student: Student) -> None:
+        with self._database.connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO students (
+                    id, tenant_id, first_name, last_name, email, phone, active
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    str(student.id),
+                    str(student.tenant_id),
+                    student.first_name,
+                    student.last_name,
+                    student.email,
+                    student.phone,
+                    int(student.active),
+                ),
+            )

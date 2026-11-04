@@ -15,11 +15,17 @@ describe('canAccess', () => {
     expect(canAccess('STUDENT', 'finance')).toBe(false)
   })
 
-  it('gives finance roles access to finance only', () => {
-    for (const role of ['DIRECTION', 'ACCOUNTANT', 'CASHIER']) {
+  it('gives cashiers and accountants finance without the student directory', () => {
+    for (const role of ['ACCOUNTANT', 'CASHIER']) {
       expect(canAccess(role, 'finance')).toBe(true)
       expect(canAccess(role, 'students')).toBe(false)
     }
+  })
+
+  it('lets DIRECTION open students and finance', () => {
+    expect(canAccess('DIRECTION', 'students')).toBe(true)
+    expect(canAccess('DIRECTION', 'finance')).toBe(true)
+    expect(canAccess('DIRECTION', 'classes')).toBe(false)
   })
 
   it('denies unknown or missing roles', () => {

@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from uuid import UUID
 
 from src.academic.application.dto.student_summary import StudentSummary
+from src.academic.domain.entities.student import Student
 
 
 class StudentRepository(ABC):
@@ -15,4 +16,8 @@ class StudentRepository(ABC):
         student_id: UUID,
         tenant_id: UUID,
     ) -> StudentSummary | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def save(self, student: Student) -> None:
         raise NotImplementedError

@@ -42,4 +42,8 @@ describe('Sidebar by role', () => {
   it('shows dashboard and finance to a cashier', () => {
     expect(hrefsFor('CASHIER')).toEqual(['/app', '/app/finance'])
   })
+
+  it('shows students and finance to direction', () => {
+    expect(hrefsFor('DIRECTION')).toEqual(['/app', '/app/students', '/app/finance'])
+  })
 })

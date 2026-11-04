@@ -79,6 +79,9 @@ class FakeStudentRepository(StudentRepository):
     def list_by_tenant(self, tenant_id: UUID):
         return ()
 
+    def save(self, student) -> None:
+        self.valid_students.add((student.id, student.tenant_id))
+
 
 class FakeAcademicClassRepository(AcademicClassRepository):
     def __init__(self, valid_classes: set[tuple[UUID, UUID]]) -> None:
