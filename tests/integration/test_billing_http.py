@@ -149,3 +149,25 @@ def test_billing_rejects_invalid_amount_and_currency_mismatch():
         "charge_id": charge["id"], "amount": "0", "currency": "CDF", "idempotency_key": "zero",
     }).status_code == 422
 
+
+
+def test_decimal_payment_parts_exactly_cover_charge():
+    client, student_id = make_client()
+    charge = client.post("/billing/charges", json={
+        "student_id": str(student_id), "description": "Frais fractionnes",
+        "amount": "0.30", "currency": "USD",
+    })
+    assert charge.status_code == 201
+    charge_id = charge.json()["id"]
+
+    first = client.post("/billing/payments", json={
+        "charge_id": charge_id, "amount": "0.10", "currency": "USD",
+        "idempotency_key": "decimal-part-1",
+    })
+    second = client.post("/billing/payments", json={
+        "charge_id": charge_id, "amount": "0.20", "currency": "USD",
+        "idempotency_key": "decimal-part-2",
+    })
+
+    assert first.status_code == 200
+    assert second.status_code == 200
