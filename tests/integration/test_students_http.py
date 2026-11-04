@@ -204,3 +204,26 @@ def test_student_detail_requires_authentication():
     response = client.get(f"/students/{uuid4()}")
 
     assert response.status_code == 401
+
+
+def test_finance_roles_can_list_and_get_students():
+    for role in ("DIRECTION", "ACCOUNTANT", "CASHIER"):
+        client, container, _ = create_client(role=role)
+        student_id = insert_student(container)
+
+        listed = client.get("/students")
+        detail = client.get(f"/students/{student_id}")
+
+        assert listed.status_code == 200
+        assert [item["id"] for item in listed.json()] == [str(student_id)]
+        assert detail.status_code == 200
+        assert detail.json()["id"] == str(student_id)
+
+
+def test_teacher_cannot_list_students_for_finance_workflow():
+    client, container, _ = create_client(role="TEACHER")
+    insert_student(container)
+
+    response = client.get("/students")
+
+    assert response.status_code == 403
