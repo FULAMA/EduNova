@@ -34,5 +34,5 @@ export function canManageFeeCatalog(role: string | undefined): boolean {
 }
 
 export function canManageStudents(role: string | undefined): boolean {
-  return role !== undefined && STUDENT_DIRECTORY_ROLES.includes(role)
+  return role !== undefined && STUDENT_DIRECTORY_ROLES.includes(role as never)
 }
