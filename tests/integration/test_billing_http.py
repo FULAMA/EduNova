@@ -171,3 +171,91 @@ def test_decimal_payment_parts_exactly_cover_charge():
 
     assert first.status_code == 200
     assert second.status_code == 200
+
+
+
+def test_billing_data_is_isolated_between_two_tenants():
+    """A tenant cannot read or mutate another tenant's billing records."""
+    from uuid import uuid4
+
+    from tests.support.tenant import seed_membership
+
+    container = ApplicationContainer(database_path=":memory:")
+    tenant_a = uuid4()
+    tenant_b = uuid4()
+
+    def tenant_client(tenant_id, email):
+        user = User(uuid4(), email, "hashed-password", "ADMIN")
+        container._user_repository().save(user)
+        seed_membership(container, user.id, tenant_id=tenant_id, role="ADMIN")
+        token = JwtService(secret_key=TEST_JWT_SECRET).create_access_token(
+            user_id=user.id, role="ADMIN", tenant_id=tenant_id,
+        )
+        client = TestClient(create_app(container))
+        client.headers.update({"Authorization": f"Bearer {token}"})
+        return client
+
+    client_a = tenant_client(tenant_a, "tenant-a@example.test")
+    client_b = tenant_client(tenant_b, "tenant-b@example.test")
+
+    def insert_student(tenant_id, first_name):
+        student_id = uuid4()
+        with container._database.connect() as connection:
+            connection.execute(
+                "INSERT INTO students (id, tenant_id, first_name, last_name, email, active) "
+                "VALUES (?, ?, ?, ?, ?, 1)",
+                (str(student_id), str(tenant_id), first_name, "Student", None),
+            )
+        return student_id
+
+    student_a = insert_student(tenant_a, "TenantA")
+    student_b = insert_student(tenant_b, "TenantB")
+
+    charge_a_response = client_a.post("/billing/charges", json={
+        "student_id": str(student_a), "description": "Tenant A charge",
+        "amount": "100.00", "currency": "USD",
+    })
+    charge_b_response = client_b.post("/billing/charges", json={
+        "student_id": str(student_b), "description": "Tenant B charge",
+        "amount": "200.00", "currency": "USD",
+    })
+    assert charge_a_response.status_code == 201
+    assert charge_b_response.status_code == 201
+    charge_a = charge_a_response.json()
+    charge_b = charge_b_response.json()
+
+    payment_a_response = client_a.post("/billing/payments", json={
+        "charge_id": charge_a["id"], "amount": "25.00", "currency": "USD",
+        "idempotency_key": "tenant-a-payment",
+    })
+    assert payment_a_response.status_code == 200
+    payment_a = payment_a_response.json()
+
+    # A tenant cannot see the other tenant's student summary or receipt.
+    assert client_b.get(f"/billing/students/{student_a}/summary").status_code == 404
+    assert client_b.get(
+        f"/billing/receipts/{payment_a['receipt_number']}/pdf"
+    ).status_code == 404
+
+    # A tenant cannot post a payment against another tenant's charge.
+    cross_tenant_payment = client_b.post("/billing/payments", json={
+        "charge_id": charge_a["id"], "amount": "10.00", "currency": "USD",
+        "idempotency_key": "cross-tenant-payment",
+    })
+    assert cross_tenant_payment.status_code == 404
+
+    # A tenant cannot reverse another tenant's payment.
+    cross_tenant_correction = client_b.post(
+        f"/billing/payments/{payment_a['id']}/correction",
+        json={"reason": "Cross-tenant attempt"},
+    )
+    assert cross_tenant_correction.status_code == 404
+
+    # Both tenants retain only their own billing data after rejected attempts.
+    summary_a = client_a.get(f"/billing/students/{student_a}/summary")
+    summary_b = client_b.get(f"/billing/students/{student_b}/summary")
+    assert summary_a.status_code == summary_b.status_code == 200
+    assert [item["id"] for item in summary_a.json()["charges"]] == [charge_a["id"]]
+    assert [item["id"] for item in summary_a.json()["payments"]] == [payment_a["id"]]
+    assert [item["id"] for item in summary_b.json()["charges"]] == [charge_b["id"]]
+    assert summary_b.json()["payments"] == []
