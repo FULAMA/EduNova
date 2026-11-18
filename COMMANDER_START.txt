@@ -1,0 +1,55 @@
+================================================================================
+                      EDUNOVA - COMMANDES POUR DÉMARRER
+================================================================================
+
+📌 POUR POWER SHELL (recommandé) :
+
+   cd F:\EduNova
+   .\start.ps1
+
+   Puis dans UN AUTRE terminal PowerShell :
+
+   cd F:\EduNova\frontend
+   npm run dev
+
+📌 POUR CMD (Invite de commandes) :
+
+   cd F:\EduNova
+   .\start.cmd
+
+   Puis dans UN AUTRE terminal CMD :
+
+   cd F:\EduNova\frontend
+   npm run dev
+
+📌 POUR VÉRIFIER QUE TOUT MARCHE :
+
+   cd F:\EduNova
+   .\verify_edunova.ps1
+
+================================================================================
+
+⚠️  IMPORTANT :
+
+   - Utilisez toujours .\ avant le nom du script dans PowerShell
+   - Exemple : .\start.ps1 (pas start.ps1)
+   - Le point et le backslash sont OBLIGATOIRES dans PowerShell
+
+================================================================================
+
+🎯 ACCÈS À L'APPLICATION :
+
+   Backend  : http://127.0.0.1:8017
+   Frontend : http://127.0.0.1:5173
+   Swagger  : http://127.0.0.1:8017/docs
+
+================================================================================
+
+✅ SOLUTION TESTÉE ET FONCTIONNELLE
+
+   - 398/399 tests PASS
+   - Backend démarre correctement
+   - Frontend se connecte au backend
+   - Inscription et connexion fonctionnent
+
+================================================================================

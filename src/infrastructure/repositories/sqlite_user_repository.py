@@ -1,3 +1,4 @@
+import sqlite3
 from uuid import UUID
 
 from src.identity.application.interfaces.user_repository import (
@@ -12,10 +13,13 @@ class SQLiteUserRepository(UserRepository):
     def __init__(self, database: SQLiteDatabase):
         self._database = database
 
-    def save(self, user: User) -> None:
-        with self._database.connect() as connection:
-
-            existing = connection.execute(
+    def save(
+        self,
+        user: User,
+        connection: sqlite3.Connection | None = None,
+    ) -> None:
+        def _execute(conn: sqlite3.Connection) -> None:
+            existing = conn.execute(
                 """
                 SELECT id
                 FROM users
@@ -25,7 +29,7 @@ class SQLiteUserRepository(UserRepository):
             ).fetchone()
 
             if existing is None:
-                connection.execute(
+                conn.execute(
                     """
                     INSERT INTO users (
                         id,
@@ -48,9 +52,8 @@ class SQLiteUserRepository(UserRepository):
                         user.two_factor_secret,
                     ),
                 )
-
             else:
-                connection.execute(
+                conn.execute(
                     """
                     UPDATE users
                     SET
@@ -73,59 +76,76 @@ class SQLiteUserRepository(UserRepository):
                     ),
                 )
 
+        if connection is not None:
+            _execute(connection)
+            return
+
+        with self._database.connect() as conn:
+            _execute(conn)
+
     def find_by_id(
         self,
         user_id: UUID,
+        connection: sqlite3.Connection | None = None,
     ) -> User | None:
+        query = (
+            """
+            SELECT
+                id,
+                email,
+                password_hash,
+                role,
+                is_active,
+                two_factor_enabled,
+                two_factor_secret
+            FROM users
+            WHERE id = ?
+            """
+        )
+        params = (str(user_id),)
 
-        with self._database.connect() as connection:
-            row = connection.execute(
-                """
-                SELECT
-                    id,
-                    email,
-                    password_hash,
-                    role,
-                    is_active,
-                    two_factor_enabled,
-                    two_factor_secret
-                FROM users
-                WHERE id = ?
-                """,
-                (str(user_id),),
-            ).fetchone()
+        if connection is not None:
+            row = connection.execute(query, params).fetchone()
+        else:
+            with self._database.connect() as conn:
+                row = conn.execute(query, params).fetchone()
 
-            if row is None:
-                return None
+        if row is None:
+            return None
 
-            return self._to_domain(row)
+        return self._to_domain(row)
 
     def find_by_email(
         self,
         email: str,
+        connection: sqlite3.Connection | None = None,
     ) -> User | None:
+        query = (
+            """
+            SELECT
+                id,
+                email,
+                password_hash,
+                role,
+                is_active,
+                two_factor_enabled,
+                two_factor_secret
+            FROM users
+            WHERE email = ?
+            """
+        )
+        params = (email,)
 
-        with self._database.connect() as connection:
-            row = connection.execute(
-                """
-                SELECT
-                    id,
-                    email,
-                    password_hash,
-                    role,
-                    is_active,
-                    two_factor_enabled,
-                    two_factor_secret
-                FROM users
-                WHERE email = ?
-                """,
-                (email,),
-            ).fetchone()
+        if connection is not None:
+            row = connection.execute(query, params).fetchone()
+        else:
+            with self._database.connect() as conn:
+                row = conn.execute(query, params).fetchone()
 
-            if row is None:
-                return None
+        if row is None:
+            return None
 
-            return self._to_domain(row)
+        return self._to_domain(row)
 
     @staticmethod
     def _to_domain(row) -> User:

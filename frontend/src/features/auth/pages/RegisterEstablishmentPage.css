@@ -1,0 +1,197 @@
+.register-page {
+  display: grid;
+  min-height: 100vh;
+  padding: var(--space-6);
+  place-items: center;
+
+  background:
+    radial-gradient(circle at 15% 10%, rgba(39, 102, 120, 0.14), transparent 32%),
+    var(--color-background);
+}
+
+.register-card {
+  width: min(100%, 440px);
+  padding: var(--space-8);
+
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.register-card__header {
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+.register-card__eyebrow {
+  margin-bottom: var(--space-2);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.register-card h1 {
+  margin: 0;
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.register-card__description {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-md);
+}
+
+.register-form {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.register-form__label {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.register-form input {
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: 400;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.register-form input:focus {
+  outline: 3px solid var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+
+.register-form input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.register-form__input--error {
+  border-color: var(--color-danger) !important;
+}
+
+.register-form__password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.register-form__password-wrapper input {
+  width: 100%;
+  padding-right: 40px;
+}
+
+.register-form__password-toggle {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-lg);
+}
+
+.register-form__password-toggle:hover {
+  color: var(--color-text);
+}
+
+.register-form__field-error {
+  display: block;
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+  margin-top: var(--space-1);
+}
+
+.register-form__error {
+  display: block;
+  color: var(--color-danger);
+  font-size: var(--font-size-md);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.register-form__success {
+  display: block;
+  color: var(--color-success);
+  font-size: var(--font-size-md);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-success);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.register-form__submit {
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  color: white;
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.register-form__submit:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.register-form__submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.register-form__spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: register-spinner 0.6s linear infinite;
+  margin-right: var(--space-2);
+}
+
+@keyframes register-spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.register-form__login-link {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin-top: var(--space-4);
+}
+
+.register-form__login-link--action {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.register-form__login-link--action:hover {
+  text-decoration: underline;
+}

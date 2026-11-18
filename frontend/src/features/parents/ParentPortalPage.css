@@ -1,0 +1,62 @@
+.role-portal {
+  display: grid;
+  gap: 1rem;
+  max-width: 58rem;
+  margin: 0 auto;
+  padding: clamp(1rem, 4vw, 2rem);
+}
+
+.role-portal__eyebrow {
+  margin: 0;
+  color: #0d4f4a;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.role-portal__field {
+  display: grid;
+  gap: 0.45rem;
+  max-width: 32rem;
+}
+
+.role-portal__field select {
+  min-height: 2.75rem;
+  padding: 0.5rem;
+}
+
+.role-portal__list {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.role-portal__card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #d9e4df;
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.role-portal__card h3,
+.role-portal__card p {
+  margin: 0 0 0.35rem;
+}
+
+.role-portal button {
+  min-height: 2.75rem;
+  padding: 0.6rem 0.9rem;
+}
+
+@media (max-width: 36rem) {
+  .role-portal__card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

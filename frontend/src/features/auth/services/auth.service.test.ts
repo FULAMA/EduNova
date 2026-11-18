@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   getCurrentUser,
+  issueGoogleNonce,
   linkGoogleIdentity,
   login,
   verifyLoginTwoFactor,
@@ -101,7 +102,7 @@ describe('auth service request classification', () => {
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(response({ linked: true }))
 
-    await expect(linkGoogleIdentity('google-id-token')).resolves.toEqual({
+    await expect(linkGoogleIdentity('google-id-token', 'nonce', 'password', '123456')).resolves.toEqual({
       linked: true,
     })
 
@@ -109,6 +110,17 @@ describe('auth service request classification', () => {
     expect(fetchMock.mock.calls[0][1]?.headers).toBeInstanceOf(Headers)
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
       id_token: 'google-id-token',
+      nonce: 'nonce',
+      password: 'password',
+      totp_code: '123456',
     })
+  })
+
+  it('requests an authentication nonce from the backend', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(response({ nonce: 'secure-nonce' }))
+
+    await expect(issueGoogleNonce()).resolves.toBe('secure-nonce')
+    expect(fetchMock.mock.calls[0][0]).toContain('/auth/google/nonce')
+    expect(fetchMock.mock.calls[0][1]?.method).toBe('POST')
   })
 })

@@ -82,6 +82,15 @@ class FakeStudentRepository(StudentRepository):
     def save(self, student) -> None:
         self.valid_students.add((student.id, student.tenant_id))
 
+    def update(self, student) -> None:
+        self.valid_students.add((student.id, student.tenant_id))
+
+    def find_by_registration_number(self, tenant_id, registration_number):
+        return None
+
+    def find_potential_duplicates(self, tenant_id, first_name, last_name, exclude_id=None):
+        return ()
+
 
 class FakeAcademicClassRepository(AcademicClassRepository):
     def __init__(self, valid_classes: set[tuple[UUID, UUID]]) -> None:

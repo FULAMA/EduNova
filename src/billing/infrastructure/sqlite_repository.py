@@ -2,7 +2,19 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from src.billing.application.service import BillingSummary, Charge, CounterEntry, FeeAssignment, FeeType, Payment
+from src.billing.application.service import (
+    ArrearItem,
+    BillingSummary,
+    ClassFeeAssignmentResult,
+)
+from src.billing.domain.entities import (
+    Charge,
+    CounterEntry,
+    FeeAssignment,
+    FeeReminder,
+    FeeType,
+    Payment,
+)
 from src.billing.domain.money import Currency, Money
 from src.infrastructure.persistence.database import SQLiteDatabase
 
@@ -182,6 +194,118 @@ class SQLiteBillingRepository:
             ).fetchone()
         return self._fee_assignment(row)
 
+
+    def assign_fee_type_to_class(
+        self,
+        tenant_id: UUID,
+        fee_type_id: UUID,
+        class_id: UUID,
+        academic_period_id: UUID,
+        actor_id: UUID,
+    ) -> ClassFeeAssignmentResult:
+        with self._database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            fee = connection.execute(
+                "SELECT * FROM billing_fee_types WHERE tenant_id = ? AND id = ?",
+                (str(tenant_id), str(fee_type_id)),
+            ).fetchone()
+            if fee is None:
+                raise LookupError("Type de frais introuvable dans cet etablissement.")
+            if fee["status"] != "PUBLISHED":
+                raise ValueError("Seul un type de frais publie peut etre attribue.")
+            if fee["academic_period_id"] and str(academic_period_id) != fee["academic_period_id"]:
+                raise ValueError("La periode ne correspond pas au type de frais.")
+
+            if fee["applicability"] == "CLASS":
+                if fee["target_class_id"] and str(fee["target_class_id"]) != str(class_id):
+                    raise ValueError("La classe specifiee ne correspond pas a la classe cible du type de frais.")
+
+            target_class = connection.execute(
+                "SELECT 1 FROM academic_classes WHERE tenant_id = ? AND id = ?",
+                (str(tenant_id), str(class_id)),
+            ).fetchone()
+            if target_class is None:
+                raise LookupError("Classe cible introuvable dans cet etablissement.")
+
+            period = connection.execute(
+                "SELECT academic_year_id FROM academic_periods WHERE tenant_id = ? AND id = ?",
+                (str(tenant_id), str(academic_period_id)),
+            ).fetchone()
+            if period is None:
+                raise LookupError("Periode scolaire introuvable dans cet etablissement.")
+            academic_year_id = period["academic_year_id"]
+            if academic_year_id is None:
+                raise ValueError("La periode scolaire doit etre liee a une annee scolaire.")
+
+            rows = connection.execute(
+                """SELECT DISTINCT sa.student_id
+                   FROM student_assignments sa
+                   JOIN students s ON s.id = sa.student_id AND s.tenant_id = sa.tenant_id
+                   WHERE sa.tenant_id = ?
+                     AND sa.academic_class_id = ?
+                     AND sa.academic_year_id = ?
+                     AND sa.status = 'ACTIVE'
+                     AND s.active = 1
+                   ORDER BY s.last_name, s.first_name""",
+                (str(tenant_id), str(class_id), str(academic_year_id)),
+            ).fetchall()
+
+            total_eligible = len(rows)
+            assigned_count = 0
+            already_assigned_count = 0
+            assignments = []
+
+            now = datetime.now().astimezone()
+            for r in rows:
+                st_id = r["student_id"]
+                existing = connection.execute(
+                    """SELECT * FROM billing_fee_assignments
+                    WHERE tenant_id = ? AND fee_type_id = ? AND student_id = ?
+                      AND COALESCE(academic_period_id, '') = COALESCE(?, '')""",
+                    (str(tenant_id), str(fee_type_id), str(st_id), str(academic_period_id)),
+                ).fetchone()
+
+                if existing is not None:
+                    already_assigned_count += 1
+                    assignments.append(self._fee_assignment(existing))
+                    continue
+
+                assignment_id, charge_id = uuid4(), uuid4()
+                connection.execute(
+                    """INSERT INTO billing_charges
+                    (id, tenant_id, student_id, description, amount, currency, due_date, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'OPEN')""",
+                    (str(charge_id), str(tenant_id), str(st_id), fee["name"],
+                     fee["amount"], fee["currency"], now.date().isoformat()),
+                )
+                snapshot_class_id = str(class_id) if fee["applicability"] == "CLASS" else None
+                connection.execute("""INSERT INTO billing_fee_assignments
+                    (id, tenant_id, fee_type_id, fee_type_version, student_id, academic_period_id,
+                     charge_id, created_by, created_at, snapshot_name, snapshot_description,
+                     snapshot_category, snapshot_applicability, amount, currency, snapshot_class_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (str(assignment_id), str(tenant_id), str(fee_type_id), fee["version"],
+                     str(st_id), str(academic_period_id) if academic_period_id else None,
+                     str(charge_id), str(actor_id), now.isoformat(), fee["name"],
+                     fee["description"], fee["category"], fee["applicability"],
+                     fee["amount"], fee["currency"], snapshot_class_id))
+                assigned_count += 1
+                row = connection.execute(
+                    "SELECT * FROM billing_fee_assignments WHERE id = ?",
+                    (str(assignment_id),),
+                ).fetchone()
+                assignments.append(self._fee_assignment(row))
+
+            return ClassFeeAssignmentResult(
+                fee_type_id=fee_type_id,
+                class_id=class_id,
+                academic_period_id=academic_period_id,
+                total_eligible_students=total_eligible,
+                assigned_count=assigned_count,
+                already_assigned_count=already_assigned_count,
+                assignments=tuple(assignments),
+            )
+
     def record_payment(self, tenant_id: UUID, charge_id: UUID, money: Money,
                        key: str, actor_id: UUID) -> Payment:
         with self._database.connect() as connection:
@@ -257,6 +381,170 @@ class SQLiteBillingRepository:
             ).fetchall()
         return BillingSummary(tuple(self._charge(row) for row in charges), tuple(self._payment(row) for row in payments))
 
+    def list_payments(
+        self,
+        tenant_id: UUID,
+        *,
+        student_id: UUID | None = None,
+        class_id: UUID | None = None,
+        status: str | None = None,
+        recorded_from: date | None = None,
+        recorded_to: date | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[tuple[Payment, ...], int]:
+        filters = ["p.tenant_id = ?"]
+        params: list[object] = [str(tenant_id)]
+
+        if student_id is not None:
+            filters.append("p.student_id = ?")
+            params.append(str(student_id))
+        if status is not None:
+            filters.append("p.status = ?")
+            params.append(status)
+        if recorded_from is not None:
+            filters.append("date(p.recorded_at) >= date(?)")
+            params.append(recorded_from.isoformat())
+        if recorded_to is not None:
+            filters.append("date(p.recorded_at) <= date(?)")
+            params.append(recorded_to.isoformat())
+        if class_id is not None:
+            filters.append(
+                """EXISTS (
+                    SELECT 1 FROM student_assignments sa
+                    WHERE sa.tenant_id = p.tenant_id
+                      AND sa.student_id = p.student_id
+                      AND sa.academic_class_id = ?
+                      AND sa.status = 'ACTIVE'
+                )"""
+            )
+            params.append(str(class_id))
+
+        where_clause = " AND ".join(filters)
+        with self._database.connect() as connection:
+            total = connection.execute(
+                f"SELECT COUNT(*) AS total FROM billing_payments p WHERE {where_clause}",
+                params,
+            ).fetchone()["total"]
+            rows = connection.execute(
+                f"""
+                SELECT p.*, COALESCE(r.status, 'ISSUED') AS receipt_status
+                FROM billing_payments p
+                LEFT JOIN billing_receipts r
+                  ON r.tenant_id = p.tenant_id AND r.payment_id = p.id
+                WHERE {where_clause}
+                ORDER BY p.recorded_at DESC, p.id DESC
+                LIMIT ? OFFSET ?
+                """,
+                [*params, limit, offset],
+            ).fetchall()
+        return tuple(self._payment(row) for row in rows), int(total)
+
+    def list_arrears(
+        self,
+        tenant_id: UUID,
+        *,
+        student_id: UUID | None = None,
+        class_id: UUID | None = None,
+        as_of: date | None = None,
+        overdue_only: bool = True,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[tuple[ArrearItem, ...], int]:
+        reference = as_of or date.today()
+        filters = ["c.tenant_id = ?", "c.status = 'OPEN'"]
+        params: list[object] = [str(tenant_id)]
+
+        if student_id is not None:
+            filters.append("c.student_id = ?")
+            params.append(str(student_id))
+        if class_id is not None:
+            filters.append(
+                """EXISTS (
+                    SELECT 1 FROM student_assignments sa
+                    WHERE sa.tenant_id = c.tenant_id
+                      AND sa.student_id = c.student_id
+                      AND sa.academic_class_id = ?
+                      AND sa.status = 'ACTIVE'
+                )"""
+            )
+            params.append(str(class_id))
+
+        where_clause = " AND ".join(filters)
+        with self._database.connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT
+                    c.id AS charge_id,
+                    c.student_id,
+                    c.description,
+                    c.currency,
+                    CAST(c.amount AS DECIMAL) AS amount_due,
+                    c.due_date,
+                    c.status AS charge_status,
+                    (
+                        SELECT sa.academic_class_id
+                        FROM student_assignments sa
+                        WHERE sa.tenant_id = c.tenant_id
+                          AND sa.student_id = c.student_id
+                          AND sa.status = 'ACTIVE'
+                        ORDER BY sa.updated_at DESC, sa.id DESC
+                        LIMIT 1
+                    ) AS class_id,
+                    COALESCE((
+                        SELECT SUM(CAST(p.amount AS DECIMAL))
+                        FROM billing_payments p
+                        WHERE p.tenant_id = c.tenant_id
+                          AND p.charge_id = c.id
+                          AND p.status = 'CONFIRMED'
+                    ), 0) - COALESCE((
+                        SELECT SUM(CAST(e.amount AS DECIMAL))
+                        FROM billing_counter_entries e
+                        JOIN billing_payments p
+                          ON p.tenant_id = e.tenant_id AND p.id = e.original_payment_id
+                        WHERE e.tenant_id = c.tenant_id
+                          AND p.charge_id = c.id
+                    ), 0) AS amount_paid
+                FROM billing_charges c
+                WHERE {where_clause}
+                ORDER BY c.due_date IS NULL, c.due_date, c.id
+                """,
+                params,
+            ).fetchall()
+
+        items: list[ArrearItem] = []
+        for row in rows:
+            amount_due = Decimal(str(row["amount_due"])).quantize(Decimal("0.01"))
+            amount_paid = Decimal(str(row["amount_paid"])).quantize(Decimal("0.01"))
+            remaining = (amount_due - amount_paid).quantize(Decimal("0.01"))
+            if remaining <= 0:
+                continue
+            due_date = (
+                date.fromisoformat(row["due_date"]) if row["due_date"] else None
+            )
+            overdue = due_date is not None and due_date < reference
+            if overdue_only and not overdue:
+                continue
+            items.append(
+                ArrearItem(
+                    charge_id=UUID(row["charge_id"]),
+                    student_id=UUID(row["student_id"]),
+                    description=row["description"],
+                    currency=Currency(row["currency"]),
+                    amount_due=amount_due,
+                    amount_paid=amount_paid,
+                    amount_remaining=remaining,
+                    due_date=due_date,
+                    charge_status=row["charge_status"],
+                    overdue=overdue,
+                    class_id=UUID(row["class_id"]) if row["class_id"] else None,
+                )
+            )
+
+        total = len(items)
+        page = tuple(items[offset : offset + limit])
+        return page, total
+
     def reverse_payment(self, tenant_id: UUID, payment_id: UUID, reason: str, actor_id: UUID) -> CounterEntry:
         with self._database.connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -296,4 +584,97 @@ class SQLiteBillingRepository:
     @staticmethod
     def _payment(row) -> Payment:
         return Payment(UUID(row["id"]), UUID(row["tenant_id"]), UUID(row["charge_id"]), UUID(row["student_id"]), Money(Decimal(row["amount"]), Currency(row["currency"])), row["idempotency_key"], row["status"], UUID(row["recorded_by"]), datetime.fromisoformat(row["recorded_at"]), row["receipt_number"], row["receipt_status"] if "receipt_status" in row.keys() else "ISSUED")
+
+    @staticmethod
+    def _fee_reminder(row) -> FeeReminder:
+        return FeeReminder(
+            id=UUID(row["id"]),
+            tenant_id=UUID(row["tenant_id"]),
+            charge_id=UUID(row["charge_id"]),
+            student_id=UUID(row["student_id"]),
+            channel=row["channel"],
+            recipient=row["recipient"],
+            notes=row["notes"],
+            sent_at=datetime.fromisoformat(row["sent_at"]),
+            sent_by=UUID(row["sent_by"]),
+        )
+
+    def record_arrear_reminder(
+        self,
+        tenant_id: UUID,
+        charge_id: UUID,
+        channel: str,
+        recipient: str,
+        notes: str | None,
+        actor_id: UUID,
+    ) -> FeeReminder:
+        now = datetime.now().astimezone()
+        reminder_id = uuid4()
+        with self._database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            charge = connection.execute(
+                "SELECT * FROM billing_charges WHERE tenant_id = ? AND id = ?",
+                (str(tenant_id), str(charge_id)),
+            ).fetchone()
+            if charge is None:
+                raise LookupError("Frais introuvable dans cet etablissement.")
+            if charge["status"] != "OPEN":
+                raise ValueError("Impossible d enregistrer une relance pour des frais annules.")
+
+            amount_due = Decimal(str(charge["amount"])).quantize(Decimal("0.01"))
+            paid_row = connection.execute(
+                """SELECT COALESCE(SUM(CAST(p.amount AS DECIMAL)), 0) AS total_paid
+                FROM billing_payments p
+                WHERE p.tenant_id = ? AND p.charge_id = ? AND p.status = 'CONFIRMED'""",
+                (str(tenant_id), str(charge_id)),
+            ).fetchone()
+            reversal_row = connection.execute(
+                """SELECT COALESCE(SUM(CAST(e.amount AS DECIMAL)), 0) AS total_reversed
+                FROM billing_counter_entries e
+                JOIN billing_payments p ON p.tenant_id = e.tenant_id AND p.id = e.original_payment_id
+                WHERE e.tenant_id = ? AND p.charge_id = ?""",
+                (str(tenant_id), str(charge_id)),
+            ).fetchone()
+            amount_paid = Decimal(str(paid_row["total_paid"])) - Decimal(str(reversal_row["total_reversed"]))
+            remaining = (amount_due - amount_paid).quantize(Decimal("0.01"))
+            if remaining <= 0:
+                raise ValueError("Ces frais ne presentent aucun arriere impaye.")
+
+            connection.execute(
+                """INSERT INTO billing_fee_reminders
+                (id, tenant_id, charge_id, student_id, channel, recipient, notes, sent_at, sent_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    str(reminder_id),
+                    str(tenant_id),
+                    str(charge_id),
+                    charge["student_id"],
+                    channel,
+                    recipient,
+                    notes,
+                    now.isoformat(),
+                    str(actor_id),
+                ),
+            )
+            row = connection.execute(
+                "SELECT * FROM billing_fee_reminders WHERE tenant_id = ? AND id = ?",
+                (str(tenant_id), str(reminder_id)),
+            ).fetchone()
+        return self._fee_reminder(row)
+
+    def list_arrear_reminders(self, tenant_id: UUID, charge_id: UUID) -> tuple[FeeReminder, ...]:
+        with self._database.connect() as connection:
+            charge = connection.execute(
+                "SELECT 1 FROM billing_charges WHERE tenant_id = ? AND id = ?",
+                (str(tenant_id), str(charge_id)),
+            ).fetchone()
+            if charge is None:
+                raise LookupError("Frais introuvable dans cet etablissement.")
+            rows = connection.execute(
+                """SELECT * FROM billing_fee_reminders
+                WHERE tenant_id = ? AND charge_id = ?
+                ORDER BY sent_at DESC, id DESC""",
+                (str(tenant_id), str(charge_id)),
+            ).fetchall()
+        return tuple(self._fee_reminder(row) for row in rows)
 

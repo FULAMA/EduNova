@@ -249,16 +249,16 @@ Priorité à l'année scolaire en cours, puis traitement progressif des archives
 - Aucune donnée ne devient officiellement exploitable avant les contrôles requis.
 - Le traitement des archives ne doit pas retarder inutilement le lancement des fonctions prioritaires.
 
-## 3. Décision suivante en attente
+## 3. Décision 45 — identité et prévention des doublons
 
 ### Décision 45 — Identification des personnes et prévention des doublons
-**Statut : EN ATTENTE — aucune option validée**
+**Statut : VALIDÉE — choix A (2026-11-19)**
 
 - **Option A :** attribuer un identifiant interne EduNova à chaque dossier, conserver les matricules existants comme références et signaler les correspondances possibles pour vérification humaine avant toute fusion.
 - **Option B :** exiger un matricule existant ou attribué par l'école avant l'enregistrement définitif.
 - **Option C :** utiliser le nom et la date de naissance comme critères principaux, avec vérification manuelle des dossiers potentiellement identiques.
 
-**Recommandation non validée :** option A. Elle permet de traiter les archives incomplètes sans inventer de matricule officiel et limite les fusions erronées.
+Le choix A a été explicitement ratifié le 2026-11-19. Il permet de traiter les archives incomplètes sans inventer de matricule officiel et limite les fusions erronées.
 
 ## 4. Point de cohérence de numérotation
 
@@ -380,11 +380,11 @@ Les propositions ci-dessous constituent la version courante a examiner. Les bloc
 
 | Identifiant | Proposition actualisee | Statut |
 |---|---|---|
-| `PAR-REL-01` | Plusieurs parents ou responsables autorises peuvent etre associes a un meme eleve, et un parent peut etre associe a plusieurs eleves. L'association reste tenant-scoped. La definition du responsable legal et les cas de garde partagee restent a confirmer. | `PROPOSED - CONFIRMATION METIER REQUISE` |
+| `PAR-REL-01` | Plusieurs parents ou responsables autorises peuvent etre associes a un meme eleve, et un parent peut etre associe a plusieurs eleves. L'association reste tenant-scoped. La definition du responsable legal et les cas de garde partagee restent a confirmer. | `VALIDÉE le 2026-11-19, voir ratification` |
 | `PAR-REL-02` | La creation et la validation d'un rattachement sont reservees a la direction ou a un agent disposant d'une permission explicite. Le role `PARENT` seul n'accorde pas ce droit. | `PROPOSED - BLOCKED` |
 | `PAR-REL-03` | La verification suit la procedure de l'etablissement. Cette proposition n'impose aucune preuve documentaire specifique ; les preuves, motifs, acteurs et conditions de validation restent a definir par decision metier. | `PROPOSED - BLOCKED` |
 | `PAR-REL-04` | Le cycle de vie propose est `PENDING`, `ACTIVE`, `REVOKED`. Apres revocation, un nouveau rattachement est cree pour un nouveau lien ; l'ancien reste conserve dans l'historique. Les modalites de retablissement et de conservation restent ouvertes. | `PROPOSED - BLOCKED` |
-| `PAR-REL-06` | Un parent peut consulter les bulletins officiels, resultats et presences de l'enfant uniquement si le serveur verifie l'association active, le tenant et les permissions applicables. Les donnees provisoires, remplacees ou hors perimetre restent exclues. | `PROPOSED - BLOCKED` |
+| `PAR-REL-06` | Un parent peut consulter les bulletins officiels de l'enfant si le serveur verifie l'association dans le tenant actif. Resultats détaillés, présences et données financières sont exclus du périmètre validé actuel. | `VALIDÉE le 2026-11-19, voir ratification` |
 
 #### Compatibilite et limites
 
@@ -405,11 +405,24 @@ Les propositions ci-dessous constituent la version courante a examiner. Les bloc
 
 Cette section est additive. Elle ne remplace pas les décisions historiques et ne transforme pas les options en décisions validées.
 
+### Ratifications métier du 2026-11-19
+
+Les confirmations explicites du propriétaire produit ci-dessous prévalent sur les statuts « en attente » et les formulations contradictoires des propositions précédentes :
+
+| Identifiant | Décision ratifiée | Limites restant ouvertes |
+|---|---|---|
+| `D45` | Choix A : chaque dossier élève est identifié par un identifiant interne EduNova. Le matricule reste une référence facultative. Les doublons possibles doivent être signalés pour vérification humaine ; aucune fusion automatique n'est autorisée. | Les critères exacts de détection et le parcours de revue restent à définir. |
+| `PAR-REL-01` | Cardinalité plusieurs-à-plusieurs entre responsables associés et élèves, strictement limitée à un établissement (`tenant-scoped`). Un même élève peut avoir plusieurs responsables associés et un responsable plusieurs élèves. | La définition juridique de responsable, les types de lien, les preuves et le cycle de révocation restent ouverts. |
+| `PAR-REL-06` | Le portail parent permet uniquement la consultation et le téléchargement des bulletins officiellement publiés d'élèves associés dans le tenant actif. Les résultats détaillés, présences et données financières sont exclus à ce stade. | Les preuves, révocations et modalités d'historique du rattachement restent ouvertes. |
+| `BUL-TECH-02` | Les rôles `ADMIN` et `DIRECTION` peuvent tous deux préparer, publier et corriger les bulletins officiels. La correction reste versionnée conformément à D8. | La révocation d'un bulletin émis reste une décision séparée (BUL-TECH-04). |
+
+Ces ratifications ne définissent pas les contrôles de rattachement encore en attente (PAR-REL-02 à PAR-REL-04) et n'autorisent pas de fusion automatique d'élèves.
+
 ### BUL-TECH-02 - Autorisations de publication et correction
 
-**Statut : EN ATTENTE DE DECISION PRODUIT**
+**Statut : VALIDÉE le 2026-11-19 — ADMIN et DIRECTION pour préparation, publication et correction**
 
-L'implementation actuelle reserve la publication et la correction au role `ADMIN`, conforme aux controles techniques existants. Il reste a confirmer si un role de direction ou un role academique habilite doit etre autorise, et si les roles de publication et de correction doivent etre distincts. Ce choix determine les permissions backend, les tests multi-tenant et l'audit des acteurs.
+La préparation, la publication et la correction sont autorisées aux rôles `ADMIN` et `DIRECTION`. Les permissions sont contrôlées côté serveur ; toute correction d'un bulletin émis crée une nouvelle version conformément à D8. La révocation reste traitée séparément sous BUL-TECH-04.
 
 ### BUL-TECH-03 - Consultation des versions remplacees
 

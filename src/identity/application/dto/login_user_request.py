@@ -6,4 +6,4 @@ from uuid import UUID
 class LoginUserRequest:
     email: str
     password: str
-    tenant_id: UUID
+    tenant_id: UUID | None = None

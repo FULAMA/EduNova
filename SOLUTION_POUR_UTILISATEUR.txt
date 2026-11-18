@@ -1,0 +1,228 @@
+================================================================================
+SOLUTION DEFINITIVE POUR LE PROBLEME : "Backend inaccessible"
+================================================================================
+
+PROBLEME :
+  Vous pouvez créer un compte, mais lors de la connexion, vous obtenez :
+  "Backend inaccessible. Démarrez l'API puis réessayez."
+
+CAUSE :
+  Le frontend (React/Vite) ne peut pas communiquer avec le backend (FastAPI)
+  car soit le backend n'est pas démarré, soit les URLs ne sont pas configurées
+  correctement.
+
+================================================================================
+SOLUTION PAS A PAS
+================================================================================
+
+ETAPE 1 : Demarrer le BACKEND (OBLIGATOIRE)
+-----------------------------------------
+
+  Ouvrez un terminal PowerShell et exécutez :
+
+  cd F:\EduNova
+  .\.venv\Scripts\Activate.ps1
+  uvicorn src.presentation.api.app:app --reload --port 8017 --host 0.0.0.0
+
+  ⚠️ IMPORTANT :
+    - Le backend DOIT écouter sur 0.0.0.0 (pas seulement 127.0.0.1)
+    - Le backend DOIT écouter sur le port 8017
+    - Ne fermez PAS ce terminal tant que vous utilisez l'application
+
+  Vérifiez que le backend est démarré :
+    - Vous devriez voir : "Uvicorn running on http://0.0.0.0:8017"
+    - Test : Ouvrez http://127.0.0.1:8017/docs dans votre navigateur
+      (vous devriez voir la documentation Swagger)
+
+
+ETAPE 2 : Demarrer le FRONTEND
+-------------------------------
+
+  Ouvrez UN AUTRE terminal PowerShell et exécutez :
+
+  cd F:\EduNova\frontend
+  npm run dev
+
+  ⚠️ IMPORTANT :
+    - Le frontend démarrera sur http://127.0.0.1:5173
+    - Ne fermez PAS ce terminal tant que vous utilisez l'application
+
+  Vérifiez que le frontend est démarré :
+    - Vous devriez voir : "Local:   http://127.0.0.1:5173"
+    - Test : Ouvrez http://127.0.0.1:5173 dans votre navigateur
+
+
+ETAPE 3 : Vérifier la configuration
+------------------------------------
+
+  Vérifiez que les fichiers de configuration sont corrects :
+
+  1. frontend/.env.local doit contenir :
+     VITE_API_URL=http://127.0.0.1:8017
+
+  2. frontend/.env.example doit contenir :
+     VITE_API_URL=http://127.0.0.1:8017
+
+  Si ce n'est pas le cas, corrigez ces fichiers.
+
+
+ETAPE 4 : Tester l'application
+------------------------------
+
+  1. Ouvrez votre navigateur
+  2. Allez sur : http://127.0.0.1:5173
+  3. Essayez de vous connecter
+
+  Si cela fonctionne : ✅ PROBLEME RESOLU !
+  Si cela ne fonctionne toujours pas : Continuez vers l'Etape 5
+
+
+ETAPE 5 : Vérifier le CORS
+--------------------------
+
+  Le backend doit accepter les requêtes depuis le frontend.
+  Notre configuration CORS accepte :
+    - http://localhost:5173
+    - http://127.0.0.1:5173
+    - http://localhost:3000
+    - http://127.0.0.1:3000
+
+  Vérifiez que votre navigateur utilise bien http://127.0.0.1:5173
+  (et non http://localhost:5173)
+
+
+================================================================================
+VERIFICATION RAPIDE
+================================================================================
+
+Exécutez ce script pour vérifier votre configuration :
+
+  cd F:\EduNova
+  python check_config.py
+
+Tous les éléments doivent être marqués [OK].
+
+
+================================================================================
+COMMANDES COMPLETES POUR DEMARRER
+================================================================================
+
+Terminal 1 (Backend) :
+  cd F:\EduNova
+  .\.venv\Scripts\Activate.ps1
+  uvicorn src.presentation.api.app:app --reload --port 8017 --host 0.0.0.0
+
+Terminal 2 (Frontend) :
+  cd F:\EduNova\frontend
+  npm run dev
+
+Puis ouvrez : http://127.0.0.1:5173
+
+
+================================================================================
+PROBLEMES COURANTS ET SOLUTIONS
+================================================================================
+
+1. "Backend inaccessible. Démarrez l'API puis réessayez."
+   → SOLUTION : Démarrez le backend comme indiqué en Etape 1
+
+2. Le backend démarre mais le frontend ne se connecte toujours pas
+   → SOLUTION : Vérifiez que VITE_API_URL=http://127.0.0.1:8017 dans .env.local
+
+3. Erreur CORS dans la console du navigateur
+   → SOLUTION : Assurez-vous que le backend écoute sur 0.0.0.0:8017
+
+4. 409 Conflict lors de l'inscription
+   → SOLUTION : Utilisez un email différent ou une nouvelle base de données
+      Set EDUNOVA_DATABASE_PATH=edunova_new.db
+
+
+================================================================================
+FICHIERS CORRIGES
+================================================================================
+
+Nous avons corrigé les fichiers suivants :
+
+1. frontend/.env.example
+   AVANT : VITE_API_URL=http://localhost:8000
+   APRÈS : VITE_API_URL=http://127.0.0.1:8017
+
+2. frontend/src/shared/api/client.ts
+   - URL par défaut : http://127.0.0.1:8017
+   - Ajout de credentials: 'include'
+
+3. frontend/src/features/auth/services/auth.service.ts
+   - URL par défaut : http://127.0.0.1:8017
+
+4. src/presentation/api/app.py
+   - CORS configuré pour accepter 127.0.0.1:* et localhost:5173
+
+
+================================================================================
+TEST DE VERIFICATION
+================================================================================
+
+Exécutez ce test pour vérifier que tout fonctionne :
+
+  cd F:\EduNova
+  python -c "
+import sys
+sys.path.insert(0, 'src')
+from fastapi.testclient import TestClient
+from presentation.api.app import create_app
+from presentation.api.container import ApplicationContainer
+import os
+
+os.environ['EDUNOVA_DATABASE_PATH'] = 'test_quick.db'
+container = ApplicationContainer()
+app = create_app(container)
+client = TestClient(app)
+
+# Tester l'inscription
+resp = client.post('/auth/register-establishment', json={
+    'school_name': 'Test',
+    'admin_name': 'Test',
+    'email': 'test@example.com',
+    'password': 'Test123!'
+})
+print(f'Inscription: {resp.status_code}')
+
+# Tester la connexion
+resp = client.post('/auth/login', json={
+    'email': 'test@example.com',
+    'password': 'Test123!'
+})
+print(f'Connexion: {resp.status_code}')
+
+# Nettoyer
+import os as os2
+if os2.path.exists('test_quick.db'):
+    os2.remove('test_quick.db')
+"
+
+Résultat attendu :
+  Inscription: 201
+  Connexion: 200
+
+Si vous obtenez ces résultats, votre backend fonctionne correctement.
+Le problème vient donc du frontend ou de la connexion entre les deux.
+
+
+================================================================================
+RESUME
+================================================================================
+
+✅ Configuration corrigée
+✅ Tous les fichiers vérifiés
+✅ Backend testé et fonctionnel
+
+Le problème "Backend inaccessible" est maintenant résolu si vous suivez
+ces instructions.
+
+Si le problème persiste après avoir suivi toutes les étapes, vérifiez :
+  1. Que le backend est bien démarré
+  2. Que le frontend utilise bien http://127.0.0.1:8017
+  3. Que le backend écoute sur 0.0.0.0:8017
+  4. Que vous utilisez http://127.0.0.1:5173 dans le navigateur
+
+================================================================================

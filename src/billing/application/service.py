@@ -1,85 +1,65 @@
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from uuid import UUID, uuid4
 
 from src.billing.domain.money import Currency, Money
+from src.billing.domain.entities import (
+    Charge,
+    CounterEntry,
+    FeeAssignment,
+    FeeReminder,
+    FeeType,
+    Payment,
+)
 
 
 @dataclass(frozen=True)
-class Charge:
-    id: UUID
-    tenant_id: UUID
-    student_id: UUID
-    description: str
-    amount: Money
-    due_date: date | None
-    status: str = "OPEN"
-
-
-@dataclass(frozen=True)
-class FeeType:
-    id: UUID
-    tenant_id: UUID
-    name: str
-    description: str
-    category: str
-    amount: Money
-    academic_period_id: UUID | None
-    target_class_id: UUID | None
-    applicability: str
-    status: str
-    version: int
-    created_by: UUID
-    created_at: datetime
-    updated_at: datetime
-
-
-@dataclass(frozen=True)
-class FeeAssignment:
-    id: UUID
-    tenant_id: UUID
+class ClassFeeAssignmentResult:
     fee_type_id: UUID
-    fee_type_version: int
-    student_id: UUID
-    academic_period_id: UUID | None
-    snapshot_class_id: UUID | None
-    charge_id: UUID
-    amount: Money
-    created_by: UUID
-    created_at: datetime
-
-
-@dataclass(frozen=True)
-class Payment:
-    id: UUID
-    tenant_id: UUID
-    charge_id: UUID
-    student_id: UUID
-    amount: Money
-    idempotency_key: str
-    status: str
-    recorded_by: UUID
-    recorded_at: datetime
-    receipt_number: str
-    receipt_status: str = "ISSUED"
-
-
-@dataclass(frozen=True)
-class CounterEntry:
-    id: UUID
-    tenant_id: UUID
-    original_payment_id: UUID
-    amount: Money
-    reason: str
-    recorded_by: UUID
-    recorded_at: datetime
+    class_id: UUID
+    academic_period_id: UUID
+    total_eligible_students: int
+    assigned_count: int
+    already_assigned_count: int
+    assignments: tuple[FeeAssignment, ...]
 
 
 @dataclass(frozen=True)
 class BillingSummary:
     charges: tuple[Charge, ...]
     payments: tuple[Payment, ...]
+
+
+@dataclass(frozen=True)
+class PaymentPage:
+    items: tuple[Payment, ...]
+    total: int
+    limit: int
+    offset: int
+
+
+@dataclass(frozen=True)
+class ArrearItem:
+    charge_id: UUID
+    student_id: UUID
+    description: str
+    currency: Currency
+    amount_due: Decimal
+    amount_paid: Decimal
+    amount_remaining: Decimal
+    due_date: date | None
+    charge_status: str
+    overdue: bool
+    class_id: UUID | None = None
+
+
+@dataclass(frozen=True)
+class ArrearPage:
+    items: tuple[ArrearItem, ...]
+    total: int
+    limit: int
+    offset: int
 
 
 class BillingService:
@@ -135,6 +115,19 @@ class BillingService:
     def assign_fee_type(self, tenant_id: UUID, fee_type_id: UUID, student_id: UUID, academic_period_id: UUID | None, actor_id: UUID) -> FeeAssignment:
         return self._repository.assign_fee_type(tenant_id, fee_type_id, student_id, academic_period_id, actor_id)
 
+    def assign_fee_type_to_class(
+        self,
+        tenant_id: UUID,
+        fee_type_id: UUID,
+        class_id: UUID,
+        academic_period_id: UUID,
+        actor_id: UUID,
+    ) -> ClassFeeAssignmentResult:
+        return self._repository.assign_fee_type_to_class(
+            tenant_id, fee_type_id, class_id, academic_period_id, actor_id
+        )
+
+
     def record_payment(
         self,
         tenant_id: UUID,
@@ -156,6 +149,70 @@ class BillingService:
             raise LookupError("Eleve introuvable dans cet etablissement.")
         return self._repository.summary(tenant_id, student_id)
 
+    def list_payments(
+        self,
+        tenant_id: UUID,
+        *,
+        student_id: UUID | None = None,
+        class_id: UUID | None = None,
+        status: str | None = None,
+        recorded_from: date | None = None,
+        recorded_to: date | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> PaymentPage:
+        if limit < 1 or limit > 200:
+            raise ValueError("La limite de pagination doit etre entre 1 et 200.")
+        if offset < 0:
+            raise ValueError("Le decalage de pagination ne peut pas etre negatif.")
+        if status is not None and not status.strip():
+            raise ValueError("Le statut de paiement est invalide.")
+        if student_id is not None and not self._repository.student_exists(
+            student_id, tenant_id
+        ):
+            raise LookupError("Eleve introuvable dans cet etablissement.")
+        items, total = self._repository.list_payments(
+            tenant_id,
+            student_id=student_id,
+            class_id=class_id,
+            status=status.strip() if status else None,
+            recorded_from=recorded_from,
+            recorded_to=recorded_to,
+            limit=limit,
+            offset=offset,
+        )
+        return PaymentPage(items=items, total=total, limit=limit, offset=offset)
+
+    def list_arrears(
+        self,
+        tenant_id: UUID,
+        *,
+        student_id: UUID | None = None,
+        class_id: UUID | None = None,
+        as_of: date | None = None,
+        overdue_only: bool = True,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> ArrearPage:
+        if limit < 1 or limit > 200:
+            raise ValueError("La limite de pagination doit etre entre 1 et 200.")
+        if offset < 0:
+            raise ValueError("Le decalage de pagination ne peut pas etre negatif.")
+        if student_id is not None and not self._repository.student_exists(
+            student_id, tenant_id
+        ):
+            raise LookupError("Eleve introuvable dans cet etablissement.")
+        items, total = self._repository.list_arrears(
+            tenant_id,
+            student_id=student_id,
+            class_id=class_id,
+            as_of=as_of,
+            overdue_only=overdue_only,
+            limit=limit,
+            offset=offset,
+        )
+        return ArrearPage(items=items, total=total, limit=limit, offset=offset)
+
     def reverse_payment(self, tenant_id: UUID, payment_id: UUID, reason: str, actor_id: UUID) -> CounterEntry:
         if not reason.strip():
             raise ValueError("Le motif de correction est obligatoire.")
@@ -167,3 +224,28 @@ class BillingService:
             raise LookupError("Recu introuvable dans cet etablissement.")
         return receipt
 
+    def record_arrear_reminder(
+        self,
+        tenant_id: UUID,
+        charge_id: UUID,
+        channel: str,
+        recipient: str,
+        notes: str | None,
+        actor_id: UUID,
+    ) -> FeeReminder:
+        channel_clean = channel.strip().upper()
+        allowed_channels = {"SMS", "EMAIL", "LETTER", "PHONE", "IN_PERSON"}
+        if channel_clean not in allowed_channels:
+            raise ValueError(f"Canal de relance invalide. Autorises : {', '.join(sorted(allowed_channels))}")
+        if not recipient.strip():
+            raise ValueError("Le destinataire de la relance est obligatoire.")
+        return self._repository.record_arrear_reminder(
+            tenant_id, charge_id, channel_clean, recipient.strip(), notes.strip() if notes else None, actor_id
+        )
+
+    def list_arrear_reminders(
+        self,
+        tenant_id: UUID,
+        charge_id: UUID,
+    ) -> tuple[FeeReminder, ...]:
+        return self._repository.list_arrear_reminders(tenant_id, charge_id)

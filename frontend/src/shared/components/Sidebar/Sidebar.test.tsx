@@ -29,7 +29,7 @@ describe('Sidebar', () => {
     const page = renderSidebar()
     const links = Array.from(page.querySelectorAll('nav a'))
 
-    expect(links).toHaveLength(7)
+    expect(links).toHaveLength(9)
     expect(links.map((link) => link.getAttribute('aria-label'))).toEqual([
       'Tableau de bord',
       'Élèves',
@@ -38,6 +38,8 @@ describe('Sidebar', () => {
       'Présences',
       'Finances',
       'Configuration scolaire',
+      'Espace parent',
+      'Espace enseignant',
     ])
     expect(links.every((link) => link.textContent?.includes(link.getAttribute('aria-label') ?? ''))).toBe(true)
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
@@ -48,6 +50,8 @@ describe('Sidebar', () => {
       '/app/attendance',
       '/app/finance',
       '/app/academic-catalogues',
+      '/app/parent-portal',
+      '/app/teacher-portal',
     ])
   })
 

@@ -20,6 +20,18 @@ class FakeStudentRepository(StudentRepository):
     def save(self, student: Student) -> None:
         self.saved.append(student)
 
+    def update(self, student: Student) -> None:
+        self.saved.append(student)
+
+    def find_by_registration_number(self, tenant_id, registration_number):
+        for s in self.saved:
+            if s.tenant_id == tenant_id and s.registration_number == registration_number:
+                return None
+        return None
+
+    def find_potential_duplicates(self, tenant_id, first_name, last_name, exclude_id=None):
+        return ()
+
 
 def test_create_student_persists_trimmed_fields():
     repository = FakeStudentRepository()

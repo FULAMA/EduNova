@@ -47,7 +47,7 @@ def test_student_portal_resolves_linked_account_without_client_student_id() -> N
     student_id, year_id, class_id = uuid4(), uuid4(), uuid4()
     with container._database.connect() as connection:
         connection.execute(
-            "INSERT INTO students VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO students (id, tenant_id, first_name, last_name, email, phone, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (str(student_id), str(TEST_TENANT_ID), "Eleve", "Synthetique", None, None, 1),
         )
     container._academic_year_repository().save(AcademicYear(
@@ -95,7 +95,7 @@ def test_student_link_rejects_a_student_from_another_tenant() -> None:
     other_tenant_id, other_student_id = uuid4(), uuid4()
     with container._database.connect() as connection:
         connection.execute(
-            "INSERT INTO students VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO students (id, tenant_id, first_name, last_name, email, phone, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (str(other_student_id), str(other_tenant_id), "Autre", "Tenant", None, None, 1),
         )
 
@@ -123,7 +123,7 @@ def test_student_portal_reads_only_the_linked_student_academic_record() -> None:
     year_id, class_id = uuid4(), uuid4()
     with container._database.connect() as connection:
         connection.execute(
-            "INSERT INTO students VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO students (id, tenant_id, first_name, last_name, email, phone, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (str(student_id), str(TEST_TENANT_ID), "Eleve", "Resultats", None, None, 1),
         )
     container._academic_period_repository().save(AcademicPeriod(
@@ -202,7 +202,7 @@ def test_student_portal_cannot_read_another_tenant_or_client_selected_student() 
             (tenant_b, student_id_b, "Eleve B"),
         ):
             connection.execute(
-                "INSERT INTO students VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO students (id, tenant_id, first_name, last_name, email, phone, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (str(student_id), str(tenant_id), first_name, "Confidentiel", None, None, 1),
             )
     for tenant_id, period_id, year_id, class_id in (
@@ -291,7 +291,7 @@ def test_student_link_requires_existing_active_student_membership() -> None:
     student_id = uuid4()
     with container._database.connect() as connection:
         connection.execute(
-            "INSERT INTO students VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO students (id, tenant_id, first_name, last_name, email, phone, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (str(student_id), str(TEST_TENANT_ID), "Eleve", "Controle", None, None, 1),
         )
 

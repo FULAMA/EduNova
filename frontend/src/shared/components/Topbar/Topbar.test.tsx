@@ -10,6 +10,7 @@ import { Topbar } from './Topbar'
 
 vi.mock('../../../features/auth/services/auth.service', () => ({
   clearSession: vi.fn(),
+  logout: vi.fn(async () => undefined),
 }))
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -77,8 +78,8 @@ describe('Topbar account controls', () => {
     expect(accountButton.getAttribute('aria-expanded')).toBe('false')
   })
 
-  it('clears the local session and navigates to login on sign out', async () => {
-    const { clearSession } = await import('../../../features/auth/services/auth.service')
+  it('revokes the session via logout and navigates to login on sign out', async () => {
+    const { logout } = await import('../../../features/auth/services/auth.service')
     const page = renderTopbar()
     const accountButton = page.querySelector('button[aria-controls="topbar-account-menu"]') as HTMLButtonElement
     act(() => accountButton.click())
@@ -86,7 +87,7 @@ describe('Topbar account controls', () => {
 
     await act(async () => signOutButton.click())
 
-    expect(clearSession).toHaveBeenCalledOnce()
+    expect(logout).toHaveBeenCalledOnce()
     expect(page.querySelector('[data-testid="location"]')?.textContent).toBe('/login')
   })
 })

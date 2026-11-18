@@ -38,7 +38,7 @@ def test_report_card_is_published_only_after_validated_deliberation_and_is_stude
     student_id, period_id, deliberation_id = uuid4(), uuid4(), uuid4()
     with container._database.connect() as connection:
         connection.execute(
-            "INSERT INTO students VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO students (id, tenant_id, first_name, last_name, email, phone, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (str(student_id), str(TEST_TENANT_ID), "Eleve", "Bulletin", None, None, 1),
         )
     container._academic_period_repository().save(AcademicPeriod(
@@ -82,3 +82,56 @@ def test_report_card_is_published_only_after_validated_deliberation_and_is_stude
     assert pdf.status_code == 200
     assert pdf.headers["content-type"] == "application/pdf"
     assert pdf.content.startswith(b"%PDF")
+
+
+def test_direction_role_can_prepare_publish_and_correct_report_card():
+    container = ApplicationContainer(database_path=":memory:")
+    direction = User(uuid4(), "direction-bulletin@example.test", "hash", "DIRECTION")
+    container._user_repository().save(direction)
+    seed_membership(container, direction.id, role="DIRECTION")
+    direction_client = authenticated_client(container, direction)
+
+    student_id, period_id, deliberation_id = uuid4(), uuid4(), uuid4()
+    with container._database.connect() as connection:
+        connection.execute(
+            "INSERT INTO students (id, tenant_id, first_name, last_name, email, phone, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (str(student_id), str(TEST_TENANT_ID), "Eleve", "Direction", None, None, 1),
+        )
+    container._academic_period_repository().save(AcademicPeriod(
+        period_id, TEST_TENANT_ID, "Trimestre 1", date(2026, 9, 1), date(2026, 12, 20),
+    ))
+    container._student_academic_record_repository().save(StudentAcademicRecord(
+        tenant_id=TEST_TENANT_ID, student_id=student_id, academic_period_id=period_id,
+        subject_results=(), general_average=16, failed_subjects=0,
+        credits_obtained=25, total_credits=30, status=AcademicRecordStatus.VALIDATED,
+    ))
+    deliberation = SQLiteDeliberationRepository(container._database).save(Deliberation(
+        student_id=student_id, average=16, failed_subjects=0,
+        decision=DeliberationDecision.ADMITTED, tenant_id=TEST_TENANT_ID,
+        academic_period_id=period_id, record_version=1, id=deliberation_id,
+        status="VALIDATED", version=2, created_by=direction.id,
+        created_at=datetime.now(timezone.utc), validated_by=direction.id,
+        validated_at=datetime.now(timezone.utc),
+    ))
+
+    # DIRECTION prépare le bulletin
+    prepared = direction_client.post(
+        f"/report-cards/{student_id}/{period_id}/prepare",
+        json={"deliberation_id": str(deliberation.id)},
+    )
+    assert prepared.status_code == 201
+    rc_id = prepared.json()["id"]
+
+    # DIRECTION publie le bulletin (BUL-TECH-02 validé)
+    published = direction_client.post(f"/report-cards/{rc_id}/publish")
+    assert published.status_code == 200
+    assert published.json()["status"] == "ISSUED"
+
+    # DIRECTION corrige le bulletin (BUL-TECH-02 validé)
+    corrected = direction_client.post(
+        f"/report-cards/{rc_id}/correct",
+        json={"deliberation_id": str(deliberation.id)},
+    )
+    assert corrected.status_code == 200
+    assert corrected.json()["status"] == "ISSUED"
+    assert corrected.json()["report_version"] == 2

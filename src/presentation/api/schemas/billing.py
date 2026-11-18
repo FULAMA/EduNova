@@ -76,6 +76,34 @@ class BillingSummaryResponse(BaseModel):
     payments: list[PaymentResponse]
 
 
+class PaymentListResponse(BaseModel):
+    items: list[PaymentResponse]
+    total: int
+    limit: int
+    offset: int
+
+
+class ArrearItemResponse(BaseModel):
+    charge_id: UUID
+    student_id: UUID
+    description: str
+    currency: Currency
+    amount_due: Decimal
+    amount_paid: Decimal
+    amount_remaining: Decimal
+    due_date: date | None
+    charge_status: str
+    overdue: bool
+    class_id: UUID | None = None
+
+
+class ArrearListResponse(BaseModel):
+    items: list[ArrearItemResponse]
+    total: int
+    limit: int
+    offset: int
+
+
 class FeeTypeResponse(BaseModel):
     id: UUID
     name: str
@@ -111,3 +139,36 @@ class FeeAssignmentResponse(BaseModel):
     created_by: UUID
     created_at: datetime
 
+
+
+class ClassFeeAssignmentRequest(BaseModel):
+    class_id: UUID
+    academic_period_id: UUID
+
+
+class ClassFeeAssignmentResponse(BaseModel):
+    fee_type_id: UUID
+    class_id: UUID
+    academic_period_id: UUID
+    total_eligible_students: int
+    assigned_count: int
+    already_assigned_count: int
+    assignments: list[FeeAssignmentResponse]
+
+
+class CreateArrearReminderRequest(BaseModel):
+    channel: str = Field(..., description="Canal de relance: SMS, EMAIL, LETTER, PHONE, IN_PERSON")
+    recipient: str = Field(..., min_length=1, max_length=255, description="Coordonnees ou identite du destinataire")
+    notes: str | None = Field(None, max_length=1000, description="Notes contextuelles sur la relance")
+
+
+class ArrearReminderResponse(BaseModel):
+    id: UUID
+    tenant_id: UUID
+    charge_id: UUID
+    student_id: UUID
+    channel: str
+    recipient: str
+    notes: str | None
+    sent_at: datetime
+    sent_by: UUID

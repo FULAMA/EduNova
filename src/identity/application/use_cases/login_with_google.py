@@ -1,4 +1,8 @@
+import hashlib
+from datetime import datetime, timezone
+
 from src.identity.application.dto.google_login_request import GoogleLoginRequest
+from src.identity.application.interfaces.google_nonce_repository import GoogleNonceRepository
 from src.identity.application.interfaces.google_identity_verifier import (
     GoogleIdentityVerifier,
 )
@@ -23,6 +27,7 @@ class LoginWithGoogle:
         external_identity_repository: ExternalIdentityRepository,
         google_identity_verifier: GoogleIdentityVerifier,
         jwt_service: JwtService,
+        google_nonce_repository: GoogleNonceRepository,
     ):
         self._user_repository = user_repository
         self._membership_repository = membership_repository
@@ -30,6 +35,7 @@ class LoginWithGoogle:
         self._external_identity_repository = external_identity_repository
         self._google_identity_verifier = google_identity_verifier
         self._jwt_service = jwt_service
+        self._google_nonce_repository = google_nonce_repository
 
     def execute(
         self,
@@ -37,8 +43,18 @@ class LoginWithGoogle:
     ) -> LoginUserResponse:
         if not request.id_token.strip():
             raise ValueError("Le jeton Google ne peut pas etre vide.")
+        if not request.nonce.strip():
+            raise ValueError("Nonce Google invalide.")
 
-        identity = self._google_identity_verifier.verify(request.id_token)
+        nonce_hash = hashlib.sha256(request.nonce.encode("utf-8")).hexdigest()
+        if not self._google_nonce_repository.consume(
+            nonce_hash, datetime.now(timezone.utc)
+        ):
+            raise ValueError("Nonce Google invalide.")
+
+        identity = self._google_identity_verifier.verify(
+            request.id_token, request.nonce
+        )
 
         if not identity.email_verified or not identity.email.strip():
             raise ValueError("L adresse e-mail Google n est pas verifiee.")

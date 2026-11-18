@@ -16,6 +16,9 @@ import {
 } from '../../services/student-portal.service'
 
 function errorMessage(reason: unknown): string {
+  if (reason instanceof ApiError && reason.status === 0) {
+    return 'Aucune connexion réseau. Les données scolaires ne sont pas enregistrées hors ligne. Réessayez lorsque le réseau sera disponible.'
+  }
   if (reason instanceof ApiError && reason.status === 401) {
     return 'Votre session a expire. Veuillez vous reconnecter.'
   }

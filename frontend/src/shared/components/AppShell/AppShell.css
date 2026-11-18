@@ -21,6 +21,15 @@
   animation: app-shell-enter 180ms ease-out both;
 }
 
+.app-shell__offline-banner {
+  margin: 0;
+  padding: 0.7rem 1rem;
+  color: #563500;
+  background: #fff2cf;
+  border-block: 1px solid #e8ca84;
+  font-weight: 600;
+}
+
 @keyframes app-shell-enter {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }

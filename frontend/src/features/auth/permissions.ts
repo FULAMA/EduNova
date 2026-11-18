@@ -6,6 +6,9 @@ export type AppModule =
   | 'attendance'
   | 'finance'
   | 'academic-catalogues'
+  | 'parent-portal'
+  | 'student-portal'
+  | 'teacher-portal'
 
 const FINANCE_ROLES = ['ADMIN', 'DIRECTION', 'ACCOUNTANT', 'CASHIER'] as const
 const STUDENT_DIRECTORY_ROLES = ['ADMIN', 'DIRECTION'] as const
@@ -15,10 +18,13 @@ const STUDENT_DIRECTORY_ROLES = ['ADMIN', 'DIRECTION'] as const
 const MODULE_ROLES: Record<AppModule, readonly string[]> = {
   dashboard: ['ADMIN', 'DIRECTION', 'ACCOUNTANT', 'CASHIER', 'STUDENT'],
   students: STUDENT_DIRECTORY_ROLES,
-  classes: ['ADMIN'],
+  classes: ['ADMIN', 'DIRECTION'],
   enrollments: ['ADMIN'],
   attendance: ['ADMIN'],
   'academic-catalogues': ['ADMIN'],
+  'parent-portal': ['PARENT'],
+  'student-portal': ['STUDENT'],
+  'teacher-portal': ['PROF', 'TEACHER'],
   finance: FINANCE_ROLES,
 }
 
@@ -35,4 +41,8 @@ export function canManageFeeCatalog(role: string | undefined): boolean {
 
 export function canManageStudents(role: string | undefined): boolean {
   return role !== undefined && STUDENT_DIRECTORY_ROLES.includes(role as never)
+}
+
+export function canManageClassSubjects(role: string | undefined): boolean {
+  return role === 'ADMIN'
 }

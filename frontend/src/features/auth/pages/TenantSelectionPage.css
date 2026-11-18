@@ -1,0 +1,236 @@
+.tenant-selection-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.tenant-selection-page__container {
+  width: 100%;
+  max-width: 500px;
+}
+
+.tenant-selection-page__card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  padding: 2.5rem;
+  border: 1px solid #e0e0e0;
+}
+
+.tenant-selection-page__title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.tenant-selection-page__description {
+  color: #666;
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.tenant-selection-page__error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.tenant-selection-page__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.tenant-selection-page__fieldset {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.tenant-selection-page__legend {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4b5563;
+  padding: 0 0.5rem;
+}
+
+.tenant-selection-page__tenants {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tenant-selection-page__tenant {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.tenant-selection-page__tenant:hover {
+  background: #f9fafb;
+}
+
+.tenant-selection-page__tenant--selected {
+  background: #e0f2fe;
+  border-color: #3b82f6;
+}
+
+.tenant-selection-page__tenant-radio {
+  appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid #d1d5db;
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.tenant-selection-page__tenant-radio:checked {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.tenant-selection-page__tenant-radio:checked::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 0.5rem;
+  height: 0.5rem;
+  background: white;
+  border-radius: 50%;
+}
+
+.tenant-selection-page__tenant-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.tenant-selection-page__tenant-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.tenant-selection-page__tenant-role {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.tenant-selection-page__actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.tenant-selection-page__submit {
+  flex: 1;
+  padding: 0.875rem 1.5rem;
+  background: #1a1a2e;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.tenant-selection-page__submit:hover:not(:disabled) {
+  background: #2d2d44;
+}
+
+.tenant-selection-page__submit:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.tenant-selection-page__submit:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.tenant-selection-page__cancel {
+  flex: 1;
+  padding: 0.875rem 1.5rem;
+  background: #f9fafb;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tenant-selection-page__cancel:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.tenant-selection-page__cancel:disabled {
+  background: #f9fafb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.tenant-selection-page__spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #ffffff80;
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: tenant-selection-page-spinner 0.8s linear infinite;
+  margin-right: 0.5rem;
+}
+
+@keyframes tenant-selection-page-spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .tenant-selection-page {
+    padding: 1rem;
+  }
+
+  .tenant-selection-page__card {
+    padding: 1.5rem;
+  }
+
+  .tenant-selection-page__title {
+    font-size: 1.5rem;
+  }
+
+  .tenant-selection-page__actions {
+    flex-direction: column;
+  }
+
+  .tenant-selection-page__submit,
+  .tenant-selection-page__cancel {
+    width: 100%;
+  }
+}

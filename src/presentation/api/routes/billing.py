@@ -1,15 +1,19 @@
+from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from src.billing.application.service import BillingService
 from src.presentation.api.dependencies import get_billing_service
 from src.presentation.api.dependencies.auth import get_current_user, get_tenant_context, require_finance_manager_role, require_finance_role
 from src.presentation.api.schemas.billing import (
+    ArrearItemResponse,
+    ArrearListResponse,
     BillingSummaryResponse,
     ChargeCreateRequest,
     ChargeResponse,
     PaymentCreateRequest,
+    PaymentListResponse,
     PaymentResponse,
     CounterEntryResponse,
     PaymentCorrectionRequest,
@@ -17,6 +21,10 @@ from src.presentation.api.schemas.billing import (
     FeeTypeResponse,
     FeeAssignmentRequest,
     FeeAssignmentResponse,
+    ClassFeeAssignmentRequest,
+    ClassFeeAssignmentResponse,
+    CreateArrearReminderRequest,
+    ArrearReminderResponse,
 )
 from src.shared.application.context.tenant_context import TenantContext
 from src.identity.application.dto.authenticated_user import AuthenticatedUser
@@ -75,6 +83,89 @@ def record_payment(data: PaymentCreateRequest, service: BillingService = Depends
         raise HTTPException(status_code=409 if "idempotence" in str(exc) or "solde" in str(exc) or "devise" in str(exc) else 400, detail=str(exc)) from exc
 
 
+@router.get("/payments", response_model=PaymentListResponse, dependencies=_finance)
+def list_payments(
+    student_id: UUID | None = Query(default=None),
+    class_id: UUID | None = Query(default=None),
+    status_filter: str | None = Query(default=None, alias="status", max_length=40),
+    recorded_from: date | None = Query(default=None),
+    recorded_to: date | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    service: BillingService = Depends(get_billing_service),
+    tenant: TenantContext = Depends(get_tenant_context),
+) -> PaymentListResponse:
+    try:
+        page = service.list_payments(
+            tenant.tenant_id,
+            student_id=student_id,
+            class_id=class_id,
+            status=status_filter,
+            recorded_from=recorded_from,
+            recorded_to=recorded_to,
+            limit=limit,
+            offset=offset,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Eleve introuvable dans cet etablissement.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return PaymentListResponse(
+        items=[_payment_response(item) for item in page.items],
+        total=page.total,
+        limit=page.limit,
+        offset=page.offset,
+    )
+
+
+@router.get("/arrears", response_model=ArrearListResponse, dependencies=_finance)
+def list_arrears(
+    student_id: UUID | None = Query(default=None),
+    class_id: UUID | None = Query(default=None),
+    as_of: date | None = Query(default=None),
+    overdue_only: bool = Query(default=True),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    service: BillingService = Depends(get_billing_service),
+    tenant: TenantContext = Depends(get_tenant_context),
+) -> ArrearListResponse:
+    try:
+        page = service.list_arrears(
+            tenant.tenant_id,
+            student_id=student_id,
+            class_id=class_id,
+            as_of=as_of,
+            overdue_only=overdue_only,
+            limit=limit,
+            offset=offset,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Eleve introuvable dans cet etablissement.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ArrearListResponse(
+        items=[
+            ArrearItemResponse(
+                charge_id=item.charge_id,
+                student_id=item.student_id,
+                description=item.description,
+                currency=item.currency,
+                amount_due=item.amount_due,
+                amount_paid=item.amount_paid,
+                amount_remaining=item.amount_remaining,
+                due_date=item.due_date,
+                charge_status=item.charge_status,
+                overdue=item.overdue,
+                class_id=item.class_id,
+            )
+            for item in page.items
+        ],
+        total=page.total,
+        limit=page.limit,
+        offset=page.offset,
+    )
+
+
 @router.get("/students/{student_id}/summary", response_model=BillingSummaryResponse, dependencies=_finance)
 def get_billing_summary(student_id: UUID, service: BillingService = Depends(get_billing_service), tenant: TenantContext = Depends(get_tenant_context)):
     try:
@@ -130,6 +221,44 @@ def assign_fee_type(fee_type_id: UUID, data: FeeAssignmentRequest, service: Bill
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
+
+
+@router.post(
+    "/fee-types/{fee_type_id}/assign-class",
+    response_model=ClassFeeAssignmentResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_finance_manager_role())],
+)
+def assign_fee_type_to_class(
+    fee_type_id: UUID,
+    data: ClassFeeAssignmentRequest,
+    service: BillingService = Depends(get_billing_service),
+    tenant: TenantContext = Depends(get_tenant_context),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    try:
+        result = service.assign_fee_type_to_class(
+            tenant.tenant_id,
+            fee_type_id,
+            data.class_id,
+            data.academic_period_id,
+            current_user.id,
+        )
+        return ClassFeeAssignmentResponse(
+            fee_type_id=result.fee_type_id,
+            class_id=result.class_id,
+            academic_period_id=result.academic_period_id,
+            total_eligible_students=result.total_eligible_students,
+            assigned_count=result.assigned_count,
+            already_assigned_count=result.already_assigned_count,
+            assignments=[_fee_assignment_response(item) for item in result.assignments],
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409 if "publie" in str(exc) or "cible" in str(exc) else 400, detail=str(exc)) from exc
+
+
 @router.post("/payments/{payment_id}/correction", response_model=CounterEntryResponse, dependencies=_finance)
 def correct_payment(data: PaymentCorrectionRequest, payment_id: UUID, service: BillingService = Depends(get_billing_service), tenant: TenantContext = Depends(get_tenant_context), current_user: AuthenticatedUser = Depends(get_current_user)):
     try:
@@ -170,3 +299,72 @@ def get_receipt_pdf(receipt_number: str, service: BillingService = Depends(get_b
     body.extend(f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF".encode())
     return Response(content=bytes(body), media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="receipt-{receipt_number}.pdf"'})
 
+
+
+@router.post(
+    "/arrears/{charge_id}/reminders",
+    response_model=ArrearReminderResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=_finance,
+)
+def record_arrear_reminder(
+    charge_id: UUID,
+    data: CreateArrearReminderRequest,
+    service: BillingService = Depends(get_billing_service),
+    tenant: TenantContext = Depends(get_tenant_context),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    try:
+        reminder = service.record_arrear_reminder(
+            tenant.tenant_id,
+            charge_id,
+            data.channel,
+            data.recipient,
+            data.notes,
+            current_user.id,
+        )
+        return ArrearReminderResponse(
+            id=reminder.id,
+            tenant_id=reminder.tenant_id,
+            charge_id=reminder.charge_id,
+            student_id=reminder.student_id,
+            channel=reminder.channel,
+            recipient=reminder.recipient,
+            notes=reminder.notes,
+            sent_at=reminder.sent_at,
+            sent_by=reminder.sent_by,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get(
+    "/arrears/{charge_id}/reminders",
+    response_model=list[ArrearReminderResponse],
+    dependencies=_finance,
+)
+def list_arrear_reminders(
+    charge_id: UUID,
+    service: BillingService = Depends(get_billing_service),
+    tenant: TenantContext = Depends(get_tenant_context),
+):
+    try:
+        reminders = service.list_arrear_reminders(tenant.tenant_id, charge_id)
+        return [
+            ArrearReminderResponse(
+                id=r.id,
+                tenant_id=r.tenant_id,
+                charge_id=r.charge_id,
+                student_id=r.student_id,
+                channel=r.channel,
+                recipient=r.recipient,
+                notes=r.notes,
+                sent_at=r.sent_at,
+                sent_by=r.sent_by,
+            )
+            for r in reminders
+        ]
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

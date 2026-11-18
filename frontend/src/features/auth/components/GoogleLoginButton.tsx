@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { issueGoogleNonce } from '../services/auth.service'
 
 import './GoogleLoginButton.css'
 
@@ -7,7 +8,7 @@ type GoogleCredentialResponse = {
 }
 
 type GoogleLoginButtonProps = {
-  onCredential: (credential: string) => void
+  onCredential: (credential: string, nonce: string) => void
 }
 
 type GoogleIdentityApi = {
@@ -15,6 +16,7 @@ type GoogleIdentityApi = {
     id: {
       initialize: (options: {
         client_id: string
+        nonce: string
         callback: (response: GoogleCredentialResponse) => void
       }) => void
       renderButton: (
@@ -49,10 +51,30 @@ export function GoogleLoginButton({
   onCredential,
 }: GoogleLoginButtonProps) {
   const buttonRef = useRef<HTMLDivElement>(null)
+  const cancelTimerRef = useRef<number | undefined>(undefined)
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
+  const [nonce, setNonce] = useState<string | null>(null)
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [attempt, setAttempt] = useState(0)
+  const [authAttempt, setAuthAttempt] = useState<'idle' | 'waiting' | 'cancelled'>('idle')
+
+  const refreshNonce = useCallback(async () => {
+    setStatus('loading')
+    setNonce(null)
+    try {
+      setNonce(await issueGoogleNonce())
+      setStatus('ready')
+    } catch {
+      setStatus('error')
+    }
+  }, [])
 
   useEffect(() => {
-    if (!clientId || !buttonRef.current) {
+    if (clientId) void refreshNonce()
+  }, [attempt, clientId, refreshNonce])
+
+  useEffect(() => {
+    if (!clientId || !nonce || !buttonRef.current) {
       return
     }
 
@@ -63,7 +85,15 @@ export function GoogleLoginButton({
 
       window.google.accounts.id.initialize({
         client_id: clientId,
-        callback: ({ credential }) => onCredential(credential),
+        nonce,
+        callback: ({ credential }) => {
+          if (cancelTimerRef.current !== undefined) {
+            window.clearTimeout(cancelTimerRef.current)
+          }
+          setAuthAttempt('idle')
+          onCredential(credential, nonce)
+          void refreshNonce()
+        },
       })
       buttonRef.current.replaceChildren()
       window.google.accounts.id.renderButton(buttonRef.current, {
@@ -75,7 +105,12 @@ export function GoogleLoginButton({
 
     const existingScript = document.getElementById(GOOGLE_SCRIPT_ID)
     if (existingScript) {
-      render()
+      if (window.google) {
+        render()
+      } else {
+        existingScript.addEventListener('load', render, { once: true })
+        existingScript.addEventListener('error', () => setStatus('error'), { once: true })
+      }
       return
     }
 
@@ -85,8 +120,24 @@ export function GoogleLoginButton({
     script.async = true
     script.defer = true
     script.onload = render
+    script.onerror = () => setStatus('error')
     document.head.appendChild(script)
-  }, [clientId, onCredential])
+  }, [clientId, nonce, onCredential])
+
+  useEffect(() => () => {
+    if (cancelTimerRef.current !== undefined) {
+      window.clearTimeout(cancelTimerRef.current)
+    }
+  }, [])
+
+  function noteGoogleButtonClick() {
+    if (authAttempt === 'waiting') return
+    setAuthAttempt('waiting')
+    cancelTimerRef.current = window.setTimeout(() => {
+      setAuthAttempt('cancelled')
+      void refreshNonce()
+    }, 60_000)
+  }
 
   if (!clientId) {
     return (
@@ -104,5 +155,30 @@ export function GoogleLoginButton({
     )
   }
 
-  return <div ref={buttonRef} aria-label="Connexion avec Google" />
+  if (status === 'loading') {
+    return <p role="status">Préparation de la connexion Google…</p>
+  }
+
+  if (status === 'error') {
+    return (
+      <div>
+        <p role="alert">La connexion Google est momentanément indisponible.</p>
+        <button type="button" onClick={() => setAttempt((value) => value + 1)}>
+          Réessayer
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div onClick={noteGoogleButtonClick}>
+      <div ref={buttonRef} aria-label="Connexion avec Google" />
+      {authAttempt === 'waiting' ? (
+        <p role="status">Connexion Google en cours… Fermez la fenêtre pour annuler.</p>
+      ) : null}
+      {authAttempt === 'cancelled' ? (
+        <p role="status">La tentative a expiré ou a été annulée. Réessayez.</p>
+      ) : null}
+    </div>
+  )
 }

@@ -1,0 +1,200 @@
+.two-factor-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.two-factor-page__container {
+  width: 100%;
+  max-width: 400px;
+}
+
+.two-factor-page__card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  padding: 2.5rem;
+  border: 1px solid #e0e0e0;
+  text-align: center;
+}
+
+.two-factor-page__title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 0.5rem;
+}
+
+.two-factor-page__description {
+  color: #666;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.two-factor-page__email {
+  color: #4b5563;
+  font-size: 0.9rem;
+  margin-bottom: 2rem;
+  padding: 0.5rem 1rem;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.two-factor-page__error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.two-factor-page__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  text-align: left;
+}
+
+.two-factor-page__code-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.two-factor-page__code-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.two-factor-page__code-input {
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.5rem;
+  padding: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #1f2937;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.two-factor-page__code-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: white;
+}
+
+.two-factor-page__code-input:disabled {
+  background: #f9fafb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.two-factor-page__code-input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.two-factor-page__code-hint {
+  font-size: 0.8rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+.two-factor-page__submit {
+  width: 100%;
+  padding: 1rem;
+  background: #1a1a2e;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.two-factor-page__submit:hover:not(:disabled) {
+  background: #2d2d44;
+}
+
+.two-factor-page__submit:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.two-factor-page__submit:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.two-factor-page__spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #ffffff80;
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: two-factor-page-spinner 0.8s linear infinite;
+  margin-right: 0.5rem;
+}
+
+@keyframes two-factor-page-spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.two-factor-page__footer {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.two-factor-page__cancel {
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  color: #6b7280;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.two-factor-page__cancel:hover:not(:disabled) {
+  color: #1f2937;
+  background: #f9fafb;
+}
+
+.two-factor-page__cancel:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .two-factor-page {
+    padding: 1rem;
+  }
+
+  .two-factor-page__card {
+    padding: 1.5rem;
+  }
+
+  .two-factor-page__title {
+    font-size: 1.5rem;
+  }
+
+  .two-factor-page__code-input {
+    font-size: 1.5rem;
+    letter-spacing: 0.3rem;
+  }
+}

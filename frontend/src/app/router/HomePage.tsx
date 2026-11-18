@@ -9,10 +9,13 @@ export function HomePage() {
   const user = useCurrentUser()
 
   if (user.role === 'STUDENT') return <StudentPortalPage />
-  if (user.role === 'ADMIN') return <DashboardPage />
+  if (user.role === 'PARENT') return <Navigate to="/app/parent-portal" replace />
+  if (user.role === 'PROF' || user.role === 'TEACHER') {
+    return <Navigate to="/app/teacher-portal" replace />
+  }
+  if (user.role === 'ADMIN' || user.role === 'DIRECTION') return <DashboardPage />
 
-  // Le tableau de bord appelle des routes réservées à ADMIN :
-  // les rôles financiers arrivent directement sur leur espace.
+  // Les rôles financiers exclusifs (ACCOUNTANT, CASHIER) arrivent directement sur leur espace.
   if (canAccess(user.role, 'finance')) {
     return <Navigate to="/app/finance" replace />
   }

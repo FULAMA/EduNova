@@ -1,4 +1,4 @@
-﻿from uuid import uuid4
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
@@ -67,6 +67,7 @@ def test_admin_lists_only_students_from_active_tenant():
             "first_name": "Ada",
             "last_name": "Lovelace",
             "email": "ada@example.test",
+        "registration_number": None,
             "active": True,
         }
     ]
@@ -158,6 +159,7 @@ def test_admin_gets_student_detail_from_active_tenant():
         "first_name": "Ada",
         "last_name": "Lovelace",
         "email": "ada@example.test",
+        "registration_number": None,
         "active": True,
     }
 

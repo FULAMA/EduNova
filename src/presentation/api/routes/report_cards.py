@@ -46,7 +46,7 @@ def _response(report_card) -> ReportCardResponse:
     "/{student_id}/{academic_period_id}/prepare",
     response_model=ReportCardResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role("ADMIN"))],
+    dependencies=[Depends(require_role("ADMIN", "DIRECTION"))],
 )
 def prepare_report_card(
     student_id: UUID,
@@ -65,7 +65,7 @@ def prepare_report_card(
 @router.post(
     "/{report_card_id}/publish",
     response_model=ReportCardResponse,
-    dependencies=[Depends(require_role("ADMIN"))],
+    dependencies=[Depends(require_role("ADMIN", "DIRECTION"))],
 )
 def publish_report_card(
     report_card_id: UUID,
@@ -82,7 +82,7 @@ def publish_report_card(
 @router.post(
     "/{report_card_id}/correct",
     response_model=ReportCardResponse,
-    dependencies=[Depends(require_role("ADMIN"))],
+    dependencies=[Depends(require_role("ADMIN", "DIRECTION"))],
 )
 def correct_report_card(
     report_card_id: UUID,

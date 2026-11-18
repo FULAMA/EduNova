@@ -239,4 +239,21 @@
   .login-form__challenge h2 {
     font-size: var(--font-size-lg);
   }
+
+  .login-form__register-link {
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    margin-top: var(--space-4);
+  }
+
+  .login-form__register-link--action {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .login-form__register-link--action:hover {
+    text-decoration: underline;
+  }
 }

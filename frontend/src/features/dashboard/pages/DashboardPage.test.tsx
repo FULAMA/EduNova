@@ -6,10 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ApiError } from '../../../shared/api/client'
 import { getCurrentUser, getSession } from '../../auth/services/auth.service'
-import { listStudents } from '../../students/services/student.service'
-import { listAcademicClasses } from '../../classes/classes.service'
-import { listAcademicYears } from '../../enrollments/enrollment.service'
-import { listSubjects } from '../../academic-catalogues/academic-catalogue.service'
+import { getDirectionDashboard } from '../services/dashboard.service'
+import type { DirectionDashboardData } from '../types/dashboard.types'
 import DashboardPage from './DashboardPage'
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -20,28 +18,13 @@ vi.mock('../../auth/services/auth.service', () => ({
   linkGoogleIdentity: vi.fn(),
 }))
 
-vi.mock('../../students/services/student.service', () => ({
-  listStudents: vi.fn(),
-}))
-
-vi.mock('../../classes/classes.service', () => ({
-  listAcademicClasses: vi.fn(),
-}))
-
-vi.mock('../../enrollments/enrollment.service', () => ({
-  listAcademicYears: vi.fn(),
-}))
-
-vi.mock('../../academic-catalogues/academic-catalogue.service', () => ({
-  listSubjects: vi.fn(),
+vi.mock('../services/dashboard.service', () => ({
+  getDirectionDashboard: vi.fn(),
 }))
 
 const mockedGetCurrentUser = vi.mocked(getCurrentUser)
 const mockedGetSession = vi.mocked(getSession)
-const mockedListStudents = vi.mocked(listStudents)
-const mockedListAcademicClasses = vi.mocked(listAcademicClasses)
-const mockedListAcademicYears = vi.mocked(listAcademicYears)
-const mockedListSubjects = vi.mocked(listSubjects)
+const mockedGetDirectionDashboard = vi.mocked(getDirectionDashboard)
 
 let root: Root | undefined
 let host: HTMLDivElement
@@ -66,49 +49,64 @@ async function settle() {
   })
 }
 
+const mockDashboardData: DirectionDashboardData = {
+  active_students: 42,
+  headcount_by_class: [
+    { class_id: 'c-1', class_name: '7e EB A', active_students: 25 },
+    { class_id: 'c-2', class_name: '8e EB B', active_students: 17 },
+  ],
+  expected_amounts: [
+    { currency: 'USD', amount: '5000.00' },
+    { currency: 'CDF', amount: '1200000.00' },
+  ],
+  paid_amounts: [
+    { currency: 'USD', amount: '3500.00' },
+    { currency: 'CDF', amount: '600000.00' },
+  ],
+  remaining_amounts: [
+    { currency: 'USD', amount: '1500.00' },
+    { currency: 'CDF', amount: '600000.00' },
+  ],
+  recovery_rates: [
+    { currency: 'USD', rate_percent: '70.00' },
+    { currency: 'CDF', rate_percent: '50.00' },
+  ],
+  financial_by_class: [
+    {
+      class_id: 'c-1',
+      class_name: '7e EB A',
+      expected: [{ currency: 'USD', amount: '3000.00' }],
+      paid: [{ currency: 'USD', amount: '2000.00' }],
+      remaining: [{ currency: 'USD', amount: '1000.00' }],
+    },
+    {
+      class_id: 'c-2',
+      class_name: '8e EB B',
+      expected: [{ currency: 'CDF', amount: '1200000.00' }],
+      paid: [{ currency: 'CDF', amount: '600000.00' }],
+      remaining: [{ currency: 'CDF', amount: '600000.00' }],
+    },
+  ],
+}
+
 describe('DashboardPage', () => {
   beforeEach(() => {
     mockedGetSession.mockReturnValue({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
-      email: 'admin@example.test',
+      email: 'directeur@example.test',
       tenantId: 'tenant-1',
     })
 
     mockedGetCurrentUser.mockResolvedValue({
-      id: 'user-1',
-      email: 'admin@example.test',
-      role: 'ADMIN',
+      id: 'user-dir-1',
+      email: 'directeur@example.test',
+      role: 'DIRECTION',
       is_active: true,
       two_factor_enabled: true,
     })
 
-    mockedListStudents.mockResolvedValue([
-      { id: 's-1', firstName: 'Jean', lastName: 'Kabangu', email: 'jean@test.cd', status: 'active' },
-      { id: 's-2', firstName: 'Marie', lastName: 'Tshimanga', email: null, status: 'inactive' },
-    ])
-
-    mockedListAcademicClasses.mockResolvedValue([
-      { id: 'c-1', name: '7e EB', active: true },
-      { id: 'c-2', name: '8e EB', active: true },
-      { id: 'c-3', name: 'Ancienne Classe', active: false },
-    ])
-
-    mockedListAcademicYears.mockResolvedValue([
-      {
-        id: 'y-1',
-        label: '2026-2027',
-        start_date: '2026-09-01',
-        end_date: '2027-07-02',
-        status: 'ACTIVE',
-      },
-    ])
-
-    mockedListSubjects.mockResolvedValue([
-      { id: 'sub-1', name: 'Mathématiques', code: 'MATH', coefficient: 3, active: true },
-      { id: 'sub-2', name: 'Physique', code: 'PHYS', coefficient: 2, active: true },
-      { id: 'sub-3', name: 'Latin Archivé', code: 'LAT', coefficient: 1, active: false },
-    ])
+    mockedGetDirectionDashboard.mockResolvedValue(mockDashboardData)
   })
 
   afterEach(() => {
@@ -117,57 +115,69 @@ describe('DashboardPage', () => {
     vi.resetAllMocks()
   })
 
-  it('shows the authenticated identity and real business metrics from the API', async () => {
+  it('shows the authenticated DIRECTION identity and real business metrics from GET /dashboard/direction', async () => {
     const page = renderPage()
     expect(page.textContent).toContain('Chargement de votre session...')
     await settle()
 
-    // Session identity
-    expect(page.textContent).toContain('Administrateur')
-    expect(page.textContent).toContain('admin@example.test')
-    expect(page.textContent).toContain('Activés')
+    // Identity check
+    expect(page.textContent).toContain('Direction')
+    expect(page.textContent).toContain('directeur@example.test')
 
-    // Real Metrics
-    expect(page.textContent).toContain('Élèves inscrits')
-    expect(page.textContent).toContain('2') // total students
-    expect(page.textContent).toContain('1 actif sur 2')
+    // Real Key Indicators
+    expect(page.textContent).toContain('Élèves actifs')
+    expect(page.textContent).toContain('42')
+    expect(page.textContent).toContain('42 élèves actifs dans l’établissement')
 
-    expect(page.textContent).toContain('Classes pédagogiques')
-    expect(page.textContent).toContain('2') // active classes
-    expect(page.textContent).toContain('3 classes configurées')
+    expect(page.textContent).toContain('Classes avec effectifs')
+    expect(page.textContent).toContain('2')
 
-    expect(page.textContent).toContain('Matières enseignées')
-    expect(page.textContent).toContain('2') // active subjects
+    // Multi-currency recovery rates (USD & CDF separated per Decision 19 & 23)
+    expect(page.textContent).toContain('Recouvrement (USD)')
+    expect(page.textContent).toContain('70.00 %')
+    expect(page.textContent).toContain('Recouvrement (CDF)')
+    expect(page.textContent).toContain('50.00 %')
 
-    expect(page.textContent).toContain('Année scolaire active')
-    expect(page.textContent).toContain('2026-2027')
-    expect(page.textContent).toContain('Du 2026-09-01 au 2027-07-02')
+    // Table of class headcounts
+    expect(page.textContent).toContain('Effectifs par classe')
+    expect(page.textContent).toContain('7e EB A')
+    expect(page.textContent).toContain('25')
+    expect(page.textContent).toContain('8e EB B')
+    expect(page.textContent).toContain('17')
 
-    // No warning banner when active year exists
-    expect(page.textContent).not.toContain('aucune année scolaire n’est actuellement active')
+    // Financial breakdown by class
+    expect(page.textContent).toContain('Situation financière par classe')
+    expect(page.textContent).toContain('1 000,00 USD')
+    expect(page.textContent).toContain('600 000,00 CDF')
   })
 
-  it('renders a warning banner and "Aucune active" when no year is ACTIVE', async () => {
-    mockedListAcademicYears.mockResolvedValue([
-      {
-        id: 'y-draft',
-        label: '2026-2027 (Brouillon)',
-        start_date: '2026-09-01',
-        end_date: '2027-07-02',
-        status: 'DRAFT',
-      },
-    ])
-
+  it('restricts quick links for DIRECTION role to authorized modules only (students, classes, finance)', async () => {
     const page = renderPage()
     await settle()
 
-    expect(page.textContent).toContain('Aucune active')
-    expect(page.textContent).toContain('Aucune année avec le statut ACTIVE')
-    expect(page.textContent).toContain('Attention : aucune année scolaire n’est actuellement active.')
-    expect(page.textContent).toContain('Gérer les années scolaires →')
+    const links = Array.from(page.querySelectorAll<HTMLAnchorElement>('a.quick-link-card'))
+    const hrefs = links.map((a) => a.getAttribute('href'))
+
+    // DIRECTION authorized modules
+    expect(hrefs).toContain('/app/students')
+    expect(hrefs).toContain('/app/classes')
+    expect(hrefs).toContain('/app/finance')
+
+    // ADMIN exclusive modules MUST NOT be shown to DIRECTION
+    expect(hrefs).not.toContain('/app/enrollments')
+    expect(hrefs).not.toContain('/app/academic-catalogues')
+    expect(hrefs).not.toContain('/app/attendance')
   })
 
-  it('renders verified quick links to valid application routes', async () => {
+  it('renders ADMIN exclusive quick links when user is ADMIN', async () => {
+    mockedGetCurrentUser.mockResolvedValue({
+      id: 'admin-1',
+      email: 'admin@example.test',
+      role: 'ADMIN',
+      is_active: true,
+      two_factor_enabled: false,
+    })
+
     const page = renderPage()
     await settle()
 
@@ -179,21 +189,43 @@ describe('DashboardPage', () => {
     expect(hrefs).toContain('/app/students')
     expect(hrefs).toContain('/app/academic-catalogues')
     expect(hrefs).toContain('/app/attendance')
+    expect(hrefs).toContain('/app/finance')
   })
 
-  it('gracefully handles metric failure without unmounting user session or inventing fictitious metrics', async () => {
-    mockedListStudents.mockRejectedValue(new ApiError(500, 'database error'))
+  it('handles empty dashboard data without crashes and with clear empty states', async () => {
+    mockedGetDirectionDashboard.mockResolvedValue({
+      active_students: 0,
+      headcount_by_class: [],
+      expected_amounts: [],
+      paid_amounts: [],
+      remaining_amounts: [],
+      recovery_rates: [],
+      financial_by_class: [],
+    })
+
+    const page = renderPage()
+    await settle()
+
+    expect(page.textContent).toContain('Élèves actifs')
+    expect(page.textContent).toContain('0')
+    expect(page.textContent).toContain('Aucun frais ouvert enregistré pour le moment')
+    expect(page.textContent).toContain('Aucune classe avec élèves actifs pour le moment.')
+    expect(page.textContent).toContain('Aucune obligation financière enregistrée par classe.')
+  })
+
+  it('gracefully handles dashboard API failure without unmounting user session or inventing fictitious metrics', async () => {
+    mockedGetDirectionDashboard.mockRejectedValue(new ApiError(500, 'database error'))
 
     const page = renderPage()
     await settle()
 
     // Session remains intact
-    expect(page.textContent).toContain('Administrateur')
-    expect(page.textContent).toContain('admin@example.test')
+    expect(page.textContent).toContain('Direction')
+    expect(page.textContent).toContain('directeur@example.test')
 
     // Metric failure is shown
     expect(page.textContent).toContain('Indicateurs indisponibles')
-    expect(page.textContent).toContain('Impossible de charger les indicateurs de pilotage.')
+    expect(page.textContent).toContain('Impossible de charger les indicateurs de pilotage de l’établissement.')
 
     // No fictitious metrics
     expect(page.querySelector('[data-testid="dashboard-metrics-grid"]')).toBeNull()
@@ -206,7 +238,7 @@ describe('DashboardPage', () => {
     await settle()
 
     expect(page.textContent).toContain('Espace indisponible')
-    expect(page.textContent).not.toContain('Élèves inscrits')
+    expect(page.textContent).not.toContain('Élèves actifs')
     expect(page.querySelector('[role="alert"]')).not.toBeNull()
   })
 
@@ -218,5 +250,6 @@ describe('DashboardPage', () => {
 
     expect(page.textContent).toContain('Votre session est indisponible')
     expect(mockedGetCurrentUser).not.toHaveBeenCalled()
+    expect(mockedGetDirectionDashboard).not.toHaveBeenCalled()
   })
 })

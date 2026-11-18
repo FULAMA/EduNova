@@ -30,6 +30,13 @@ class JwtService(ABC):
         pass
 
     @abstractmethod
+    def create_tenant_selection_token(
+        self,
+        user_id: UUID,
+    ) -> str:
+        pass
+
+    @abstractmethod
     def decode_token(self, token: str) -> dict:
         pass
 

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useCurrentUser } from '../../../features/auth/components/useCurrentUser'
-import { clearSession } from '../../../features/auth/services/auth.service'
+import { logout } from '../../../features/auth/services/auth.service'
 
 import './Topbar.css'
 
@@ -16,9 +16,9 @@ export function Topbar({ onMenuOpen }: TopbarProps) {
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  function signOut() {
-    clearSession()
+  async function signOut() {
     setIsAccountMenuOpen(false)
+    await logout()
     navigate('/login', { replace: true })
   }
 

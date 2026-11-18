@@ -8,3 +8,4 @@ class GoogleLoginRequest(BaseModel):
 
     id_token: str = Field(min_length=1)
     tenant_id: UUID
+    nonce: str = Field(min_length=1, max_length=256)

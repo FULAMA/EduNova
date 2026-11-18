@@ -202,3 +202,13 @@
     transition: none;
   }
 }
+
+.classes-page__info {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text-muted);
+  background: var(--color-surface-subtle, #f9fafb);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}

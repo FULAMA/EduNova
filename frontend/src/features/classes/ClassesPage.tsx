@@ -1,9 +1,11 @@
-﻿import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useContext, useEffect, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
 import { ApiError } from '../../shared/api/client'
+import { CurrentUserContext } from '../auth/components/current-user.context'
+import { canManageClassSubjects } from '../auth/permissions'
 import { listSubjects, type Subject } from '../academic-catalogues/academic-catalogue.service'
 import { assignSubjectToClass, listAcademicClasses, type AcademicClass, type ClassSubject } from './classes.service'
 import './ClassesPage.css'
@@ -39,6 +41,10 @@ function errorText(error: unknown): string {
 }
 
 export default function ClassesPage() {
+  const currentUser = useContext(CurrentUserContext)
+  // Par défaut, si aucun CurrentUserContext n'est fourni (ex: test unitaire isolé), autoriser pour conserver la rétrocompatibilité des tests
+  const canManage = currentUser ? canManageClassSubjects(currentUser.role) : true
+
   const [classes, setClasses] = useState<AcademicClass[]>([])
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [recentAssignments, setRecentAssignments] = useState<Array<ClassSubject & { className: string; subjectName: string }>>([])
@@ -57,28 +63,35 @@ export default function ClassesPage() {
     setLoading(true)
     setError('')
     try {
-      const [loadedClasses, loadedSubjects] = await Promise.all([
-        listAcademicClasses(),
-        listSubjects(),
-      ])
-      setClasses(loadedClasses)
-      setSubjects(loadedSubjects)
-      setLoadError(false)
-      const firstClassId = loadedClasses[0]?.id || ''
-      const firstSubject = loadedSubjects[0]
-      const currentValues = getValues()
-      reset({
-        classId: currentValues.classId || firstClassId,
-        subjectId: currentValues.subjectId || firstSubject?.id || '',
-        coefficient: currentValues.coefficient === '1' && firstSubject?.coefficient ? String(firstSubject.coefficient) : currentValues.coefficient,
-      })
+      if (canManage) {
+        const [loadedClasses, loadedSubjects] = await Promise.all([
+          listAcademicClasses(),
+          listSubjects(),
+        ])
+        setClasses(loadedClasses)
+        setSubjects(loadedSubjects)
+        setLoadError(false)
+        const firstClassId = loadedClasses[0]?.id || ''
+        const firstSubject = loadedSubjects[0]
+        const currentValues = getValues()
+        reset({
+          classId: currentValues.classId || firstClassId,
+          subjectId: currentValues.subjectId || firstSubject?.id || '',
+          coefficient: currentValues.coefficient === '1' && firstSubject?.coefficient ? String(firstSubject.coefficient) : currentValues.coefficient,
+        })
+      } else {
+        const loadedClasses = await listAcademicClasses()
+        setClasses(loadedClasses)
+        setSubjects([])
+        setLoadError(false)
+      }
     } catch (reason) {
       setLoadError(true)
       setError(errorText(reason))
     } finally {
       setLoading(false)
     }
-  }, [getValues, reset])
+  }, [canManage, getValues, reset])
 
   useEffect(() => {
     void Promise.resolve().then(load)
@@ -150,65 +163,74 @@ export default function ClassesPage() {
         ) : null}
       </section>
 
-      <section className="classes-page__section" aria-labelledby="assign-subject-title">
-        <h2 id="assign-subject-title">Assigner une matière à une classe</h2>
-        <form className="classes-page__form" onSubmit={handleSubmit(handleAssignSubject)} noValidate>
-          <div className="classes-page__field">
-          <label htmlFor="assignment-class">Classe</label>
-          <select id="assignment-class" aria-invalid={Boolean(errors.classId)} aria-describedby={errors.classId ? 'assignment-class-error' : undefined}
-            {...register('classId')} disabled={isSubmitting || classes.length === 0}>
-              <option value="">Sélectionnez une classe</option>
-              {classes.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-          </select>
-          {errors.classId ? <p id="assignment-class-error">{errors.classId.message}</p> : null}
-          </div>
+      {canManage ? (
+        <section className="classes-page__section" aria-labelledby="assign-subject-title">
+          <h2 id="assign-subject-title">Assigner une matière à une classe</h2>
+          <form className="classes-page__form" onSubmit={handleSubmit(handleAssignSubject)} noValidate>
+            <div className="classes-page__field">
+            <label htmlFor="assignment-class">Classe</label>
+            <select id="assignment-class" aria-invalid={Boolean(errors.classId)} aria-describedby={errors.classId ? 'assignment-class-error' : undefined}
+              {...register('classId')} disabled={isSubmitting || classes.length === 0}>
+                <option value="">Sélectionnez une classe</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+            </select>
+            {errors.classId ? <p id="assignment-class-error">{errors.classId.message}</p> : null}
+            </div>
 
-          <div className="classes-page__field">
-          <label htmlFor="assignment-subject">Matière</label>
-          <select id="assignment-subject" aria-invalid={Boolean(errors.subjectId)} aria-describedby={errors.subjectId ? 'assignment-subject-error' : undefined}
-            {...register('subjectId', { onChange: (e) => {
-              const subj = subjects.find((s) => s.id === e.target.value)
-              if (subj?.coefficient) setValue('coefficient', String(subj.coefficient), { shouldValidate: true })
-            } })} disabled={isSubmitting || subjects.length === 0}>
-              <option value="">Sélectionnez une matière</option>
-              {subjects.map((s) => (
-                <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
-              ))}
-          </select>
-          {errors.subjectId ? <p id="assignment-subject-error">{errors.subjectId.message}</p> : null}
-          </div>
+            <div className="classes-page__field">
+            <label htmlFor="assignment-subject">Matière</label>
+            <select id="assignment-subject" aria-invalid={Boolean(errors.subjectId)} aria-describedby={errors.subjectId ? 'assignment-subject-error' : undefined}
+              {...register('subjectId', { onChange: (e) => {
+                const subj = subjects.find((s) => s.id === e.target.value)
+                if (subj?.coefficient) setValue('coefficient', String(subj.coefficient), { shouldValidate: true })
+              } })} disabled={isSubmitting || subjects.length === 0}>
+                <option value="">Sélectionnez une matière</option>
+                {subjects.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
+                ))}
+            </select>
+            {errors.subjectId ? <p id="assignment-subject-error">{errors.subjectId.message}</p> : null}
+            </div>
 
-          <div className="classes-page__field">
-          <label htmlFor="assignment-coefficient">Coefficient</label>
-          <input id="assignment-coefficient" type="number" step="any" aria-invalid={Boolean(errors.coefficient)}
-            aria-describedby={errors.coefficient ? 'assignment-coefficient-error' : undefined}
-            {...register('coefficient')} disabled={isSubmitting} />
-          {errors.coefficient ? <p id="assignment-coefficient-error">{errors.coefficient.message}</p> : null}
-          </div>
+            <div className="classes-page__field">
+            <label htmlFor="assignment-coefficient">Coefficient</label>
+            <input id="assignment-coefficient" type="number" step="any" aria-invalid={Boolean(errors.coefficient)}
+              aria-describedby={errors.coefficient ? 'assignment-coefficient-error' : undefined}
+              {...register('coefficient')} disabled={isSubmitting} />
+            {errors.coefficient ? <p id="assignment-coefficient-error">{errors.coefficient.message}</p> : null}
+            </div>
 
-          <button className="classes-page__submit"
-            type="submit"
-            disabled={isSubmitting || !selectedClassId || !selectedSubjectId || classes.length === 0 || subjects.length === 0}
-          >
-            {isSubmitting ? 'Assignation en cours…' : 'Assigner la matière'}
-          </button>
-        </form>
+            <button className="classes-page__submit"
+              type="submit"
+              disabled={isSubmitting || !selectedClassId || !selectedSubjectId || classes.length === 0 || subjects.length === 0}
+            >
+              {isSubmitting ? 'Assignation en cours…' : 'Assigner la matière'}
+            </button>
+          </form>
 
-        {recentAssignments.length > 0 ? (
-          <div className="classes-page__recent">
-            <h3>Assignations effectuées durant la session</h3>
-            <ul>
-              {recentAssignments.map((a) => (
-                <li key={a.id}>
-                  {a.subjectName} assignée à {a.className} (coeff. {a.coefficient})
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-      </section>
+          {recentAssignments.length > 0 ? (
+            <div className="classes-page__recent">
+              <h3>Assignations effectuées durant la session</h3>
+              <ul>
+                {recentAssignments.map((a) => (
+                  <li key={a.id}>
+                    {a.subjectName} assignée à {a.className} (coeff. {a.coefficient})
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </section>
+      ) : (
+        <section className="classes-page__section" aria-labelledby="assign-subject-title">
+          <h2 id="assign-subject-title">Configuration des matières</h2>
+          <p className="classes-page__info" role="note">
+            La configuration des matières et l’affectation des coefficients sont réservées à l’administrateur de l’établissement.
+          </p>
+        </section>
+      )}
     </main>
   )
 }

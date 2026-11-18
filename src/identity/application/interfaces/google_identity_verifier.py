@@ -11,5 +11,5 @@ class GoogleIdentity:
 
 class GoogleIdentityVerifier(ABC):
     @abstractmethod
-    def verify(self, id_token: str) -> GoogleIdentity:
+    def verify(self, id_token: str, expected_nonce: str) -> GoogleIdentity:
         raise NotImplementedError

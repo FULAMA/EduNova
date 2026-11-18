@@ -21,8 +21,35 @@ class FakeGoogleVerifier:
     def __init__(self, identity: GoogleIdentity):
         self.identity = identity
 
-    def verify(self, id_token: str) -> GoogleIdentity:
+    def verify(self, id_token: str, expected_nonce: str) -> GoogleIdentity:
         return self.identity
+
+
+class FakePasswordHasher:
+    def verify(self, password: str, password_hash: str) -> bool:
+        return password == "current-password" and password_hash == "hashed-password"
+
+
+class FakeTwoFactorService:
+    def verify_code(self, secret: str, code: str) -> bool:
+        return code == "123456"
+
+
+class FakeTotpAntiReplayRepository:
+    def __init__(self):
+        self.intervals = {}
+
+    def record_interval(self, user_id, interval_index):
+        if interval_index <= self.intervals.get(user_id, -1):
+            return False
+        self.intervals[user_id] = interval_index
+        return True
+
+
+def nonce_payload(client: TestClient) -> str:
+    response = client.post("/auth/google/nonce")
+    assert response.status_code == 200
+    return response.json()["nonce"]
 
 
 def create_authenticated_container() -> tuple[
@@ -65,6 +92,10 @@ def test_link_then_login_uses_persisted_google_subject():
         user_repository=container._user_repository(),
         external_identity_repository=external_repository,
         google_identity_verifier=verifier,
+        password_hasher=FakePasswordHasher(),
+        two_factor_service=FakeTwoFactorService(),
+        totp_anti_replay_repository=FakeTotpAntiReplayRepository(),
+        google_nonce_repository=container._google_nonce_repository(),
     )
     login_use_case = LoginWithGoogle(
         user_repository=container._user_repository(),
@@ -73,6 +104,7 @@ def test_link_then_login_uses_persisted_google_subject():
         external_identity_repository=external_repository,
         google_identity_verifier=verifier,
         jwt_service=container._jwt_service(),
+        google_nonce_repository=container._google_nonce_repository(),
     )
     client = TestClient(
         create_app(
@@ -88,7 +120,11 @@ def test_link_then_login_uses_persisted_google_subject():
     )
     client.headers["Authorization"] = f"Bearer {token}"
 
-    linked = client.post("/auth/google/link", json={"id_token": "google-token"})
+    nonce = nonce_payload(client)
+    linked = client.post(
+        "/auth/google/link",
+        json={"id_token": "google-token", "nonce": nonce, "password": "current-password"},
+    )
 
     assert linked.status_code == 200
     assert linked.json() == {"linked": True}
@@ -100,11 +136,13 @@ def test_link_then_login_uses_persisted_google_subject():
     assert stored.user_id == user.id
 
     client.headers.pop("Authorization")
+    nonce = nonce_payload(client)
     logged_in = client.post(
         "/auth/google",
         json={
             "id_token": "google-token",
             "tenant_id": str(TEST_TENANT_ID),
+            "nonce": nonce,
         },
     )
 
@@ -124,16 +162,19 @@ def test_valid_google_email_without_persisted_link_is_rejected():
         ),
         google_identity_verifier=verifier,
         jwt_service=container._jwt_service(),
+        google_nonce_repository=container._google_nonce_repository(),
     )
     client = TestClient(
         create_app(container, login_with_google_use_case=login_use_case)
     )
 
+    nonce = nonce_payload(client)
     response = client.post(
         "/auth/google",
         json={
             "id_token": "google-token",
             "tenant_id": str(TEST_TENANT_ID),
+            "nonce": nonce,
         },
     )
 
@@ -172,6 +213,10 @@ def test_google_identity_cannot_be_linked_to_two_users():
         user_repository=container._user_repository(),
         external_identity_repository=repository,
         google_identity_verifier=verifier,
+        password_hasher=FakePasswordHasher(),
+        two_factor_service=FakeTwoFactorService(),
+        totp_anti_replay_repository=FakeTotpAntiReplayRepository(),
+        google_nonce_repository=container._google_nonce_repository(),
     )
     client = TestClient(
         create_app(
@@ -181,7 +226,156 @@ def test_google_identity_cannot_be_linked_to_two_users():
     )
     client.headers["Authorization"] = f"Bearer {token}"
 
-    response = client.post("/auth/google/link", json={"id_token": "google-token"})
+    nonce = nonce_payload(client)
+    response = client.post(
+        "/auth/google/link",
+        json={"id_token": "google-token", "nonce": nonce, "password": "current-password"},
+    )
 
     assert response.status_code == 409
     assert response.json() == {"detail": "Identite Google deja liee."}
+
+
+def test_link_requires_edunova_password_reauthentication():
+    container, user, client = create_authenticated_container()
+    repository = SQLiteExternalIdentityRepository(container._database)
+    use_case = LinkGoogleIdentity(
+        user_repository=container._user_repository(),
+        external_identity_repository=repository,
+        google_identity_verifier=FakeGoogleVerifier(identity()),
+        password_hasher=FakePasswordHasher(),
+        two_factor_service=FakeTwoFactorService(),
+        totp_anti_replay_repository=FakeTotpAntiReplayRepository(),
+        google_nonce_repository=container._google_nonce_repository(),
+    )
+    client = TestClient(create_app(container, link_google_identity_use_case=use_case))
+    token = JwtService(secret_key=TEST_JWT_SECRET).create_access_token(
+        user_id=user.id,
+        role="ADMIN",
+        tenant_id=TEST_TENANT_ID,
+    )
+    client.headers["Authorization"] = f"Bearer {token}"
+    nonce = nonce_payload(client)
+
+    response = client.post(
+        "/auth/google/link",
+        json={"id_token": "google-token", "nonce": nonce, "password": "wrong-password"},
+    )
+
+    assert response.status_code == 401
+    assert repository.find_by_provider_and_subject("google", "google-subject") is None
+
+
+def test_link_with_two_factor_requires_a_valid_totp_code():
+    container, user, client = create_authenticated_container()
+    user.two_factor_enabled = True
+    user.two_factor_secret = "test-secret"
+    container._user_repository().save(user)
+    repository = SQLiteExternalIdentityRepository(container._database)
+    use_case = LinkGoogleIdentity(
+        user_repository=container._user_repository(),
+        external_identity_repository=repository,
+        google_identity_verifier=FakeGoogleVerifier(identity()),
+        password_hasher=FakePasswordHasher(),
+        two_factor_service=FakeTwoFactorService(),
+        totp_anti_replay_repository=FakeTotpAntiReplayRepository(),
+        google_nonce_repository=container._google_nonce_repository(),
+    )
+    client = TestClient(create_app(container, link_google_identity_use_case=use_case))
+    token = JwtService(secret_key=TEST_JWT_SECRET).create_access_token(
+        user_id=user.id,
+        role="ADMIN",
+        tenant_id=TEST_TENANT_ID,
+    )
+    client.headers["Authorization"] = f"Bearer {token}"
+    nonce = nonce_payload(client)
+
+    response = client.post(
+        "/auth/google/link",
+        json={
+            "id_token": "google-token",
+            "nonce": nonce,
+            "password": "current-password",
+            "totp_code": "000000",
+        },
+    )
+
+    assert response.status_code == 401
+    assert repository.find_by_provider_and_subject("google", "google-subject") is None
+
+
+def test_google_login_does_not_link_by_matching_email_alone():
+    container, user, _ = create_authenticated_container()
+    use_case = LoginWithGoogle(
+        user_repository=container._user_repository(),
+        membership_repository=container._membership_repository(),
+        tenant_repository=container._tenant_repository(),
+        external_identity_repository=SQLiteExternalIdentityRepository(container._database),
+        google_identity_verifier=FakeGoogleVerifier(identity(email=user.email)),
+        jwt_service=container._jwt_service(),
+        google_nonce_repository=container._google_nonce_repository(),
+    )
+    client = TestClient(create_app(container, login_with_google_use_case=use_case))
+    nonce = nonce_payload(client)
+
+    response = client.post(
+        "/auth/google",
+        json={
+            "id_token": "google-token",
+            "tenant_id": str(TEST_TENANT_ID),
+            "nonce": nonce,
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Authentification Google refusee."}
+
+
+def test_google_link_requires_a_fresh_totp_interval():
+    container, user, _ = create_authenticated_container()
+    user.two_factor_enabled = True
+    user.two_factor_secret = "test-secret"
+    container._user_repository().save(user)
+    repository = SQLiteExternalIdentityRepository(container._database)
+    totp_replay_repository = FakeTotpAntiReplayRepository()
+    use_case = LinkGoogleIdentity(
+        user_repository=container._user_repository(),
+        external_identity_repository=repository,
+        google_identity_verifier=FakeGoogleVerifier(identity()),
+        password_hasher=FakePasswordHasher(),
+        two_factor_service=FakeTwoFactorService(),
+        totp_anti_replay_repository=totp_replay_repository,
+        google_nonce_repository=container._google_nonce_repository(),
+    )
+    client = TestClient(create_app(container, link_google_identity_use_case=use_case))
+    token = JwtService(secret_key=TEST_JWT_SECRET).create_access_token(
+        user_id=user.id,
+        role="ADMIN",
+        tenant_id=TEST_TENANT_ID,
+    )
+    client.headers["Authorization"] = f"Bearer {token}"
+
+    first_nonce = nonce_payload(client)
+    first_response = client.post(
+        "/auth/google/link",
+        json={
+            "id_token": "google-token",
+            "nonce": first_nonce,
+            "password": "current-password",
+            "totp_code": "123456",
+        },
+    )
+    second_nonce = nonce_payload(client)
+    replay_response = client.post(
+        "/auth/google/link",
+        json={
+            "id_token": "google-token",
+            "nonce": second_nonce,
+            "password": "current-password",
+            "totp_code": "123456",
+        },
+    )
+
+    assert first_response.status_code == 200
+    assert replay_response.status_code == 401
+    assert repository.find_by_provider_and_subject("google", "google-subject") is not None

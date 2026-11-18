@@ -1,12 +1,52 @@
-﻿from pathlib import Path
+from src.identity.application.use_cases.logout_user import LogoutUser
+from src.academic.application.use_cases.get_direction_dashboard import GetDirectionDashboard
+from pathlib import Path
 
 from src.infrastructure.security.jwt_service import JwtService
 from src.infrastructure.security.google_identity_verifier import (
     GoogleIdTokenVerifier,
 )
+
+# Integration Services
+from src.integrations.infrastructure.services.brevo_notification_service import (
+    BrevoNotificationService,
+)
+from src.integrations.infrastructure.services.courier_notification_service import (
+    CourierNotificationService,
+)
+from src.integrations.infrastructure.services.firebase_notification_service import (
+    FirebaseNotificationService,
+)
+from src.integrations.infrastructure.services.stripe_payment_gateway import (
+    StripePaymentGateway,
+)
+from src.integrations.infrastructure.services.flutterwave_payment_gateway import (
+    FlutterwavePaymentGateway,
+)
+from src.integrations.infrastructure.services.google_classroom_service import (
+    GoogleClassroomService,
+)
+from src.integrations.infrastructure.services.google_calendar_service import (
+    GoogleCalendarService,
+)
+from src.integrations.infrastructure.services.moodle_lms_service import (
+    MoodleLMSService,
+)
+from src.integrations.infrastructure.services.jitsi_video_service import (
+    JitsiVideoService,
+)
+from src.integrations.infrastructure.services.posthog_analytics_service import (
+    PostHogAnalyticsService,
+)
 from src.identity.infrastructure.security.argon2_password_hasher import (
     Argon2PasswordHasher,
 )
+from src.identity.infrastructure.security.in_memory_rate_limiter import InMemoryRateLimiter
+from src.identity.application.interfaces.rate_limiter import RateLimiter
+from src.identity.application.use_cases.register_establishment import RegisterEstablishment
+from src.academic.application.use_cases.update_student import UpdateStudent
+from src.tenancy.domain.services.tenant_slug_service import TenantSlugService
+from src.tenancy.infrastructure.persistence.sqlite_establishment_provisioning_uow import SQLiteEstablishmentProvisioningUnitOfWork
 from src.identity.infrastructure.security.pyotp_two_factor_service import (
     PyOtpTwoFactorService,
 )
@@ -26,6 +66,31 @@ from src.academic.application.use_cases.publish_report_card import PublishReport
 from src.academic.application.use_cases.list_student_report_cards import ListStudentReportCards
 from src.academic.application.use_cases.get_student_report_card import GetStudentReportCard
 from src.academic.application.use_cases.correct_report_card import CorrectReportCard
+from src.academic.application.interfaces.grade_dispute_repository import GradeDisputeRepository
+from src.infrastructure.repositories.sqlite_grade_dispute_repository import SQLiteGradeDisputeRepository
+from src.academic.application.use_cases.submit_grade_dispute import SubmitGradeDispute
+from src.academic.application.use_cases.review_grade_dispute import ReviewGradeDispute
+from src.academic.application.use_cases.resolve_grade_dispute import ResolveGradeDispute
+from src.academic.application.use_cases.list_grade_disputes import ListGradeDisputes
+from src.identity.application.interfaces.parent_student_link_repository import ParentStudentLinkRepository
+from src.infrastructure.repositories.sqlite_parent_student_link_repository import SQLiteParentStudentLinkRepository
+from src.identity.application.use_cases.link_parent_student import LinkParentStudent
+from src.identity.application.use_cases.list_parent_children import ListParentChildren
+from src.academic.application.interfaces.teacher_assignment_repository import TeacherAssignmentRepository
+from src.infrastructure.repositories.sqlite_teacher_assignment_repository import SQLiteTeacherAssignmentRepository
+from src.academic.application.use_cases.assign_teacher import AssignTeacher
+from src.academic.application.use_cases.list_teacher_assignments import ListTeacherAssignments
+from src.academic.application.interfaces.ai_pedagogical_service import AIPedagogicalService
+from src.infrastructure.ai.pedagogical_ai_service import EduNovaAIPedagogicalService
+from src.academic.application.use_cases.generate_report_card_ai_feedback import (
+    GenerateReportCardAIFeedback,
+)
+from src.academic.application.use_cases.generate_student_risk_ai_diagnosis import (
+    GenerateStudentRiskAIDiagnosis,
+)
+from src.academic.application.use_cases.generate_parent_portal_ai_summary import (
+    GenerateParentPortalAISummary,
+)
 from src.infrastructure.repositories.sqlite_deliberation_repository import SQLiteDeliberationRepository
 from src.academic.application.use_cases.analyze_academic_risk import (
     AnalyzeAcademicRisk,
@@ -77,6 +142,7 @@ from src.identity.application.use_cases.login_user import (
 )
 from src.identity.application.use_cases.login_with_google import LoginWithGoogle
 from src.identity.application.use_cases.link_google_identity import LinkGoogleIdentity
+from src.identity.application.use_cases.issue_google_nonce import IssueGoogleNonce
 from src.identity.application.use_cases.refresh_access_token import (
     RefreshAccessToken,
 )
@@ -121,6 +187,7 @@ from src.infrastructure.repositories.sqlite_student_repository import (
 from src.infrastructure.repositories.sqlite_external_identity_repository import (
     SQLiteExternalIdentityRepository,
 )
+from src.infrastructure.repositories.sqlite_google_nonce_repository import SQLiteGoogleNonceRepository
 from src.infrastructure.repositories.sqlite_subject_repository import (
     SQLiteSubjectRepository,
 )
@@ -134,8 +201,6 @@ from src.tenancy.infrastructure.repositories.sqlite_membership_repository import
 from src.billing.application.service import BillingService
 from src.infrastructure.repositories.sqlite_billing_repository import SQLiteBillingRepository
 from src.tenancy.infrastructure.repositories.sqlite_tenant_repository import SQLiteTenantRepository
-
-
 class ApplicationContainer:
 
     def __init__(
@@ -288,6 +353,84 @@ class ApplicationContainer:
             self._report_card_repository(), self.prepare_report_card()
         )
 
+    def _grade_dispute_repository(self) -> GradeDisputeRepository:
+        return SQLiteGradeDisputeRepository(self._database)
+
+    def submit_grade_dispute(self) -> SubmitGradeDispute:
+        return SubmitGradeDispute(self._grade_dispute_repository())
+
+    def review_grade_dispute(self) -> ReviewGradeDispute:
+        return ReviewGradeDispute(self._grade_dispute_repository())
+
+    def resolve_grade_dispute(self) -> ResolveGradeDispute:
+        return ResolveGradeDispute(self._grade_dispute_repository())
+
+    def list_grade_disputes(self) -> ListGradeDisputes:
+        return ListGradeDisputes(self._grade_dispute_repository())
+
+    def _parent_student_link_repository(self) -> ParentStudentLinkRepository:
+        return SQLiteParentStudentLinkRepository(self._database)
+
+    def link_parent_student(self) -> LinkParentStudent:
+        return LinkParentStudent(
+            self._parent_student_link_repository(),
+            self._student_repository(),
+            self._membership_repository(),
+        )
+
+    def list_parent_children(self) -> ListParentChildren:
+        return ListParentChildren(
+            self._parent_student_link_repository(),
+            self._student_repository(),
+        )
+
+    def _teacher_assignment_repository(self) -> TeacherAssignmentRepository:
+        return SQLiteTeacherAssignmentRepository(self._database)
+
+    def assign_teacher(self) -> AssignTeacher:
+        return AssignTeacher(
+            self._teacher_assignment_repository(),
+            self._membership_repository(),
+            self._academic_class_repository(),
+            self._subject_repository(),
+            self._academic_year_repository(),
+        )
+
+    def list_teacher_assignments(self) -> ListTeacherAssignments:
+        return ListTeacherAssignments(self._teacher_assignment_repository())
+
+    def _ai_pedagogical_service(self) -> AIPedagogicalService:
+        if not hasattr(self, "_ai_pedagogical_service_instance"):
+            self._ai_pedagogical_service_instance: AIPedagogicalService = EduNovaAIPedagogicalService()
+        return self._ai_pedagogical_service_instance
+
+    def generate_report_card_ai_feedback(self) -> GenerateReportCardAIFeedback:
+        return GenerateReportCardAIFeedback(
+            self._ai_pedagogical_service(),
+            self._report_card_repository(),
+            self._student_repository(),
+            self._subject_repository(),
+        )
+
+    def generate_student_risk_ai_diagnosis(self) -> GenerateStudentRiskAIDiagnosis:
+        return GenerateStudentRiskAIDiagnosis(
+            self._ai_pedagogical_service(),
+            self.analyze_student_academic_risk(),
+            self._student_repository(),
+            self._student_academic_record_repository(),
+            self._attendance_repository(),
+        )
+
+    def generate_parent_portal_ai_summary(self) -> GenerateParentPortalAISummary:
+        return GenerateParentPortalAISummary(
+            self._ai_pedagogical_service(),
+            self._parent_student_link_repository(),
+            self._report_card_repository(),
+            self._student_repository(),
+            self._academic_period_repository(),
+            self._subject_repository(),
+        )
+
     def _academic_year_repository(self) -> SQLiteAcademicYearRepository:
         return SQLiteAcademicYearRepository(self._database)
 
@@ -350,6 +493,46 @@ class ApplicationContainer:
     def _tenant_repository(self) -> SQLiteTenantRepository:
         return SQLiteTenantRepository(self._database)
 
+
+    def _establishment_provisioning_unit_of_work(self) -> SQLiteEstablishmentProvisioningUnitOfWork:
+        return SQLiteEstablishmentProvisioningUnitOfWork(
+            self._database,
+            self._tenant_repository(),
+            self._user_repository(),
+            self._membership_repository(),
+        )
+
+    def _tenant_slug_service(self) -> TenantSlugService:
+        return TenantSlugService()
+
+    def _password_hasher(self):
+        return Argon2PasswordHasher()
+
+    def _pyotp_two_factor_service(self):
+        return PyOtpTwoFactorService()
+
+    def _rate_limiter(self) -> RateLimiter:
+        if not hasattr(self, '_rate_limiter_instance'):
+            self._rate_limiter_instance: RateLimiter = InMemoryRateLimiter()
+        return self._rate_limiter_instance
+
+    def rate_limiter(self) -> RateLimiter:
+        return self._rate_limiter()
+
+    def _totp_anti_replay_repository(self):
+        from src.infrastructure.repositories.sqlite_totp_anti_replay_repository import SQLiteTotpAntiReplayRepository
+        return SQLiteTotpAntiReplayRepository(self._database)
+
+    def _google_nonce_repository(self) -> SQLiteGoogleNonceRepository:
+        return SQLiteGoogleNonceRepository(self._database)
+
+    def issue_google_nonce(self) -> IssueGoogleNonce:
+        return IssueGoogleNonce(self._google_nonce_repository())
+
+    def _consumed_token_repository(self):
+        from src.infrastructure.repositories.sqlite_consumed_token_repository import SQLiteConsumedTokenRepository
+        return SQLiteConsumedTokenRepository(self._database)
+
     def analyze_student_academic_record(
         self,
     ) -> AnalyzeStudentAcademicRecord:
@@ -366,6 +549,55 @@ class ApplicationContainer:
 
     def update_subject(self) -> UpdateSubject:
         return UpdateSubject(self._subject_repository())
+
+
+    def register_establishment(self) -> RegisterEstablishment:
+        notification_service = (
+            self.brevo_notification_service()
+            if getattr(self._settings, "brevo_api_key", None)
+            else None
+        )
+        return RegisterEstablishment(
+            self._establishment_provisioning_unit_of_work(),
+            self._tenant_repository(),
+            self._user_repository(),
+            self._password_hasher(),
+            notification_service=notification_service,
+        )
+
+    def select_tenant_context(self):
+        from src.identity.application.use_cases.select_tenant_context import SelectTenantContext as RealSelectTenantContext
+        return RealSelectTenantContext(
+            self._user_repository(),
+            self._membership_repository(),
+            self._tenant_repository(),
+            self._jwt_service(),
+            self._rate_limiter(),
+            self._consumed_token_repository(),
+        )
+
+    def update_student(self) -> UpdateStudent:
+        return UpdateStudent(self._student_repository())
+
+    def logout_user(self) -> LogoutUser:
+        return LogoutUser(
+            self._refresh_token_repository(),
+            self._jwt_service(),
+        )
+
+    def get_direction_dashboard(self) -> GetDirectionDashboard:
+        return GetDirectionDashboard(self._database)
+
+    def verify_login_two_factor(self) -> VerifyLoginTwoFactor:
+        return VerifyLoginTwoFactor(
+            user_repository=self._user_repository(),
+            membership_repository=self._membership_repository(),
+            tenant_repository=self._tenant_repository(),
+            two_factor_service=self._pyotp_two_factor_service(),
+            jwt_service=self._jwt_service(),
+            rate_limiter=self._rate_limiter(),
+            totp_anti_replay_repository=self._totp_anti_replay_repository(),
+        )
 
     def list_academic_periods(self) -> ListAcademicPeriods:
         return ListAcademicPeriods(self._academic_period_repository())
@@ -522,6 +754,7 @@ class ApplicationContainer:
                 self._settings.google_client_id,
             ),
             jwt_service=self._jwt_service(),
+            google_nonce_repository=self._google_nonce_repository(),
         )
 
     def link_google_identity(self) -> LinkGoogleIdentity:
@@ -531,17 +764,10 @@ class ApplicationContainer:
             google_identity_verifier=GoogleIdTokenVerifier(
                 self._settings.google_client_id,
             ),
-        )
-
-    def verify_login_two_factor(
-        self,
-    ) -> VerifyLoginTwoFactor:
-        return VerifyLoginTwoFactor(
-            user_repository=self._user_repository(),
-            membership_repository=self._membership_repository(),
-            tenant_repository=self._tenant_repository(),
-            two_factor_service=PyOtpTwoFactorService(),
-            jwt_service=self._jwt_service(),
+            password_hasher=self._password_hasher(),
+            two_factor_service=self._pyotp_two_factor_service(),
+            totp_anti_replay_repository=self._totp_anti_replay_repository(),
+            google_nonce_repository=self._google_nonce_repository(),
         )
 
     def refresh_access_token(
@@ -554,3 +780,121 @@ class ApplicationContainer:
             refresh_token_repository=self._refresh_token_repository(),
             jwt_service=self._jwt_service(),
         )
+
+    # =========================================================================
+    # INTEGRATION SERVICES
+    # =========================================================================
+
+    def _brevo_notification_service(self) -> BrevoNotificationService:
+        """Create Brevo notification service."""
+        if not self._settings.brevo_api_key:
+            raise ValueError("BREVO_API_KEY is required for Brevo integration")
+        return BrevoNotificationService(api_key=self._settings.brevo_api_key)
+
+    def _courier_notification_service(self) -> CourierNotificationService:
+        """Create Courier notification service."""
+        if not self._settings.courier_api_key:
+            raise ValueError("COURIER_API_KEY is required for Courier integration")
+        return CourierNotificationService(api_key=self._settings.courier_api_key)
+
+    def _firebase_notification_service(self) -> FirebaseNotificationService:
+        """Create Firebase notification service."""
+        return FirebaseNotificationService(
+            credentials_path=self._settings.firebase_credentials_path
+        )
+
+    def _stripe_payment_gateway(self) -> StripePaymentGateway:
+        """Create Stripe payment gateway."""
+        if not self._settings.stripe_secret_key:
+            raise ValueError("STRIPE_SECRET_KEY is required for Stripe integration")
+        return StripePaymentGateway(
+            secret_key=self._settings.stripe_secret_key,
+            webhook_secret=self._settings.stripe_webhook_secret,
+            publishable_key=self._settings.stripe_publishable_key,
+        )
+
+    def _flutterwave_payment_gateway(self) -> FlutterwavePaymentGateway:
+        """Create Flutterwave payment gateway."""
+        if not self._settings.flutterwave_secret_key:
+            raise ValueError(
+                "FLUTTERWAVE_SECRET_KEY is required for Flutterwave integration"
+            )
+        return FlutterwavePaymentGateway(
+            secret_key=self._settings.flutterwave_secret_key,
+            public_key=self._settings.flutterwave_public_key,
+            encryption_key=self._settings.flutterwave_encryption_key,
+        )
+
+    def _google_classroom_service(self) -> GoogleClassroomService:
+        """Create Google Classroom service."""
+        return GoogleClassroomService(
+            enabled=self._settings.google_classroom_enabled,
+            client_id=self._settings.google_oauth_client_id,
+            client_secret=self._settings.google_oauth_client_secret,
+        )
+
+    def _google_calendar_service(self) -> GoogleCalendarService:
+        """Create Google Calendar service."""
+        return GoogleCalendarService(
+            enabled=self._settings.google_calendar_enabled
+        )
+
+    def _moodle_lms_service(self) -> MoodleLMSService:
+        """Create Moodle LMS service."""
+        return MoodleLMSService(
+            base_url=self._settings.moodle_base_url,
+            token=self._settings.moodle_token,
+        )
+
+    def _jitsi_video_service(self) -> JitsiVideoService:
+        """Create Jitsi video service."""
+        return JitsiVideoService(base_url=self._settings.jitsi_base_url)
+
+    def _posthog_analytics_service(self) -> PostHogAnalyticsService:
+        """Create PostHog analytics service."""
+        return PostHogAnalyticsService(
+            project_id=self._settings.posthog_project_id,
+            api_key=self._settings.posthog_api_key,
+            base_url=self._settings.posthog_base_url,
+        )
+
+    # Public getters for integration services
+    def brevo_notification_service(self) -> BrevoNotificationService:
+        """Get Brevo notification service."""
+        return self._brevo_notification_service()
+
+    def courier_notification_service(self) -> CourierNotificationService:
+        """Get Courier notification service."""
+        return self._courier_notification_service()
+
+    def firebase_notification_service(self) -> FirebaseNotificationService:
+        """Get Firebase notification service."""
+        return self._firebase_notification_service()
+
+    def stripe_payment_gateway(self) -> StripePaymentGateway:
+        """Get Stripe payment gateway."""
+        return self._stripe_payment_gateway()
+
+    def flutterwave_payment_gateway(self) -> FlutterwavePaymentGateway:
+        """Get Flutterwave payment gateway."""
+        return self._flutterwave_payment_gateway()
+
+    def google_classroom_service(self) -> GoogleClassroomService:
+        """Get Google Classroom service."""
+        return self._google_classroom_service()
+
+    def google_calendar_service(self) -> GoogleCalendarService:
+        """Get Google Calendar service."""
+        return self._google_calendar_service()
+
+    def moodle_lms_service(self) -> MoodleLMSService:
+        """Get Moodle LMS service."""
+        return self._moodle_lms_service()
+
+    def jitsi_video_service(self) -> JitsiVideoService:
+        """Get Jitsi video service."""
+        return self._jitsi_video_service()
+
+    def posthog_analytics_service(self) -> PostHogAnalyticsService:
+        """Get PostHog analytics service."""
+        return self._posthog_analytics_service()

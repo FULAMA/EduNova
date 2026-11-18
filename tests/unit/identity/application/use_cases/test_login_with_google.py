@@ -84,8 +84,13 @@ class FakeGoogleVerifier:
     def __init__(self, identity):
         self.identity = identity
 
-    def verify(self, id_token):
+    def verify(self, id_token, expected_nonce):
         return self.identity
+
+
+class FakeGoogleNonceRepository:
+    def consume(self, nonce_hash, now):
+        return True
 
 
 class FakeJwtService:
@@ -122,6 +127,7 @@ def build_use_case(user, identity, linked_user=None, linked=True):
         ),
         google_identity_verifier=FakeGoogleVerifier(identity),
         jwt_service=FakeJwtService(),
+        google_nonce_repository=FakeGoogleNonceRepository(),
     )
 
 
@@ -148,7 +154,7 @@ def test_google_login_returns_tokens_for_existing_member():
     use_case = build_use_case(user, make_identity())
 
     result = use_case.execute(
-        GoogleLoginRequest(id_token="google-id-token", tenant_id=TEST_TENANT_ID)
+        GoogleLoginRequest(id_token="google-id-token", tenant_id=TEST_TENANT_ID, nonce="nonce")
     )
 
     assert result.authenticated is True
@@ -162,7 +168,7 @@ def test_google_login_preserves_edunova_two_factor_flow():
     use_case = build_use_case(user, make_identity())
 
     result = use_case.execute(
-        GoogleLoginRequest(id_token="google-id-token", tenant_id=TEST_TENANT_ID)
+        GoogleLoginRequest(id_token="google-id-token", tenant_id=TEST_TENANT_ID, nonce="nonce")
     )
 
     assert result.authenticated is False
@@ -178,7 +184,7 @@ def test_google_login_rejects_unverified_email():
 
     with pytest.raises(ValueError, match="e-mail Google"):
         use_case.execute(
-            GoogleLoginRequest(id_token="google-id-token", tenant_id=TEST_TENANT_ID)
+            GoogleLoginRequest(id_token="google-id-token", tenant_id=TEST_TENANT_ID, nonce="nonce")
         )
 
 
@@ -192,7 +198,7 @@ def test_google_login_rejects_unknown_account_without_provisioning():
 
     with pytest.raises(ValueError, match="Identifiants invalides"):
         use_case.execute(
-            GoogleLoginRequest(id_token="google-id-token", tenant_id=TEST_TENANT_ID)
+            GoogleLoginRequest(id_token="google-id-token", tenant_id=TEST_TENANT_ID, nonce="nonce")
         )
 
 
@@ -208,11 +214,12 @@ def test_google_login_rejects_valid_but_unlinked_identity():
         external_identity_repository=repository,
         google_identity_verifier=FakeGoogleVerifier(make_identity()),
         jwt_service=FakeJwtService(),
+        google_nonce_repository=FakeGoogleNonceRepository(),
     )
 
     with pytest.raises(ValueError, match="Identifiants invalides"):
         use_case.execute(
-            GoogleLoginRequest(id_token="google-id-token", tenant_id=TEST_TENANT_ID)
+            GoogleLoginRequest(id_token="google-id-token", tenant_id=TEST_TENANT_ID, nonce="nonce")
         )
 
 
@@ -225,5 +232,6 @@ def test_google_login_rejects_missing_tenant_membership():
             GoogleLoginRequest(
                 id_token="google-id-token",
                 tenant_id=uuid4(),
+                nonce="nonce",
             )
         )

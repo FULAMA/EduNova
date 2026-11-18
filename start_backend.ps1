@@ -1,15 +1,16 @@
 #!/usr/bin/env powershell
-# Script de démarrage du backend EduNova pour Windows
-# Utilise une base de données temporaire et une clé JWT valide
+# Script pour démarrer uniquement le backend EduNova
 
 $ErrorActionPreference = "Stop"
 
 # Chemin du projet
 $ProjectRoot = "F:\EduNova"
+
+# Changer de répertoire
 Set-Location -Path $ProjectRoot
 
 Write-Host "==========================================" -ForegroundColor Cyan
-Write-Host "  EduNova - Démarrage Backend" -ForegroundColor Cyan
+Write-Host "  EduNova Backend - Démarrage" -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -17,7 +18,13 @@ Write-Host ""
 $BackendHost = "0.0.0.0"
 $Port = 8017
 $DbPath = "$ProjectRoot\edunova_test.db"
-$JwtSecret = "dev-secret-key-32-chars-minimum-123456789012"  # 44 caractères
+$JwtSecret = "dev-secret-key-32-chars-minimum-123456789012"
+
+# Vérifier que le JWT secret a au moins 32 caractères
+if ($JwtSecret.Length -lt 32) {
+    Write-Host "[ERREUR] Le JWT secret doit contenir au moins 32 caracteres. Actuellement: $($JwtSecret.Length)" -ForegroundColor Red
+    exit 1
+}
 
 # Définir les variables d'environnement
 $env:EDUNOVA_ENVIRONMENT = "development"
@@ -30,6 +37,7 @@ $env:EDUNOVA_DEV_SEED = "true"
 $env:EDUNOVA_DEV_SEED_PASSWORD = "DevPass123!"
 $env:EDUNOVA_DEV_SEED_EMAIL = "admin@edunova.com"
 
+# Les variables d'environnement sont déjà définies ci-dessus via $env: et seront héritées par uvicorn
 Write-Host "[CONFIG] Variables d'environnement configurées" -ForegroundColor Yellow
 Write-Host "[CONFIG] JWT Secret : $($JwtSecret.Length) caractères" -ForegroundColor Yellow
 Write-Host "[CONFIG] Base de données : $DbPath" -ForegroundColor Yellow
@@ -51,10 +59,11 @@ Write-Host ""
 Write-Host "[START] Démarrage du backend FastAPI..." -ForegroundColor Yellow
 Write-Host "  URL : http://${BackendHost}:${Port}" -ForegroundColor DarkGray
 Write-Host "  Swagger : http://${BackendHost}:${Port}/docs" -ForegroundColor DarkGray
+Write-Host "  Health check : http://${BackendHost}:${Port}/health" -ForegroundColor DarkGray
 Write-Host ""
 
 try {
-    # Exécuter uvicorn avec les variables définies
+    # Exécuter uvicorn (les variables d'environnement sont héritées de $env:)
     uvicorn src.presentation.api.main:app --host $BackendHost --port $Port --reload
 } catch {
     Write-Host "[ERREUR] Impossible de démarrer le backend : $_" -ForegroundColor Red

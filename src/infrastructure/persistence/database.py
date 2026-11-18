@@ -210,6 +210,15 @@ class SQLiteDatabase:
 
             connection.execute(
                 """
+                CREATE TABLE IF NOT EXISTS consumed_tokens (
+                    jti TEXT PRIMARY KEY,
+                    consumed_at TEXT NOT NULL
+                )
+                """
+            )
+
+            connection.execute(
+                """
                 CREATE TABLE IF NOT EXISTS students (
                     id TEXT PRIMARY KEY,
                     first_name TEXT NOT NULL,
@@ -217,6 +226,41 @@ class SQLiteDatabase:
                     email TEXT,
                     phone TEXT,
                     active INTEGER NOT NULL
+                )
+                """
+            )
+
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS enrollments (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    student_id TEXT NOT NULL,
+                    academic_year_id TEXT NOT NULL,
+                    academic_class_id TEXT NOT NULL,
+                    enrollment_date TEXT NOT NULL,
+                    end_date TEXT,
+                    status TEXT NOT NULL,
+                    previous_establishment TEXT,
+                    previous_class TEXT,
+                    transfer_reason TEXT,
+
+                    UNIQUE (
+                        student_id,
+                        academic_year_id
+                    ),
+
+                    FOREIGN KEY (tenant_id)
+                        REFERENCES tenants (id),
+
+                    FOREIGN KEY (student_id)
+                        REFERENCES students (id),
+
+                    FOREIGN KEY (academic_year_id)
+                        REFERENCES academic_years (id),
+
+                    FOREIGN KEY (academic_class_id)
+                        REFERENCES academic_classes (id)
                 )
                 """
             )

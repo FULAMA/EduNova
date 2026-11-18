@@ -295,5 +295,39 @@ describe('ClassesPage', () => {
     expect(host.querySelector(`label[for="assignment-${field}"]`)).not.toBeNull()
     expect(host.querySelector(`#assignment-${field}-error`)?.textContent).toBeTruthy()
   })
+
+  it('allows DIRECTION to consult classes list without subject assignment form', async () => {
+    const { CurrentUserContext } = await import('../auth/components/current-user.context')
+    const directionUser = {
+      id: 'dir-1',
+      email: 'directeur@example.test',
+      role: 'DIRECTION',
+      is_active: true,
+      two_factor_enabled: false,
+    }
+
+    act(() => {
+      root.render(
+        createElement(
+          CurrentUserContext.Provider,
+          { value: directionUser },
+          createElement(ClassesPage),
+        ),
+      )
+    })
+    await settle()
+
+    // Can consult classes list
+    expect(mockListClasses).toHaveBeenCalled()
+    expect(host.textContent).toContain('Terminale S')
+    expect(host.textContent).toContain('Premiere L')
+
+    // Does not call subjects catalogue API reserved for ADMIN
+    expect(mockListSubjects).not.toHaveBeenCalled()
+
+    // Does not render assign subject form
+    expect(host.querySelector('form')).toBeNull()
+    expect(host.textContent).toContain('La configuration des matières et l’affectation des coefficients sont réservées à l’administrateur')
+  })
 })
 

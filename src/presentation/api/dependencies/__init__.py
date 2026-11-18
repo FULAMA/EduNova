@@ -1,3 +1,4 @@
+from src.identity.application.interfaces.rate_limiter import RateLimiter
 from src.academic.application.use_cases.add_subject_result import AddSubjectResult
 from src.academic.application.use_cases.analyze_academic_risk import (
     AnalyzeAcademicRisk,
@@ -21,6 +22,8 @@ from src.academic.application.use_cases.list_students import ListStudents
 from src.academic.application.use_cases.list_student_academic_periods import ListStudentAcademicPeriods
 from src.academic.application.use_cases.get_student import GetStudent
 from src.academic.application.use_cases.create_student import CreateStudent
+from src.academic.application.use_cases.update_student import UpdateStudent
+from src.academic.application.use_cases.get_direction_dashboard import GetDirectionDashboard
 from src.academic.application.use_cases.list_subjects import ListSubjects
 from src.academic.application.use_cases.create_subject import CreateSubject
 from src.academic.application.use_cases.update_subject import UpdateSubject
@@ -45,6 +48,25 @@ from src.academic.application.use_cases.apply_student_promotion import ApplyStud
 from src.academic.application.use_cases.validate_deliberation import ValidateDeliberation
 from src.academic.application.use_cases.prepare_report_card import PrepareReportCard
 from src.academic.application.use_cases.publish_report_card import PublishReportCard
+from src.academic.application.use_cases.submit_grade_dispute import SubmitGradeDispute
+from src.academic.application.use_cases.review_grade_dispute import ReviewGradeDispute
+from src.academic.application.use_cases.resolve_grade_dispute import ResolveGradeDispute
+from src.academic.application.use_cases.list_grade_disputes import ListGradeDisputes
+from src.identity.application.interfaces.parent_student_link_repository import ParentStudentLinkRepository
+from src.identity.application.use_cases.link_parent_student import LinkParentStudent
+from src.identity.application.use_cases.list_parent_children import ListParentChildren
+from src.academic.application.interfaces.teacher_assignment_repository import TeacherAssignmentRepository
+from src.academic.application.use_cases.assign_teacher import AssignTeacher
+from src.academic.application.use_cases.list_teacher_assignments import ListTeacherAssignments
+from src.academic.application.use_cases.generate_report_card_ai_feedback import (
+    GenerateReportCardAIFeedback,
+)
+from src.academic.application.use_cases.generate_student_risk_ai_diagnosis import (
+    GenerateStudentRiskAIDiagnosis,
+)
+from src.academic.application.use_cases.generate_parent_portal_ai_summary import (
+    GenerateParentPortalAISummary,
+)
 from src.academic.application.use_cases.list_student_report_cards import ListStudentReportCards
 from src.academic.application.use_cases.get_student_report_card import GetStudentReportCard
 from src.academic.application.use_cases.correct_report_card import CorrectReportCard
@@ -59,11 +81,18 @@ from src.identity.application.use_cases.login_user import (
 )
 from src.identity.application.use_cases.login_with_google import LoginWithGoogle
 from src.identity.application.use_cases.link_google_identity import LinkGoogleIdentity
+from src.identity.application.use_cases.logout_user import LogoutUser
 from src.identity.application.use_cases.refresh_access_token import (
     RefreshAccessToken,
 )
 from src.identity.application.use_cases.register_user import (
     RegisterUser,
+)
+from src.identity.application.use_cases.register_establishment import (
+    RegisterEstablishment,
+)
+from src.identity.application.use_cases.select_tenant_context import (
+    SelectTenantContext,
 )
 from src.identity.application.use_cases.verify_login_two_factor import (
     VerifyLoginTwoFactor,
@@ -154,6 +183,14 @@ def get_get_student_use_case() -> GetStudent:
 
 def get_create_student_use_case() -> CreateStudent:
     return get_container().create_student()
+
+
+def get_update_student_use_case() -> UpdateStudent:
+    return get_container().update_student()
+
+
+def get_direction_dashboard_use_case() -> GetDirectionDashboard:
+    return get_container().get_direction_dashboard()
 
 
 def get_list_student_academic_periods_use_case() -> ListStudentAcademicPeriods:
@@ -300,12 +337,28 @@ def get_link_google_identity_use_case() -> LinkGoogleIdentity:
     return get_container().link_google_identity()
 
 
+def get_issue_google_nonce_use_case():
+    return get_container().issue_google_nonce()
+
+
 def get_refresh_access_token_use_case() -> RefreshAccessToken:
     return get_container().refresh_access_token()
 
 
+def get_logout_user_use_case() -> LogoutUser:
+    return get_container().logout_user()
+
+
 def get_register_user_use_case() -> RegisterUser:
     return get_container().register_user()
+
+
+def get_register_establishment_use_case() -> RegisterEstablishment:
+    return get_container().register_establishment()
+
+
+def get_select_tenant_context_use_case() -> SelectTenantContext:
+    return get_container().select_tenant_context()
 
 
 def get_verify_login_two_factor_use_case() -> VerifyLoginTwoFactor:
@@ -314,3 +367,59 @@ def get_verify_login_two_factor_use_case() -> VerifyLoginTwoFactor:
 
 def get_verify_two_factor_use_case() -> VerifyTwoFactor:
     return get_container().verify_two_factor()
+
+
+def get_rate_limiter() -> RateLimiter:
+    return get_container().rate_limiter()
+
+
+def get_submit_grade_dispute_use_case() -> SubmitGradeDispute:
+    return get_container().submit_grade_dispute()
+
+
+def get_review_grade_dispute_use_case() -> ReviewGradeDispute:
+    return get_container().review_grade_dispute()
+
+
+def get_resolve_grade_dispute_use_case() -> ResolveGradeDispute:
+    return get_container().resolve_grade_dispute()
+
+
+def get_list_grade_disputes_use_case() -> ListGradeDisputes:
+    return get_container().list_grade_disputes()
+
+
+def get_parent_student_link_repository() -> ParentStudentLinkRepository:
+    return get_container()._parent_student_link_repository()
+
+
+def get_link_parent_student_use_case() -> LinkParentStudent:
+    return get_container().link_parent_student()
+
+
+def get_list_parent_children_use_case() -> ListParentChildren:
+    return get_container().list_parent_children()
+
+
+def get_teacher_assignment_repository() -> TeacherAssignmentRepository:
+    return get_container()._teacher_assignment_repository()
+
+
+def get_assign_teacher_use_case() -> AssignTeacher:
+    return get_container().assign_teacher()
+
+
+def get_list_teacher_assignments_use_case() -> ListTeacherAssignments:
+    return get_container().list_teacher_assignments()
+
+
+def get_generate_report_card_ai_feedback_use_case() -> GenerateReportCardAIFeedback:
+    return get_container().generate_report_card_ai_feedback()
+
+
+def get_generate_student_risk_ai_diagnosis_use_case() -> GenerateStudentRiskAIDiagnosis:
+    return get_container().generate_student_risk_ai_diagnosis()
+
+
+def get_generate_parent_portal_ai_summary_use_case() -> GenerateParentPortalAISummary:
+    return get_container().generate_parent_portal_ai_summary()

@@ -23,7 +23,14 @@ class CreateStudent:
         last_name: str,
         email: str | None = None,
         phone: str | None = None,
+        registration_number: str | None = None,
     ) -> StudentSummary:
+        clean_reg = _optional_text(registration_number)
+        if clean_reg:
+            existing = self._repository.find_by_registration_number(tenant_id, clean_reg)
+            if existing is not None:
+                raise ValueError("Le matricule scolaire est deja attribue dans cet etablissement.")
+
         student = Student(
             id=uuid4(),
             tenant_id=tenant_id,
@@ -31,6 +38,7 @@ class CreateStudent:
             last_name=last_name.strip(),
             email=_optional_text(email),
             phone=_optional_text(phone),
+            registration_number=clean_reg,
         )
         self._repository.save(student)
         return StudentSummary(
@@ -39,4 +47,5 @@ class CreateStudent:
             last_name=student.last_name,
             email=student.email,
             active=student.active,
+            registration_number=student.registration_number,
         )

@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react'
 import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { ApiError } from '../../../shared/api/client'
 import { GoogleLoginButton } from '../components/GoogleLoginButton'
@@ -8,10 +8,11 @@ import {
   loginWithGoogle,
   login,
   saveSession,
-  verifyLoginTwoFactor,
 } from '../services/auth.service'
+import type { LoginResponse } from '../services/auth.service'
 
 import './LoginPage.css'
+
 
 type LoginLocationState = {
   from?: { pathname?: string }
@@ -23,8 +24,6 @@ function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [tenantId, setTenantId] = useState('')
-  const [twoFactorToken, setTwoFactorToken] = useState<string | null>(null)
-  const [twoFactorCode, setTwoFactorCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -50,9 +49,7 @@ function LoginPage() {
   }
 
   function validateTenantId(value: string): string | null {
-    if (!value.trim()) return 'L\'identifiant du tenant est requis'
-    // Basic UUID validation (8-4-4-4-12 hex format)
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.trim())) {
+    if (value.trim() && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.trim())) {
       return 'L\'identifiant du tenant doit être un UUID valide'
     }
     return null
@@ -61,13 +58,59 @@ function LoginPage() {
   function validateForm(): boolean {
     const newEmailError = validateEmail(email)
     const newPasswordError = validatePassword(password)
-    const newTenantIdError = validateTenantId(tenantId)
+    const newTenantIdError = tenantId ? validateTenantId(tenantId) : null
 
     setEmailError(newEmailError)
     setPasswordError(newPasswordError)
     setTenantIdError(newTenantIdError)
 
     return !newEmailError && !newPasswordError && !newTenantIdError
+  }
+
+  /**
+   * Gère la réponse de login et redirige selon le scénario
+   */
+  function handleLoginResponse(response: LoginResponse): void {
+    // Scénario A : Utilisateur mono-tenant avec tokens ordinaires directement
+    if (response.authenticated && response.access_token && response.refresh_token) {
+      saveSession({
+        accessToken: response.access_token,
+        refreshToken: response.refresh_token,
+        email: response.email || email.trim(),
+        tenantId: tenantId.trim() || '',
+      })
+      navigate(from ?? '/app', { replace: true })
+      return
+    }
+
+    // Scénario B : Sélection de tenant requise
+    if (response.tenant_selection_required && response.tenant_selection_token && response.available_tenants) {
+      navigate('/login/select-tenant', {
+        state: {
+          email: response.email || email.trim(),
+          tenantSelectionToken: response.tenant_selection_token,
+          availableTenants: response.available_tenants,
+        },
+        replace: true,
+      })
+      return
+    }
+
+    // Scénario C : 2FA requis (après sélection de tenant ou mono-tenant)
+    if (response.two_factor_required && response.two_factor_token) {
+      navigate('/login/2fa', {
+        state: {
+          email: response.email || email.trim(),
+          twoFactorToken: response.two_factor_token,
+          tenantSelectionToken: null,
+        },
+        replace: true,
+      })
+      return
+    }
+
+    // Cas d'erreur : pas de tokens et pas de redirection claire
+    setError('La réponse du serveur ne contient pas de jeton de session valide.')
   }
 
   async function handleLoginSubmit(event: FormEvent<HTMLFormElement>) {
@@ -78,7 +121,7 @@ function LoginPage() {
     setEmailError(null)
     setPasswordError(null)
     setTenantIdError(null)
-    setTouched({ email: true, password: true, tenantId: true })
+    setTouched({ email: true, password: true, tenantId: Boolean(tenantId) })
 
     if (!validateForm()) {
       return
@@ -87,40 +130,14 @@ function LoginPage() {
     setIsSubmitting(true)
 
     try {
-      const response = await login({
+      const response: LoginResponse = await login({
         email: email.trim(),
         password,
-        tenant_id: tenantId.trim(),
+        tenant_id: tenantId.trim() || undefined,
       })
 
-      if (response.two_factor_required) {
-        if (!response.two_factor_token) {
-          setError('Le serveur n\'a pas fourni de défi 2FA valide.')
-          return
-        }
+      handleLoginResponse(response)
 
-        setPassword('')
-        setShowPassword(false)
-        setTwoFactorToken(response.two_factor_token)
-        return
-      }
-
-      if (
-        !response.authenticated ||
-        !response.access_token ||
-        !response.refresh_token
-      ) {
-        setError('Connexion refusée par le serveur.')
-        return
-      }
-
-      saveSession({
-        accessToken: response.access_token,
-        refreshToken: response.refresh_token,
-        email: email.trim(),
-        tenantId: tenantId.trim(),
-      })
-      navigate(from ?? '/app', { replace: true })
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) {
         setError('Adresse e-mail ou mot de passe incorrect.')
@@ -142,95 +159,15 @@ function LoginPage() {
     }
   }
 
-  async function handleTwoFactorSubmit(
-    event: FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault()
-    setError(null)
-
-    if (!twoFactorToken || !/^\d{6}$/.test(twoFactorCode)) {
-      setError('Saisissez un code 2FA de 6 chiffres.')
-      return
-    }
-
-    setIsSubmitting(true)
-
-    try {
-      const response = await verifyLoginTwoFactor(
-        twoFactorToken,
-        twoFactorCode,
-      )
-
-      if (!response.authenticated) {
-        setError('La vérification 2FA a été refusée.')
-        setTwoFactorCode('')
-        return
-      }
-
-      saveSession({
-        accessToken: response.access_token,
-        refreshToken: response.refresh_token,
-        email: email.trim(),
-        tenantId: tenantId.trim(),
-      })
-      setTwoFactorCode('')
-      navigate(from ?? '/app', { replace: true })
-    } catch (cause) {
-      setTwoFactorCode('')
-
-      if (cause instanceof ApiError && cause.status === 400) {
-        setError(
-          cause.message.includes('Code 2FA')
-            ? 'Code 2FA invalide.'
-            : 'Le défi 2FA est invalide ou expiré. Recommencez.',
-        )
-      } else if (cause instanceof ApiError && cause.status === 404) {
-        setError('La session 2FA n\'est plus disponible. Recommencez.')
-      } else {
-        setError('Vérification impossible. Vérifiez votre serveur API.')
-      }
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  async function handleGoogleCredential(idToken: string) {
+  async function handleGoogleCredential(idToken: string, nonce: string) {
     setError(null)
     setIsSubmitting(true)
 
     try {
-      const response = await loginWithGoogle(idToken, tenantId.trim())
+      const response: LoginResponse = await loginWithGoogle(idToken, tenantId.trim(), nonce)
 
-      if (response.two_factor_required) {
-        if (!response.two_factor_token) {
-          setError('Le serveur n\'a pas fourni de défi 2FA valide.')
-          return
-        }
+      handleLoginResponse(response)
 
-        if (response.email) {
-          setEmail(response.email)
-        }
-        setTwoFactorToken(response.two_factor_token)
-        return
-      }
-
-      if (
-        !response.authenticated ||
-        !response.access_token ||
-        !response.refresh_token
-      ) {
-        setError('Connexion Google refusée par le serveur.')
-        return
-      }
-
-      const authenticatedEmail = response.email ?? email.trim()
-      saveSession({
-        accessToken: response.access_token,
-        refreshToken: response.refresh_token,
-        email: authenticatedEmail,
-        tenantId: tenantId.trim(),
-      })
-      navigate(from ?? '/app', { replace: true })
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) {
         setError('Authentification Google refusée.')
@@ -246,16 +183,6 @@ function LoginPage() {
     }
   }
 
-  function restartLogin() {
-    setTwoFactorToken(null)
-    setTwoFactorCode('')
-    setPassword('')
-    setShowPassword(false)
-    setError(null)
-  }
-
-
-
   function togglePasswordVisibility() {
     setShowPassword(!showPassword)
   }
@@ -269,158 +196,113 @@ function LoginPage() {
       <section className="login-card" aria-labelledby="login-title">
         <div className="login-card__header">
           <p className="login-card__eyebrow">EduNova</p>
-          <h1 id="login-title">{twoFactorToken ? 'Vérification' : 'Connexion'}</h1>
+          <h1 id="login-title">Connexion</h1>
           <p className="login-card__description">
-            {twoFactorToken
-              ? 'Confirmez votre identité avec le code de votre application.'
-              : 'Accédez à l\'espace de votre établissement.'}
+            Accédez à l\'espace de votre établissement.
           </p>
         </div>
 
-        {twoFactorToken ? (
-          <form className="login-form" onSubmit={handleTwoFactorSubmit}>
-            <div className="login-form__challenge">
-              <h2>Double authentification</h2>
-              <p>Saisissez le code à 6 chiffres généré par votre application.</p>
+        <form className="login-form" onSubmit={handleLoginSubmit}>
+          <label className="login-form__label">
+            Adresse e-mail
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setTouched({...touched, email: false}); }}
+              onBlur={() => { setTouched({...touched, email: true}); setEmailError(validateEmail(email)); }}
+              autoComplete="username"
+              required
+              className={getInputClassName(touched.email ? emailError : null)}
+              aria-invalid={touched.email && !!emailError}
+              aria-describedby={touched.email && emailError ? 'email-error' : undefined}
+            />
+            {touched.email && emailError && (
+              <span className="login-form__field-error" id="email-error">
+                {emailError}
+              </span>
+            )}
+          </label>
+
+          <label className="login-form__label">
+            Mot de passe
+            <div className="login-form__password-wrapper">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); setTouched({...touched, password: false}); }}
+                onBlur={() => { setTouched({...touched, password: true}); setPasswordError(validatePassword(password)); }}
+                autoComplete="current-password"
+                required
+                className={getInputClassName(touched.password ? passwordError : null)}
+                aria-invalid={touched.password && !!passwordError}
+                aria-describedby={touched.password && passwordError ? 'password-error' : undefined}
+              />
+              <button
+                type="button"
+                className="login-form__password-toggle"
+                onClick={togglePasswordVisibility}
+                aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+              >
+                {showPassword ? '👁️‍🗨️' : '👁️'}
+              </button>
             </div>
+            {touched.password && passwordError && (
+              <span className="login-form__field-error" id="password-error">
+                {passwordError}
+              </span>
+            )}
+          </label>
 
-            <label>
-              Code de vérification
-              <input
-                type="text"
-                value={twoFactorCode}
-                onChange={(event) =>
-                  setTwoFactorCode(
-                    event.target.value.replace(/\D/g, '').slice(0, 6),
-                  )
-                }
-                inputMode="numeric"
-                pattern="[0-9]{6}"
-                minLength={6}
-                maxLength={6}
-                autoComplete="one-time-code"
-                required
-                autoFocus
-                className={getInputClassName(null)}
-              />
-            </label>
+          <label className="login-form__label">
+            Identifiant de l\'établissement (optionnel)
+            <input
+              type="text"
+              value={tenantId}
+              onChange={(e) => { setTenantId(e.target.value); setTouched({...touched, tenantId: false}); }}
+              onBlur={() => { setTouched({...touched, tenantId: true}); setTenantIdError(validateTenantId(tenantId)); }}
+              placeholder="UUID de l'édablissement (ex: 00000000-0000-0000-0000-000000000001)"
+              autoComplete="off"
+              className={getInputClassName(touched.tenantId ? tenantIdError : null)}
+              aria-invalid={touched.tenantId && !!tenantIdError}
+              aria-describedby={touched.tenantId && tenantIdError ? 'tenant-error' : undefined}
+            />
+            {touched.tenantId && tenantIdError && (
+              <span className="login-form__field-error" id="tenant-error">
+                {tenantIdError}
+              </span>
+            )}
+          </label>
 
-            {error ? (
-              <p className="login-form__error" role="alert">
-                {error}
-              </p>
-            ) : null}
+          {error && !emailError && !passwordError && !tenantIdError ? (
+            <p className="login-form__error" role="alert">
+              {error}
+            </p>
+          ) : null}
 
-            <button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Vérification...' : 'Vérifier le code'}
-            </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="login-form__submit"
+          >
+            {isSubmitting ? (
+              <>
+                <span className="login-form__spinner" />
+                Connexion en cours...
+              </>
+            ) : (
+              'Se connecter'
+            )}
+          </button>
 
-            <button
-              type="button"
-              className="login-form__secondary-button"
-              onClick={restartLogin}
-              disabled={isSubmitting}
-            >
-              Retour à la connexion
-            </button>
-          </form>
-        ) : (
-          <form className="login-form" onSubmit={handleLoginSubmit}>
-            <label className="login-form__label">
-              Adresse e-mail
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); setTouched({...touched, email: false}); }}
-                onBlur={() => { setTouched({...touched, email: true}); setEmailError(validateEmail(email)); }}
-                autoComplete="username"
-                required
-                className={getInputClassName(touched.email ? emailError : null)}
-                aria-invalid={touched.email && !!emailError}
-                aria-describedby={touched.email && emailError ? 'email-error' : undefined}
-              />
-              {touched.email && emailError && (
-                <span className="login-form__field-error" id="email-error">
-                  {emailError}
-                </span>
-              )}
-            </label>
-
-            <label className="login-form__label">
-              Mot de passe
-              <div className="login-form__password-wrapper">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => { setPassword(e.target.value); setTouched({...touched, password: false}); }}
-                  onBlur={() => { setTouched({...touched, password: true}); setPasswordError(validatePassword(password)); }}
-                  autoComplete="current-password"
-                  required
-                  className={getInputClassName(touched.password ? passwordError : null)}
-                  aria-invalid={touched.password && !!passwordError}
-                  aria-describedby={touched.password && passwordError ? 'password-error' : undefined}
-                />
-                <button
-                  type="button"
-                  className="login-form__password-toggle"
-                  onClick={togglePasswordVisibility}
-                  aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                >
-                  {showPassword ? '👁️‍🗨️' : '👁️'}
-                </button>
-              </div>
-              {touched.password && passwordError && (
-                <span className="login-form__field-error" id="password-error">
-                  {passwordError}
-                </span>
-              )}
-            </label>
-
-            <label className="login-form__label">
-              Identifiant de l\'établissement
-              <input
-                type="text"
-                value={tenantId}
-                onChange={(e) => { setTenantId(e.target.value); setTouched({...touched, tenantId: false}); }}
-                onBlur={() => { setTouched({...touched, tenantId: true}); setTenantIdError(validateTenantId(tenantId)); }}
-                placeholder="UUID du tenant (ex: 00000000-0000-0000-0000-000000000001)"
-                autoComplete="off"
-                required
-                className={getInputClassName(touched.tenantId ? tenantIdError : null)}
-                aria-invalid={touched.tenantId && !!tenantIdError}
-                aria-describedby={touched.tenantId && tenantIdError ? 'tenant-error' : undefined}
-              />
-              {touched.tenantId && tenantIdError && (
-                <span className="login-form__field-error" id="tenant-error">
-                  {tenantIdError}
-                </span>
-              )}
-            </label>
-
-            {error && !emailError && !passwordError && !tenantIdError ? (
-              <p className="login-form__error" role="alert">
-                {error}
-              </p>
-            ) : null}
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="login-form__submit"
-            >
-              {isSubmitting ? (
-                <>
-                  <span className="login-form__spinner" />
-                  Connexion en cours...
-                </>
-              ) : (
-                'Se connecter'
-              )}
-            </button>
-
-            <GoogleLoginButton onCredential={handleGoogleCredential} />
-          </form>
-        )}
+          <GoogleLoginButton onCredential={handleGoogleCredential} />
+          
+          <p className="login-form__register-link">
+            Nouvel établissement ?{' '}
+            <Link to="/register" className="login-form__register-link--action">
+              Créer un compte
+            </Link>
+          </p>
+        </form>
       </section>
     </main>
   )

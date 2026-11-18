@@ -45,6 +45,7 @@ from src.presentation.api.dependencies import (
     get_login_user_use_case,
     get_login_with_google_use_case,
     get_link_google_identity_use_case,
+    get_issue_google_nonce_use_case,
     get_list_students_use_case,
     get_list_student_academic_periods_use_case,
     get_list_eligible_student_periods_use_case,
@@ -73,14 +74,33 @@ from src.presentation.api.dependencies import (
     get_validate_deliberation_use_case,
     get_get_student_use_case,
     get_create_student_use_case,
+    get_update_student_use_case,
+    get_direction_dashboard_use_case,
+    get_logout_user_use_case,
+    get_rate_limiter,
     get_refresh_access_token_use_case,
     get_register_user_use_case,
+    get_register_establishment_use_case,
+    get_select_tenant_context_use_case,
     get_verify_login_two_factor_use_case,
     get_verify_two_factor_use_case,
     get_link_student_account_use_case,
     get_student_portal_profile_use_case,
     get_prepare_report_card_use_case,
     get_publish_report_card_use_case,
+    get_submit_grade_dispute_use_case,
+    get_review_grade_dispute_use_case,
+    get_resolve_grade_dispute_use_case,
+    get_list_grade_disputes_use_case,
+    get_parent_student_link_repository,
+    get_link_parent_student_use_case,
+    get_list_parent_children_use_case,
+    get_teacher_assignment_repository,
+    get_assign_teacher_use_case,
+    get_list_teacher_assignments_use_case,
+    get_generate_report_card_ai_feedback_use_case,
+    get_generate_student_risk_ai_diagnosis_use_case,
+    get_generate_parent_portal_ai_summary_use_case,
     get_list_student_report_cards_use_case,
     get_student_report_card_use_case,
     get_correct_report_card_use_case,
@@ -100,8 +120,13 @@ from src.presentation.api.routes.academic_years import router as academic_years_
 from src.presentation.api.routes.student_assignments import router as student_assignments_router
 from src.presentation.api.routes.attendance import router as attendance_router
 from src.presentation.api.routes.billing import router as billing_router
+from src.presentation.api.routes.dashboard import router as dashboard_router
 from src.presentation.api.routes.student_portal import router as student_portal_router
 from src.presentation.api.routes.report_cards import router as report_cards_router
+from src.presentation.api.routes.grade_disputes import router as grade_disputes_router
+from src.presentation.api.routes.parent_portal import router as parent_portal_router
+from src.presentation.api.routes.teacher_assignments import router as teacher_assignments_router
+from src.presentation.api.routes.ai_pedagogical import router as ai_pedagogical_router
 
 
 def create_app(
@@ -143,6 +168,7 @@ def create_app(
 
     app.dependency_overrides[get_jwt_service] = container._jwt_service
     app.dependency_overrides[get_user_repository] = container._user_repository
+    app.dependency_overrides[get_issue_google_nonce_use_case] = container.issue_google_nonce
     app.dependency_overrides[get_tenant_repository] = container._tenant_repository
     app.dependency_overrides[get_membership_repository] = container._membership_repository
     app.dependency_overrides[get_link_student_account_use_case] = container.link_student_account
@@ -156,9 +182,10 @@ def create_app(
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(container._settings.cors_allowed_origins),
+        allow_origin_regex=r"http://127\.0\.0\.1:\d+",
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type"],
+        allow_headers=["Authorization", "Content-Type", "Origin"],
     )
 
     @app.middleware("http")
@@ -260,6 +287,10 @@ def create_app(
         ] = container.get_student
 
     app.dependency_overrides[get_create_student_use_case] = container.create_student
+    app.dependency_overrides[get_update_student_use_case] = container.update_student
+    app.dependency_overrides[get_direction_dashboard_use_case] = (
+        container.get_direction_dashboard
+    )
 
     if assign_subject_to_class_use_case is not None:
         app.dependency_overrides[
@@ -351,6 +382,11 @@ def create_app(
             get_refresh_access_token_use_case
         ] = container.refresh_access_token
 
+    app.dependency_overrides[get_logout_user_use_case] = container.logout_user
+    app.dependency_overrides[get_rate_limiter] = container.rate_limiter
+    app.dependency_overrides[get_register_establishment_use_case] = container.register_establishment
+    app.dependency_overrides[get_select_tenant_context_use_case] = container.select_tenant_context
+
     app.include_router(academic_records_router)
     app.include_router(academic_catalogues_router)
     app.include_router(classes_router)
@@ -369,9 +405,27 @@ def create_app(
     app.dependency_overrides[get_prepare_deliberation_use_case] = container.prepare_deliberation
     app.dependency_overrides[get_apply_student_promotion_use_case] = container.apply_student_promotion
     app.dependency_overrides[get_validate_deliberation_use_case] = container.validate_deliberation
+    app.dependency_overrides[get_submit_grade_dispute_use_case] = container.submit_grade_dispute
+    app.dependency_overrides[get_review_grade_dispute_use_case] = container.review_grade_dispute
+    app.dependency_overrides[get_resolve_grade_dispute_use_case] = container.resolve_grade_dispute
+    app.dependency_overrides[get_list_grade_disputes_use_case] = container.list_grade_disputes
+    app.dependency_overrides[get_parent_student_link_repository] = container._parent_student_link_repository
+    app.dependency_overrides[get_link_parent_student_use_case] = container.link_parent_student
+    app.dependency_overrides[get_list_parent_children_use_case] = container.list_parent_children
+    app.dependency_overrides[get_teacher_assignment_repository] = container._teacher_assignment_repository
+    app.dependency_overrides[get_assign_teacher_use_case] = container.assign_teacher
+    app.dependency_overrides[get_list_teacher_assignments_use_case] = container.list_teacher_assignments
+    app.dependency_overrides[get_generate_report_card_ai_feedback_use_case] = container.generate_report_card_ai_feedback
+    app.dependency_overrides[get_generate_student_risk_ai_diagnosis_use_case] = container.generate_student_risk_ai_diagnosis
+    app.dependency_overrides[get_generate_parent_portal_ai_summary_use_case] = container.generate_parent_portal_ai_summary
     app.include_router(attendance_router)
     app.include_router(billing_router)
+    app.include_router(dashboard_router)
     app.include_router(student_portal_router)
     app.include_router(report_cards_router)
+    app.include_router(grade_disputes_router)
+    app.include_router(parent_portal_router)
+    app.include_router(teacher_assignments_router)
+    app.include_router(ai_pedagogical_router)
 
     return app

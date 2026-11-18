@@ -41,7 +41,7 @@ def seed_school_data(container: ApplicationContainer) -> tuple[str, str]:
     student_id, class_id = uuid4(), uuid4()
     with container._database.connect() as connection:
         connection.execute(
-            "INSERT INTO students VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO students (id, tenant_id, first_name, last_name, email, phone, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (str(student_id), str(TEST_TENANT_ID), "Ada", "Lovelace", None, None, 1),
         )
     container._academic_class_repository().save(
@@ -159,7 +159,7 @@ def test_assignment_close_rejects_unknown_or_other_tenant_ids():
     other_assignment_id = uuid4()
     with container._database.connect() as connection:
         connection.execute(
-            "INSERT INTO students VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO students (id, tenant_id, first_name, last_name, email, phone, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (str(other_student_id), str(other_tenant_id), "Grace", "Hopper", None, None, 1),
         )
         connection.execute(
@@ -215,7 +215,7 @@ def test_promotion_uses_real_route_repositories_and_is_idempotent():
 
     with container._database.connect() as connection:
         connection.execute(
-            "INSERT INTO students VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO students (id, tenant_id, first_name, last_name, email, phone, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (str(student_id), str(TEST_TENANT_ID), "Ada", "Lovelace", None, None, 1),
         )
 
@@ -292,7 +292,7 @@ def test_promotion_rejects_an_assignment_from_another_tenant():
     now = datetime.now(timezone.utc).isoformat()
     with container._database.connect() as connection:
         connection.execute(
-            "INSERT INTO students VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO students (id, tenant_id, first_name, last_name, email, phone, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (str(other_student_id), str(other_tenant_id), "Grace", "Hopper", None, None, 1),
         )
         connection.execute(

@@ -30,6 +30,8 @@ const navigationItems: NavigationItem[] = [
     module: 'academic-catalogues',
     icon: '⚙️',
   },
+  { label: 'Espace parent', to: '/app/parent-portal', module: 'parent-portal', icon: 'Parent' },
+  { label: 'Espace enseignant', to: '/app/teacher-portal', module: 'teacher-portal', icon: 'Prof' },
 ]
 
 export function Sidebar({

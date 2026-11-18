@@ -111,7 +111,7 @@ def test_academic_record_returns_real_subject_and_period_labels():
     }).json()
     with container._database.connect() as connection:
         connection.execute(
-            "INSERT INTO students VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO students (id, tenant_id, first_name, last_name, email, phone, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (str(student_id), str(TEST_TENANT_ID), "Ada", "Lovelace", None, None, 1),
         )
     year = client.post("/academic-years", json={

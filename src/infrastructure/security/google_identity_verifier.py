@@ -11,7 +11,7 @@ class GoogleIdTokenVerifier(GoogleIdentityVerifier):
     def __init__(self, client_id: str | None):
         self._client_id = client_id
 
-    def verify(self, id_token_value: str) -> GoogleIdentity:
+    def verify(self, id_token_value: str, expected_nonce: str) -> GoogleIdentity:
         if not self._client_id:
             raise ValueError("Google auth non configuree.")
 
@@ -27,11 +27,15 @@ class GoogleIdTokenVerifier(GoogleIdentityVerifier):
         issuer = claims.get("iss")
         email = claims.get("email")
         subject = claims.get("sub")
+        nonce = claims.get("nonce")
         if (
             issuer not in {"accounts.google.com", "https://accounts.google.com"}
             or not isinstance(subject, str)
             or not subject
             or not isinstance(email, str)
+            or not isinstance(nonce, str)
+            or not expected_nonce
+            or nonce != expected_nonce
         ):
             raise ValueError("Jeton Google invalide.")
 

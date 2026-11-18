@@ -10,6 +10,7 @@ class Student:
     last_name: str
     email: str | None = None
     phone: str | None = None
+    registration_number: str | None = None
     active: bool = True
 
     def __post_init__(self):

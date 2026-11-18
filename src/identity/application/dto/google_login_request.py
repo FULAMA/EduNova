@@ -7,3 +7,4 @@ from dataclasses import dataclass
 class GoogleLoginRequest:
     id_token: str
     tenant_id: UUID
+    nonce: str

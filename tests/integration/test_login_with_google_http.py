@@ -45,6 +45,7 @@ def test_google_login_returns_edunova_session_tokens():
         json={
             "id_token": "google-id-token",
             "tenant_id": str(TEST_TENANT_ID),
+            "nonce": "test-google-nonce",
         },
     )
 
@@ -60,6 +61,7 @@ def test_google_login_does_not_disclose_unknown_account_details():
         json={
             "id_token": "google-id-token",
             "tenant_id": str(TEST_TENANT_ID),
+            "nonce": "test-google-nonce",
         },
     )
 

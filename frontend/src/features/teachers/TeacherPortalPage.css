@@ -1,0 +1,40 @@
+.teacher-portal {
+  display: grid;
+  gap: 1rem;
+  max-width: 58rem;
+  margin: 0 auto;
+  padding: clamp(1rem, 4vw, 2rem);
+}
+
+.teacher-portal__eyebrow {
+  margin: 0;
+  color: #0d4f4a;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.teacher-portal__list {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.teacher-portal__card {
+  padding: 1rem;
+  border: 1px solid #d9e4df;
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.teacher-portal__card h2,
+.teacher-portal__card p {
+  margin: 0 0 0.45rem;
+}
+
+.teacher-portal button {
+  min-height: 2.75rem;
+  padding: 0.6rem 0.9rem;
+}

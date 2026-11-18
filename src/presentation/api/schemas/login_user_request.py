@@ -8,4 +8,4 @@ class LoginUserRequest(BaseModel):
 
     email: str = Field(min_length=3)
     password: str = Field(min_length=1)
-    tenant_id: UUID
+    tenant_id: UUID | None = None

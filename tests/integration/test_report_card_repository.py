@@ -21,7 +21,7 @@ def test_sqlite_report_card_is_tenant_scoped_and_published_only_for_students():
     student_id, period_id, deliberation_id, actor_id = uuid4(), uuid4(), uuid4(), uuid4()
     with container._database.connect() as connection:
         connection.execute(
-            "INSERT INTO students VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO students (id, tenant_id, first_name, last_name, email, phone, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (str(student_id), str(tenant_id), "Test", "Student", None, None, 1),
         )
     container._academic_period_repository().save(AcademicPeriod(
@@ -67,7 +67,7 @@ def test_correction_atomically_supersedes_previous_version():
     student_id, period_id, actor_id = uuid4(), uuid4(), uuid4()
     with container._database.connect() as connection:
         connection.execute(
-            "INSERT INTO students VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO students (id, tenant_id, first_name, last_name, email, phone, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (str(student_id), str(tenant_id), "Test", "Correction", None, None, 1),
         )
     container._academic_period_repository().save(AcademicPeriod(
@@ -119,7 +119,7 @@ def test_repository_rejects_a_corrupted_snapshot():
     tenant_id, student_id, period_id, actor_id = TEST_TENANT_ID, uuid4(), uuid4(), uuid4()
     with container._database.connect() as connection:
         connection.execute(
-            "INSERT INTO students VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO students (id, tenant_id, first_name, last_name, email, phone, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (str(student_id), str(tenant_id), "Test", "Integrity", None, None, 1),
         )
     container._academic_period_repository().save(AcademicPeriod(
@@ -156,7 +156,7 @@ def test_concurrent_publication_from_two_sqlite_connections_accepts_one(tmp_path
     tenant_id, student_id, period_id, actor_id = TEST_TENANT_ID, uuid4(), uuid4(), uuid4()
     with container._database.connect() as connection:
         connection.execute(
-            "INSERT INTO students VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO students (id, tenant_id, first_name, last_name, email, phone, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (str(student_id), str(tenant_id), "Test", "Concurrent", None, None, 1),
         )
     container._academic_period_repository().save(AcademicPeriod(

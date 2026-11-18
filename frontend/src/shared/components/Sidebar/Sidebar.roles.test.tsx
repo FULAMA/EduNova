@@ -35,15 +35,24 @@ describe('Sidebar by role', () => {
     expect(hrefsFor('ADMIN')).toHaveLength(7)
   })
 
-  it('shows only the dashboard to STUDENT', () => {
+  it('opens the student portal from the dashboard entry', () => {
     expect(hrefsFor('STUDENT')).toEqual(['/app'])
+  })
+
+  it('shows only the parent area to PARENT', () => {
+    expect(hrefsFor('PARENT')).toEqual(['/app/parent-portal'])
+  })
+
+  it('shows only the teacher area to canonical and legacy teacher roles', () => {
+    expect(hrefsFor('PROF')).toEqual(['/app/teacher-portal'])
+    expect(hrefsFor('TEACHER')).toEqual(['/app/teacher-portal'])
   })
 
   it('shows dashboard and finance to a cashier', () => {
     expect(hrefsFor('CASHIER')).toEqual(['/app', '/app/finance'])
   })
 
-  it('shows students and finance to direction', () => {
-    expect(hrefsFor('DIRECTION')).toEqual(['/app', '/app/students', '/app/finance'])
+  it('shows dashboard, students, classes and finance to direction', () => {
+    expect(hrefsFor('DIRECTION')).toEqual(['/app', '/app/students', '/app/classes', '/app/finance'])
   })
 })

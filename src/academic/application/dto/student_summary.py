@@ -9,3 +9,4 @@ class StudentSummary:
     last_name: str
     email: str | None
     active: bool
+    registration_number: str | None = None

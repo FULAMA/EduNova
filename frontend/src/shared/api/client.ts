@@ -6,7 +6,7 @@ import {
 } from '../../features/auth/services/auth.storage'
 
 const API_BASE_URL = (
-  import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+  import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8017'
 ).replace(/\/$/, '')
 
 const MSG_UNREACHABLE = 'Le serveur API est inaccessible.'
@@ -87,6 +87,7 @@ async function refreshSession(): Promise<RefreshResult> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ refresh_token: session.refreshToken }),
+      credentials: 'include',
     })
     const payload = await parseResponse(response)
 
@@ -161,6 +162,7 @@ async function authorizedFetch(
       return await fetch(`${API_BASE_URL}${path}`, {
         ...requestOptions,
         headers: requestHeaders(options, authenticated),
+        credentials: 'include',
       })
     } catch {
       throw new ApiError(0, MSG_UNREACHABLE)

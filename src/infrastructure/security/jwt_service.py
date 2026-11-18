@@ -76,8 +76,26 @@ class JwtService(JwtServiceInterface):
 
         payload = {
             "sub": str(user_id),
+            "jti": str(uuid4()),
             "tenant_id": str(tenant_id),
             "type": "2fa_pending",
+            "iat": now,
+            "exp": now + timedelta(minutes=5),
+        }
+
+        return jwt.encode(
+            payload,
+            self._secret_key,
+            algorithm="HS256",
+        )
+
+    def create_tenant_selection_token(self, user_id: UUID) -> str:
+        now = datetime.now(timezone.utc)
+
+        payload = {
+            "sub": str(user_id),
+            "jti": str(uuid4()),
+            "type": "tenant_selection",
             "iat": now,
             "exp": now + timedelta(minutes=5),
         }
@@ -118,8 +136,8 @@ class JwtService(JwtServiceInterface):
             )
 
         if not payload.get("tenant_id"):
-            raise ValueError("Le token refresh ne contient pas de tenant.")
+            raise ValueError(
+                "Le token refresh ne contient pas de tenant."
+            )
 
         return payload
-
-
