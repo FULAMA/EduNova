@@ -254,7 +254,7 @@ Priorité à l'année scolaire en cours, puis traitement progressif des archives
 ### Décision 45 — Identification des personnes et prévention des doublons
 **Statut : VALIDÉE — choix A (2026-11-19)**
 
-- **Option A :** attribuer un identifiant interne EduNova à chaque dossier, conserver les matricules existants comme références et signaler les correspondances possibles pour vérification humaine avant toute fusion.
+- **Option A :** attribuer un identifiant interne EduNova à chaque dossier, conserver les matricules existants comme références et signaler les correspondances possibles pour vérification humaine avant toute fusion. La détection s'effectue dans le même tenant sur égalité du prénom et du nom après normalisation Unicode NFKC, comparaison insensible à la casse et réduction des espaces successifs. L'avertissement ne bloque pas la création.
 - **Option B :** exiger un matricule existant ou attribué par l'école avant l'enregistrement définitif.
 - **Option C :** utiliser le nom et la date de naissance comme critères principaux, avec vérification manuelle des dossiers potentiellement identiques.
 
@@ -381,9 +381,9 @@ Les propositions ci-dessous constituent la version courante a examiner. Les bloc
 | Identifiant | Proposition actualisee | Statut |
 |---|---|---|
 | `PAR-REL-01` | Plusieurs parents ou responsables autorises peuvent etre associes a un meme eleve, et un parent peut etre associe a plusieurs eleves. L'association reste tenant-scoped. La definition du responsable legal et les cas de garde partagee restent a confirmer. | `VALIDÉE le 2026-11-19, voir ratification` |
-| `PAR-REL-02` | La creation et la validation d'un rattachement sont reservees a la direction ou a un agent disposant d'une permission explicite. Le role `PARENT` seul n'accorde pas ce droit. | `PROPOSED - BLOCKED` |
-| `PAR-REL-03` | La verification suit la procedure de l'etablissement. Cette proposition n'impose aucune preuve documentaire specifique ; les preuves, motifs, acteurs et conditions de validation restent a definir par decision metier. | `PROPOSED - BLOCKED` |
-| `PAR-REL-04` | Le cycle de vie propose est `PENDING`, `ACTIVE`, `REVOKED`. Apres revocation, un nouveau rattachement est cree pour un nouveau lien ; l'ancien reste conserve dans l'historique. Les modalites de retablissement et de conservation restent ouvertes. | `PROPOSED - BLOCKED` |
+| `PAR-REL-02` | `ADMIN` ou `DIRECTION` crée le rattachement après vérification par l'établissement ; le lien est actif immédiatement. Le rôle `PARENT` seul n'accorde pas ce droit. | `VALIDÉE le 2026-11-19` |
+| `PAR-REL-03` | La vérification par l'établissement précède la création. Le type de preuve, les motifs et la conservation des pièces restent à définir. | `PRINCIPE VALIDÉ le 2026-11-19 ; détails ouverts` |
+| `PAR-REL-04` | Création directe d'un lien actif après vérification par `ADMIN` ou `DIRECTION`. La révocation doit être conçue ultérieurement ; pas de suppression ni de fusion automatique. | `VALIDÉE pour la création immédiate ; révocation ouverte` |
 | `PAR-REL-06` | Un parent peut consulter les bulletins officiels de l'enfant si le serveur verifie l'association dans le tenant actif. Resultats détaillés, présences et données financières sont exclus du périmètre validé actuel. | `VALIDÉE le 2026-11-19, voir ratification` |
 
 #### Compatibilite et limites
@@ -411,12 +411,12 @@ Les confirmations explicites du propriétaire produit ci-dessous prévalent sur 
 
 | Identifiant | Décision ratifiée | Limites restant ouvertes |
 |---|---|---|
-| `D45` | Choix A : chaque dossier élève est identifié par un identifiant interne EduNova. Le matricule reste une référence facultative. Les doublons possibles doivent être signalés pour vérification humaine ; aucune fusion automatique n'est autorisée. | Les critères exacts de détection et le parcours de revue restent à définir. |
-| `PAR-REL-01` | Cardinalité plusieurs-à-plusieurs entre responsables associés et élèves, strictement limitée à un établissement (`tenant-scoped`). Un même élève peut avoir plusieurs responsables associés et un responsable plusieurs élèves. | La définition juridique de responsable, les types de lien, les preuves et le cycle de révocation restent ouverts. |
+| `D45` | Choix A : identifiant interne, matricule facultatif ; avertissement non bloquant sur prénom et nom identiques après normalisation Unicode NFKC, casse et espaces, dans le même tenant. Vérification humaine avant toute fusion. | Le parcours d'analyse historique et de fusion éventuelle reste à définir. |
+| `PAR-REL-01/02/03/04` | Cardinalité N:M tenant-scoped. `ADMIN` ou `DIRECTION` crée un lien actif immédiatement après vérification par l'établissement. | Définition des preuves à conserver, catégories de responsable, historique et révocation restent ouvertes. |
 | `PAR-REL-06` | Le portail parent permet uniquement la consultation et le téléchargement des bulletins officiellement publiés d'élèves associés dans le tenant actif. Les résultats détaillés, présences et données financières sont exclus à ce stade. | Les preuves, révocations et modalités d'historique du rattachement restent ouvertes. |
 | `BUL-TECH-02` | Les rôles `ADMIN` et `DIRECTION` peuvent tous deux préparer, publier et corriger les bulletins officiels. La correction reste versionnée conformément à D8. | La révocation d'un bulletin émis reste une décision séparée (BUL-TECH-04). |
 
-Ces ratifications ne définissent pas les contrôles de rattachement encore en attente (PAR-REL-02 à PAR-REL-04) et n'autorisent pas de fusion automatique d'élèves.
+Ces ratifications ne définissent pas les preuves à conserver, les règles de révocation ni la rétention de l'historique. Elles n'autorisent pas de fusion automatique d'élèves.
 
 ### BUL-TECH-02 - Autorisations de publication et correction
 

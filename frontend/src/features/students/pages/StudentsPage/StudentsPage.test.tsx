@@ -1,7 +1,7 @@
 ﻿// @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../../../shared/api/client'
-import { listStudents } from '../../services/student.service'
+import { createStudent, listStudents } from '../../services/student.service'
 import StudentsPage from './StudentsPage'
 import { MemoryRouter } from 'react-router-dom'
 import { createRoot, type Root } from 'react-dom/client'
@@ -11,8 +11,9 @@ import { CurrentUserContext } from '../../../auth/components/current-user.contex
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
-vi.mock('../../services/student.service', () => ({ listStudents: vi.fn() }))
+vi.mock('../../services/student.service', () => ({ createStudent: vi.fn(), listStudents: vi.fn() }))
 const mockedListStudents = vi.mocked(listStudents)
+const mockedCreateStudent = vi.mocked(createStudent)
 let root: Root
 let host: HTMLDivElement
 
@@ -67,6 +68,33 @@ describe('StudentsPage', () => {
     const page = renderPage()
     await settle()
     expect(page.textContent).toContain('Cet établissement ne possède encore aucun élève.')
+  })
+
+  it('shows a non-blocking duplicate warning after creating a same-name student', async () => {
+    mockedListStudents.mockResolvedValue([])
+    mockedCreateStudent.mockResolvedValue({
+      id: 'new-id', firstName: 'Ada', lastName: 'Lovelace', email: null, status: 'active',
+      potentialDuplicates: [{ id: 'existing-id', firstName: 'Ada', lastName: 'Lovelace' }],
+    })
+    const page = renderPage()
+    await settle()
+
+    const inputs = page.querySelectorAll('form input')
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+    act(() => {
+      setter?.call(inputs[0], 'Ada')
+      inputs[0].dispatchEvent(new Event('input', { bubbles: true }))
+      setter?.call(inputs[1], 'Lovelace')
+      inputs[1].dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await act(async () => {
+      page.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(page.textContent).toContain('Vérifiez manuellement les dossiers')
+    expect(page.textContent).toContain('aucune fusion')
   })
 
   it.each([

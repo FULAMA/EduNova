@@ -1,7 +1,7 @@
 ﻿import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { clearSession, saveSession } from '../../auth/services/auth.storage'
-import { addStudentSubjectResult, createStudentAcademicRecord, getStudent, getStudentAcademicRecord, getStudentDeliberation, listEligibleStudentPeriods, listEligibleStudentSubjects, listStudentAcademicPeriods, listStudents, validateStudentDeliberation } from './student.service'
+import { addStudentSubjectResult, createStudent, createStudentAcademicRecord, getStudent, getStudentAcademicRecord, getStudentDeliberation, listEligibleStudentPeriods, listEligibleStudentSubjects, listStudentAcademicPeriods, listStudents, validateStudentDeliberation } from './student.service'
 
 describe('student service', () => {
   afterEach(() => {
@@ -48,6 +48,21 @@ describe('student service', () => {
     expect(
       new Headers(fetchMock.mock.calls[0][1]?.headers).get('Authorization'),
     ).toBe('Bearer access-token')
+  })
+
+  it('returns same-name candidates from student creation without blocking the new record', async () => {
+    saveSession({ accessToken: 'access-token', refreshToken: 'refresh-token', email: 'admin@example.test', tenantId: 'tenant-1' })
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      id: 'student-new', first_name: 'Ada', last_name: 'Lovelace', email: null,
+      active: true, registration_number: null,
+      potential_duplicates: [{ id: 'student-old', first_name: 'Ada', last_name: 'Lovelace', registration_number: 'A-1' }],
+    }), { status: 201 }))
+
+    await expect(createStudent({ firstName: 'Ada', lastName: 'Lovelace' })).resolves.toMatchObject({
+      id: 'student-new',
+      potentialDuplicates: [{ id: 'student-old', firstName: 'Ada', lastName: 'Lovelace', registrationNumber: 'A-1' }],
+    })
+    expect(fetchMock.mock.calls[0][1]?.method).toBe('POST')
   })
 
   it('requests a student detail with auth and maps the API contract', async () => {

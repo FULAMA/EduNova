@@ -27,3 +27,14 @@ class StudentSummaryResponse(BaseModel):
     email: str | None
     registration_number: str | None = None
     active: bool
+
+
+class StudentDuplicateCandidateResponse(BaseModel):
+    id: UUID
+    first_name: str
+    last_name: str
+    registration_number: str | None = None
+
+
+class StudentCreatedResponse(StudentSummaryResponse):
+    potential_duplicates: list[StudentDuplicateCandidateResponse] = Field(default_factory=list)

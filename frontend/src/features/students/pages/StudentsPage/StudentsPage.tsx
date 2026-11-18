@@ -98,7 +98,12 @@ function StudentsPage() {
       setFirstName('')
       setLastName('')
       setEmail('')
-      setNotice(`${created.firstName} ${created.lastName} a été ajouté.`)
+      const duplicateNames = created.potentialDuplicates?.map(
+        (candidate) => `${candidate.firstName} ${candidate.lastName}`,
+      )
+      setNotice(duplicateNames?.length
+        ? `${created.firstName} ${created.lastName} a été ajouté. Attention : un ou plusieurs dossiers portent le même nom (${duplicateNames.join(', ')}). Vérifiez manuellement les dossiers ; aucune fusion n'a été effectuée.`
+        : `${created.firstName} ${created.lastName} a été ajouté.`)
     } catch (reason: unknown) {
       setFormError(describeStudentError(reason, 'Impossible de créer cet élève pour le moment.'))
     } finally {

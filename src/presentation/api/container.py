@@ -397,7 +397,12 @@ class ApplicationContainer:
         )
 
     def list_teacher_assignments(self) -> ListTeacherAssignments:
-        return ListTeacherAssignments(self._teacher_assignment_repository())
+        return ListTeacherAssignments(
+            self._teacher_assignment_repository(),
+            self._academic_class_repository(),
+            self._subject_repository(),
+            self._academic_year_repository(),
+        )
 
     def _ai_pedagogical_service(self) -> AIPedagogicalService:
         if not hasattr(self, "_ai_pedagogical_service_instance"):

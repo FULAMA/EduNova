@@ -2,6 +2,7 @@ from uuid import uuid4
 
 import pytest
 
+from src.academic.application.dto.student_summary import StudentSummary
 from src.academic.application.interfaces.student_repository import StudentRepository
 from src.academic.application.use_cases.create_student import CreateStudent
 from src.academic.domain.entities.student import Student
@@ -60,3 +61,21 @@ def test_create_student_rejects_blank_name():
             first_name="   ",
             last_name="Lovelace",
         )
+
+
+def test_create_student_keeps_creation_non_blocking_and_returns_duplicate_candidates():
+    repository = FakeStudentRepository()
+    tenant_id = uuid4()
+    existing = StudentSummary(
+        id=uuid4(), first_name="Ada", last_name="Lovelace", email=None,
+        active=True,
+    )
+    repository.find_potential_duplicates = lambda *_args, **_kwargs: (existing,)
+
+    created = CreateStudent(repository).execute(
+        tenant_id, first_name="Ada", last_name="Lovelace"
+    )
+
+    assert len(repository.saved) == 1
+    assert created.id != existing.id
+    assert created.potential_duplicates[0].id == existing.id

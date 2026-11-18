@@ -118,6 +118,24 @@ def test_link_parent_student_rejects_unauthorized_role():
     assert resp.status_code == 403
 
 
+def test_school_cannot_link_an_account_without_parent_membership():
+    client_admin, container, _ = _make_client(role="ADMIN")
+    student_user = User(uuid4(), "student@test.cd", "hash", "STUDENT")
+    container._user_repository().save(student_user)
+    seed_membership(container, student_user.id, role="STUDENT")
+    student_id = _seed_student(container)
+
+    response = client_admin.post(
+        "/parent-links",
+        json={
+            "parent_user_id": str(student_user.id),
+            "student_id": str(student_id),
+            "relationship_type": "LEGAL_GUARDIAN",
+        },
+    )
+    assert response.status_code == 404
+
+
 def test_parent_portal_list_children():
     client_parent, container, parent_user = _make_client(role="PARENT")
 

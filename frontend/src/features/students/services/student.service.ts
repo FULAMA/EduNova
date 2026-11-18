@@ -8,6 +8,12 @@ type StudentSummaryResponse = {
   last_name: string
   email: string | null
   active: boolean
+  potential_duplicates?: Array<{
+    id: string
+    first_name: string
+    last_name: string
+    registration_number?: string | null
+  }>
 }
 
 export type EligibleAcademicPeriod = {
@@ -27,6 +33,12 @@ function toStudent(student: StudentSummaryResponse): Student {
     lastName: student.last_name,
     email: student.email,
     status: student.active ? 'active' : 'inactive',
+    potentialDuplicates: student.potential_duplicates?.map((candidate) => ({
+      id: candidate.id,
+      firstName: candidate.first_name,
+      lastName: candidate.last_name,
+      registrationNumber: candidate.registration_number,
+    })),
   }
 }
 

@@ -15,8 +15,8 @@ Les sujets suivants restent bloqués ou contradictoires :
 
 | Sujet | Registre canonique | Code ou document divergent | Traitement retenu |
 |---|---|---|---|
-| D45 — identité et déduplication des élèves | Validée le 2026-11-19 : identifiant interne, matricule facultatif, doublons signalés et revus humainement, sans fusion automatique | La recherche de candidats existe dans le repository ; son intégration au parcours de création et ses critères restent incomplets | Les critères précis de rapprochement et l’expérience de revue restent à concevoir |
-| PAR-REL — association parent-élève | Cardinalités plusieurs-à-plusieurs et accès aux seuls bulletins officiels validés le 2026-11-19 | Des routes et une persistance existent déjà ; preuves, cycle de vie et révocation restent incomplets | La consultation financière a été retirée du portail parent. Aucune décision n’ouvre l’accès aux résultats détaillés ou aux présences |
+| D45 — identité et déduplication des élèves | Validée le 2026-11-19 : ID interne, matricule facultatif ; avertissement non bloquant sur prénom/nom normalisés identiques dans le tenant, revue humaine, aucune fusion automatique | Intégration au cas d’usage, réponse API et avertissement UI ajoutés ; critères NFKC, casse et espaces documentés | La procédure de revue et l’éventuelle fusion restent à concevoir |
+| PAR-REL — association parent-élève | Cardinalités N:M, lien immédiat créé par `ADMIN`/`DIRECTION` après vérification par l’établissement ; consultation limitée aux bulletins officiels | Le backend vérifie rôle parent, membership actif, élève actif et tenant ; création identifie l’acteur | Preuves à conserver, révocation et historique restent à définir ; résultats détaillés, présences et finances sont exclus |
 | BUL-TECH-02 — qui publie et corrige | Validée le 2026-11-19 : `ADMIN` et `DIRECTION` pour préparer, publier et corriger | Routes déjà protégées par ces deux rôles et test d’intégration existant | La révocation reste distincte et ouverte sous BUL-TECH-04 |
 | Rôle enseignant | Glossaire : `PROF` | Une partie de l’API et des jetons emploie `TEACHER` | `PROF` est accepté comme rôle canonique ; `TEACHER` reste accepté comme alias de compatibilité. Aucun rôle stocké n’est renommé automatiquement |
 
@@ -43,7 +43,7 @@ Les sujets suivants restent bloqués ou contradictoires :
 ### Agrégats à maintenir
 
 - `User` porte l’état d’authentification ; `Membership` porte le rôle actif dans un tenant. Les rôles ne se cumulent pas entre tenants.
-- `Student` porte son identité interne EduNova. Le matricule éventuel reste une référence tant que D45 n’est pas tranchée.
+- `Student` porte son identité interne EduNova. Le matricule facultatif reste une référence ; l’égalité de nom normalisé déclenche un avertissement, jamais une fusion automatique.
 - `StudentAssignment` porte le rattachement de l’élève à une classe et une année scolaire.
 - `StudentAcademicRecord` porte une version de résultats ; une correction conserve l’historique.
 - `ReportCard` porte un snapshot officiel versionné. Seul l’état `ISSUED` est présenté dans les portails familiaux.
@@ -56,9 +56,9 @@ Il s’agit d’une seule PWA EduNova, installable, dont la page d’accueil dé
 
 | Profil | État frontend | Données affichées | Limites actuelles |
 |---|---|---|---|
-| Parent | Écran ajouté : liste des élèves associés et bulletins officiels téléchargeables | Liens retournés par le serveur ; bulletins publiés | Pas de création de lien, de présence, de résultat détaillé, de donnée financière ou de décision de tutelle dans le portail |
+| Parent | Écran ajouté : liste des élèves associés et bulletins officiels téléchargeables | Liens retournés par le serveur ; bulletins publiés | Pas de création de lien dans le portail, de présence, de résultat détaillé, de donnée financière ou de décision de tutelle |
 | Élève | Écran existant, raccordé à l’espace de rôle | Son profil, ses résultats, présences et bulletins fournis par l’API | Pas de consultation du dossier d’un autre élève |
-| Professeur | Écran ajouté : affectations du tenant actif | Nombre d’affectations et date d’attribution | L’API ne fournit pas encore les libellés classe/matière/année ; pas de saisie de note ni d’appel dans cet écran |
+| Professeur | Écran en lecture seule : affectations du tenant actif avec libellés classe, matière et année scolaire | Libellés issus des dépôts tenant-scoped ; date d’attribution | Pas de saisie de note, correction, présence ou publication |
 
 Les écrans parent et professeur sont filtrés par rôle dans le frontend et protégés par les routes FastAPI. `PROF` et l’alias `TEACHER` ouvrent le portail enseignant. Les données sensibles ne sont pas stockées hors ligne.
 
@@ -85,18 +85,18 @@ La synchronisation différée, les notifications push et les opérations métier
 
 ### À achever sans changer de règles métier
 
-1. Ajouter au contrat de consultation enseignant les libellés de classe, matière et année, produits par un cas d’usage de lecture et non par une requête dans la route.
-2. Les entités `Charge`, `FeeType`, `FeeAssignment`, `Payment`, `CounterEntry` et `FeeReminder` sont maintenant définies dans `billing/domain/entities.py`. Les résultats de lecture paginés restent des DTO d’application. La prochaine étape est d’extraire le port de dépôt de facturation et de réduire le couplage entre `BillingService` et l’adaptateur SQLite.
-3. Continuer les contrôles d’architecture interdisant les imports SQLite/FastAPI dans les couches domaine et application.
+1. Les entit?s de facturation sont dans `billing/domain/entities.py`; les DTO pagin?s restent en application. Extraire ensuite le port de d?p?t de facturation et r?duire le couplage entre `BillingService` et SQLite.
+2. Continuer les contrôles d’architecture interdisant les imports SQLite/FastAPI dans les couches domaine et application.
+3. Aligner les pages Markdown historiques sur le code observé, sans réécrire l’historique des décisions.
 4. Aligner les pages Markdown historiques sur le code observé ; remplacer les pourcentages anciens par des statuts sourcés et datés, sans réécrire l’historique des décisions.
 
 ### Bloqués par un arbitrage produit
 
-1. D45 : format, caractère obligatoire et usage du matricule ; règles de détection et de fusion des doublons.
-2. PAR-REL : définition des responsables, preuve et validation d’un lien, révocation, historique et catégories de données consultables.
-3. BUL-TECH-02/03/04 : rôles de publication/correction, accès aux versions remplacées et révocation.
+1. D45 : procédure de revue des alertes et conditions d’une éventuelle fusion manuelle.
+2. PAR-REL : définition des catégories de responsables, preuves à conserver, révocation et historique.
+3. BUL-TECH-03/04 : accès aux versions remplacées et révocation.
 4. Fonctionnalités professeur : droits et workflow de saisie/correction des notes, gestion des absences et publication.
-5. Fonctionnalités parent : consultation des présences, finances, notifications et gestion des représentants.
+5. Fonctionnalités parent : éventuel accès ultérieur aux présences, notifications et gestion des représentants.
 
 Aucune option de cette section ne devient validée par la présente conception.
 

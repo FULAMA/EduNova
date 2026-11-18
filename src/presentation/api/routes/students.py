@@ -19,6 +19,7 @@ from src.presentation.api.dependencies.auth import (
     require_finance_role,
 )
 from src.presentation.api.schemas.student import (
+    StudentCreatedResponse,
     StudentCreateRequest,
     StudentSummaryResponse,
     StudentUpdateRequest,
@@ -57,7 +58,7 @@ def list_students(
 
 @router.post(
     "",
-    response_model=StudentSummaryResponse,
+    response_model=StudentCreatedResponse,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_finance_manager_role())],
 )
@@ -65,17 +66,27 @@ def create_student(
     data: StudentCreateRequest,
     use_case: CreateStudent = Depends(get_create_student_use_case),
     tenant_context: TenantContext = Depends(get_tenant_context),
-) -> StudentSummaryResponse:
+) -> StudentCreatedResponse:
     try:
-        return _student_response(
-            use_case.execute(
-                tenant_context.tenant_id,
-                data.first_name,
-                data.last_name,
-                data.email,
-                data.phone,
-                data.registration_number,
-            )
+        student = use_case.execute(
+            tenant_context.tenant_id,
+            data.first_name,
+            data.last_name,
+            data.email,
+            data.phone,
+            data.registration_number,
+        )
+        return StudentCreatedResponse(
+            **_student_response(student).model_dump(),
+            potential_duplicates=[
+                {
+                    "id": candidate.id,
+                    "first_name": candidate.first_name,
+                    "last_name": candidate.last_name,
+                    "registration_number": candidate.registration_number,
+                }
+                for candidate in student.potential_duplicates
+            ],
         )
     except ValueError as exc:
         status_code = status.HTTP_409_CONFLICT if "matricule" in str(exc).lower() else status.HTTP_400_BAD_REQUEST

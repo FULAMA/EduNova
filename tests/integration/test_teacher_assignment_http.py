@@ -228,6 +228,9 @@ def test_list_teacher_assignments_admin_and_teacher_portal():
     assert len(my_assignments) == 1
     assert my_assignments[0]["academic_class_id"] == str(class_id)
     assert my_assignments[0]["subject_id"] == str(subject_id)
+    assert my_assignments[0]["academic_class_label"] == "6ème Math-Physique"
+    assert my_assignments[0]["subject_label"] == "Physique Nucléaire"
+    assert my_assignments[0]["academic_year_label"] == "2026-2027"
 
 
 def test_canonical_prof_role_can_use_teacher_portal_and_receive_assignments():

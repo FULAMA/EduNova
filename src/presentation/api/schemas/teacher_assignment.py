@@ -15,7 +15,10 @@ class TeacherAssignmentResponse(BaseModel):
     tenant_id: UUID
     teacher_user_id: UUID
     academic_class_id: UUID
+    academic_class_label: str | None = None
     subject_id: UUID
+    subject_label: str | None = None
     academic_year_id: UUID
+    academic_year_label: str | None = None
     assigned_by: UUID
     assigned_at: datetime

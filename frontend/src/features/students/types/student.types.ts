@@ -8,4 +8,10 @@ export type Student = {
   status: StudentStatus
   studentNumber?: string
   className?: string
+  potentialDuplicates?: Array<{
+    id: string
+    firstName: string
+    lastName: string
+    registrationNumber?: string | null
+  }>
 }

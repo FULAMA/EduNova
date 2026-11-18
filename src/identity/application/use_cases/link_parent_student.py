@@ -31,7 +31,11 @@ class LinkParentStudent:
     ) -> ParentStudentLink:
         # 1. Vérifier que l'utilisateur existe dans l'établissement
         membership = self._membership_repository.find_by_user_and_tenant(parent_user_id, tenant_id)
-        if membership is None or not membership.active:
+        if (
+            membership is None
+            or not membership.active
+            or membership.role.strip().upper() != "PARENT"
+        ):
             raise LookupError("Utilisateur parent introuvable ou inactif dans cet etablissement.")
 
         # 2. Vérifier que l'élève existe dans l'établissement

@@ -73,6 +73,25 @@ def test_create_student_with_registration_number():
     assert data["registration_number"] == "MAT-2026-0042"
 
 
+def test_same_normalized_full_name_is_a_non_blocking_duplicate_warning():
+    client, _ = _make_client(role="ADMIN")
+    existing = client.post(
+        "/students",
+        json={"first_name": "Élise Marie", "last_name": "De La Cruz"},
+    )
+    assert existing.status_code == 201, existing.text
+
+    created = client.post(
+        "/students",
+        json={"first_name": "  E\u0301LISE   MARIE ", "last_name": " de   la cruz "},
+    )
+    assert created.status_code == 201, created.text
+    data = created.json()
+    assert data["id"] != existing.json()["id"]
+    assert [candidate["id"] for candidate in data["potential_duplicates"]] == [existing.json()["id"]]
+    assert data["first_name"] == "ÉLISE   MARIE"
+
+
 def test_create_student_rejects_duplicate_registration_number_in_same_tenant():
     client, _ = _make_client(role="ADMIN")
 

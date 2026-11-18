@@ -1,4 +1,5 @@
 import sqlite3
+import unicodedata
 from uuid import UUID
 
 from src.academic.application.dto.student_summary import StudentSummary
@@ -99,21 +100,21 @@ class SQLiteStudentRepository(StudentRepository):
         last_name: str,
         exclude_id: UUID | None = None,
     ) -> tuple[StudentSummary, ...]:
-        query = """
-            SELECT id, first_name, last_name, email, active, registration_number
-            FROM students
-            WHERE tenant_id = ?
-              AND LOWER(TRIM(first_name)) = LOWER(TRIM(?))
-              AND LOWER(TRIM(last_name)) = LOWER(TRIM(?))
-        """
-        params: list[object] = [str(tenant_id), first_name.strip(), last_name.strip()]
-        if exclude_id is not None:
-            query += " AND id != ?"
-            params.append(str(exclude_id))
+        def normalize(value: str) -> str:
+            return " ".join(unicodedata.normalize("NFKC", value).casefold().split())
 
         with self._database.connect() as connection:
-            rows = connection.execute(query, params).fetchall()
+            rows = connection.execute(
+                """
+                SELECT id, first_name, last_name, email, active, registration_number
+                FROM students
+                WHERE tenant_id = ?
+                """,
+                (str(tenant_id),),
+            ).fetchall()
 
+        normalized_first = normalize(first_name)
+        normalized_last = normalize(last_name)
         return tuple(
             StudentSummary(
                 id=UUID(row["id"]),
@@ -124,6 +125,9 @@ class SQLiteStudentRepository(StudentRepository):
                 registration_number=row["registration_number"],
             )
             for row in rows
+            if UUID(row["id"]) != exclude_id
+            and normalize(row["first_name"]) == normalized_first
+            and normalize(row["last_name"]) == normalized_last
         )
 
     def save(self, student: Student) -> None:

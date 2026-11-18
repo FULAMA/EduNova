@@ -4,8 +4,11 @@ export type TeacherAssignment = {
   tenant_id: string
   teacher_user_id: string
   academic_class_id: string
+  academic_class_label: string | null
   subject_id: string
+  subject_label: string | null
   academic_year_id: string
+  academic_year_label: string | null
   assigned_by: string
   assigned_at: string
 }

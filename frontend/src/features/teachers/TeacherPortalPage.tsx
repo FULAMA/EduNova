@@ -52,12 +52,13 @@ export default function TeacherPortalPage() {
           <ul className="teacher-portal__list">
             {assignments.map((assignment) => (
               <li className="teacher-portal__card" key={`${assignment.academic_year_id}-${assignment.academic_class_id}-${assignment.subject_id}`}>
-                <h2>Affectation pédagogique</h2>
+                <h2>{assignment.subject_label ?? 'Matière indisponible'}</h2>
+                <p>Classe : {assignment.academic_class_label ?? 'Libellé indisponible'}</p>
+                <p>Année scolaire : {assignment.academic_year_label ?? 'Libellé indisponible'}</p>
                 <p>Attribuée le {new Date(assignment.assigned_at).toLocaleDateString('fr-FR')}</p>
               </li>
             ))}
           </ul>
-          <p>Les libellés des classes, matières et années ne sont pas encore fournis par le contrat de l’API enseignant.</p>
         </>
       ) : null}
     </section>
