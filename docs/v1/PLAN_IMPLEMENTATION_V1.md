@@ -114,3 +114,56 @@ La révocation est distincte du remplacement `SUPERSEDED` et ne doit pas être i
 - utiliser des profils synthétiques dans les tests ;
 - ne fixer aucune matière, maximum, coefficient, seuil, règle de passage, mention ou repêchage officiel ;
 - ne créer aucune migration de bulletin ni émission officielle.
+
+
+## Tranche 0.2 — Ratification de l'autonomie des établissements
+
+La validation du propriétaire produit du 2026-11-01 est consignée dans [DECISIONS_RATIFIEES_AUTONOMIE_ETABLISSEMENTS_2026-11-01.md](../decisions/DECISIONS_RATIFIEES_AUTONOMIE_ETABLISSEMENTS_2026-11-01.md).
+
+Décisions confirmées : D1-A, D2-C, D3-B, D4-A (identification interne et rapprochement humain), D5-B (crédit traçable), D6-A, D7-C, D8-B, D9-B (révocation conditionnée à un contrat), D10-OUI, D11-A et D12-A.
+
+### Garde-fous de conception
+
+- Le tenant est l'espace SaaS ; le profil d'école est un concept métier distinct.
+- Ne pas créer un agrégat global de paramètres. Les politiques restent dans leurs bounded contexts.
+- Toute politique influençant un calcul, une obligation ou un workflow est versionnée et datée.
+- Les opérations historiques conservent la version de politique effectivement utilisée.
+- Aucune valeur réglementaire n'est inventée ou activée par défaut.
+- Les crédits sont par devise et auditables ; USD et CDF ne sont jamais compensés implicitement.
+- Les permissions d'établissement sont explicites, tenant-scoped et contrôlées côté serveur.
+- Les migrations sont opérées avant démarrage en V1, jamais automatiquement au démarrage.
+
+### Tranche 1 — Audit et configuration scolaire
+
+Avant toute migration ou modification de schéma :
+
+1. Cartographier les agrégats existants `Tenant`, `AcademicYear`, `AcademicPeriod`, `AcademicPolicy`, classes, options et matières.
+2. Identifier les règles actuellement codées en dur et les distinguer des invariants réglementaires ou de sécurité.
+3. Vérifier les ports, adaptateurs SQLite, routes, autorisations et contraintes tenant existants.
+4. Définir les contrats de calendrier : une seule année OPEN par tenant ; périodes chevauchantes uniquement entre calendriers/programmes distincts.
+5. Définir les politiques de versionnement et dates d'effet sans imposer de matières, maxima, coefficients ou seuils.
+6. Ajouter les tests domaine, repository temporaire, API multi-tenant et autorisations avant toute migration.
+
+### Critères d'acceptation
+
+- Aucun changement de base persistante.
+- Aucune migration avant audit et tests sur base temporaire.
+- Pas de référence inter-tenant possible.
+- Les périodes d'un même calendrier respectent les règles de chevauchement ratifiées.
+- Une seule année scolaire est OPEN par tenant en V1.
+- Les configurations et politiques sont historisées et effectives à une date explicite.
+- Les résultats historiques restent reproductibles avec leur version de politique.
+- Les contrôles CI existants restent verts.
+
+La Tranche 1 sera livrée comme une PR isolée après audit du code existant. La PR #14, qui porte des corrections qualité distinctes, reste indépendante et non fusionnée.
+
+
+### Résultat de l'audit de référence — 2026-11-01
+
+Le rapport [AUDIT_AUTONOMIE_SCOLAIRE_CALENDRIER_2026-11-01.md](../reports/AUDIT_AUTONOMIE_SCOLAIRE_CALENDRIER_2026-11-01.md) établit les constats suivants :
+
+- D1-A est déjà protégé par `AcademicYearStatus.ACTIVE`, le cas d'usage d'activation et l'index unique partiel `uq_academic_year_active` de la migration 020. Ne pas réimplémenter ni renommer ce statut.
+- D2-C nécessite un contrat de permissions métier granulaire ; les routes observées sont encore protégées par `require_role("ADMIN")`.
+- D3-B n'est pas implémenté : le modèle `AcademicPeriod` ne distingue pas les calendriers/programmes et le cas d'usage ne contrôle pas les chevauchements.
+- Les périodes historiques sans calendrier ne seront pas affectées automatiquement à un calendrier.
+- La suite de la Tranche 1 commence par le modèle métier explicite `AcademicCalendar`, puis les ports, cas d'usage, adaptateurs, routes et tests. Une migration additive ne viendra qu'après validation sur base temporaire.
