@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useEffectEvent, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useEffectEvent, useRef, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -19,6 +19,8 @@ import {
 } from '../../services/student.service'
 import type { AcademicPeriod, AcademicRecord, AcademicRecordHistory, Deliberation, EligibleSubject } from '../../types/student-detail.types'
 import type { Student } from '../../types/student.types'
+import { StudentAccountPanel } from '../../components/StudentAccountPanel'
+import { StudentRiskAIDiagnosisPanel } from '../../../ai/components/StudentRiskAIDiagnosisPanel'
 
 import './StudentDetailPage.css'
 
@@ -396,6 +398,8 @@ function StudentDetailPage() {
         </div>
       </header>
 
+      <StudentAccountPanel studentId={student.id} />
+
       <section className="student-detail-page__card">
         <header className="student-detail-page__card-header">
           <div><h2>Informations générales</h2><p>Données disponibles dans le dossier de l’établissement.</p></div>
@@ -472,6 +476,7 @@ function StudentDetailPage() {
               <div><dt>Matières échouées</dt><dd>{record.failed_subjects}</dd></div>
               <div><dt>Crédits obtenus</dt><dd>{record.credits_obtained} / {record.total_credits}</dd></div>
             </dl>
+            <StudentRiskAIDiagnosisPanel studentId={student.id} academicPeriodId={selectedPeriod} />
             {deliberation ? (
               <aside aria-label="Decision de deliberation">
                 <strong>Délibération serveur</strong>

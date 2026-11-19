@@ -1,0 +1,127 @@
+.student-risk-ai-panel {
+  margin: 1.5rem 0;
+  background: #ffffff;
+  border: 1px solid #d9dee3;
+  border-radius: 8px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.student-risk-ai-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.student-risk-ai-panel__title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #182126;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.student-risk-ai-panel__btn {
+  background-color: #276678;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.student-risk-ai-panel__btn:hover {
+  background-color: #1e5261;
+}
+
+.student-risk-ai-panel__btn:disabled {
+  background-color: #a0aec0;
+  cursor: not-allowed;
+}
+
+.student-risk-ai-panel__result {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #edf2f7;
+}
+
+.student-risk-ai-panel__badges {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.student-risk-ai-panel__level-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.student-risk-ai-panel__level-badge--low {
+  background-color: #c6f6d5;
+  color: #22543d;
+}
+
+.student-risk-ai-panel__level-badge--medium {
+  background-color: #feebc8;
+  color: #7b341e;
+}
+
+.student-risk-ai-panel__level-badge--high {
+  background-color: #fed7d7;
+  color: #742a2a;
+}
+
+.student-risk-ai-panel__score {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.student-risk-ai-panel__summary {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #2d3748;
+  margin-bottom: 1rem;
+  background-color: #f7fafc;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border-left: 3px solid #276678;
+}
+
+.student-risk-ai-panel__section-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #2d3748;
+  margin: 0.75rem 0 0.25rem 0;
+}
+
+.student-risk-ai-panel__list {
+  margin: 0 0 0.75rem 0;
+  padding-left: 1.25rem;
+  font-size: 0.875rem;
+  color: #4a5568;
+  line-height: 1.5;
+}
+
+.student-risk-ai-panel__list--action li {
+  margin-bottom: 0.35rem;
+  color: #1a365d;
+  font-weight: 500;
+}
+
+.student-risk-ai-panel__error {
+  color: #e53e3e;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}

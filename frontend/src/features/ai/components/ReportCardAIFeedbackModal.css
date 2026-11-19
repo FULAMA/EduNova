@@ -1,0 +1,100 @@
+.ai-feedback-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.ai-feedback-modal {
+  background: #ffffff;
+  border-radius: 10px;
+  max-width: 650px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-feedback-modal__header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #edf2f7;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ai-feedback-modal__header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: #182126;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ai-feedback-modal__close {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #718096;
+}
+
+.ai-feedback-modal__body {
+  padding: 1.5rem;
+}
+
+.ai-feedback-modal__card {
+  margin-bottom: 1.25rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  background-color: #f8fafc;
+}
+
+.ai-feedback-modal__card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ai-feedback-modal__card-text {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #2d3748;
+  margin-bottom: 0.75rem;
+  background: #ffffff;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #edf2f7;
+}
+
+.ai-feedback-modal__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ai-feedback-modal__copy-btn {
+  background-color: #edf2f7;
+  color: #2d3748;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ai-feedback-modal__copy-btn:hover {
+  background-color: #e2e8f0;
+}

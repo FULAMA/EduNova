@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 
 import { ApiError } from '../../shared/api/client'
+import { PageHeader } from '../../shared/components/PageHeader/PageHeader'
+import { ParentAISummaryCard } from '../ai/components/ParentAISummaryCard'
 import {
   downloadChildReportCardPdf,
   getChildReportCards,
@@ -10,6 +12,7 @@ import {
 } from './parent-portal.service'
 
 import './ParentPortalPage.css'
+import '../../shared/styles/portals.css'
 
 function accessError(error: unknown): string {
   if (error instanceof ApiError && error.status === 0) {
@@ -92,23 +95,18 @@ export default function ParentPortalPage() {
   }
 
   if (childrenStatus === 'loading') {
-    return <main aria-busy="true" className="role-portal">Chargement de votre espace famille…</main>
+    return <section aria-busy="true" className="portal-content"><PageHeader eyebrow="Famille - EduNova" title="Chargement de votre espace" description="Recuperation des bulletins associes a votre compte." /><p role="status">Chargement de votre espace famille...</p></section>
   }
 
   if (childrenStatus === 'error') {
     return (
-      <main className="role-portal" role="alert">
-        <h1>Portail famille indisponible</h1>
-        <p>{error}</p>
-      </main>
+      <section className="portal-content"><PageHeader eyebrow="Famille - EduNova" title="Portail famille indisponible" description="Votre espace n'a pas pu etre charge." /><div className="portal-content__state" role="alert"><p>{error}</p></div></section>
     )
   }
 
   return (
-    <section className="role-portal" aria-labelledby="parent-portal-title">
-      <p className="role-portal__eyebrow">EduNova · Famille</p>
-      <h1 id="parent-portal-title">Espace parent</h1>
-      <p>Consultez les bulletins officiels des élèves associés à votre compte.</p>
+    <section className="portal-content" aria-labelledby="parent-portal-title">
+      <PageHeader titleId="parent-portal-title" eyebrow="Famille - EduNova" title="Espace parent" description="Consultez les bulletins officiels des eleves associes a votre compte." />
 
       {children.length === 0 ? (
         <p role="status">Aucun élève n’est associé à votre compte. Contactez votre établissement.</p>
@@ -134,7 +132,7 @@ export default function ParentPortalPage() {
             </select>
           </label>
 
-          <section aria-labelledby="parent-report-cards-title">
+          <section className="portal-content__section" aria-labelledby="parent-report-cards-title">
             <h2 id="parent-report-cards-title">Bulletins officiels</h2>
             {cardsStatus === 'loading' ? <p aria-busy="true">Chargement des bulletins…</p> : null}
             {cardsStatus === 'error' ? <p role="alert">{error}</p> : null}
@@ -142,9 +140,9 @@ export default function ParentPortalPage() {
               <p>Aucun bulletin officiel n’est encore publié pour cet élève.</p>
             ) : null}
             {cardsStatus === 'ready' && cards.length > 0 ? (
-              <ul className="role-portal__list">
+              <ul className="portal-content__list">
                 {cards.map((card) => (
-                  <li className="role-portal__card" key={card.id}>
+                  <li className="portal-content__item" key={card.id}>
                     <div>
                       <h3>Bulletin officiel · version {card.report_version}</h3>
                       <p>{card.issued_at ? new Date(card.issued_at).toLocaleDateString('fr-FR') : 'Date de publication non renseignée'}</p>
@@ -152,6 +150,7 @@ export default function ParentPortalPage() {
                     <button type="button" onClick={() => void download(card.id)}>
                       Télécharger le PDF
                     </button>
+                    <ParentAISummaryCard studentId={selectedStudentId} reportCardId={card.id} />
                   </li>
                 ))}
               </ul>
