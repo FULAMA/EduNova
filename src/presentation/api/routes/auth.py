@@ -41,7 +41,6 @@ from src.identity.application.interfaces.rate_limiter import RateLimiter
 from src.presentation.api.dependencies.auth import (
     get_current_user,
     get_tenant_context,
-    require_role,
 )
 
 from src.presentation.api.dependencies import (
@@ -588,9 +587,15 @@ def logout_user(
 def enable_two_factor(
     user_id: UUID,
     use_case: EnableTwoFactor = Depends(get_enable_two_factor_use_case),
-    current_user=Depends(require_role("ADMIN")),
-    tenant_context=Depends(get_tenant_context),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    tenant_context: TenantContext = Depends(get_tenant_context),
 ):
+    if current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Vous ne pouvez configurer que votre propre 2FA.",
+        )
+
     try:
         result = use_case.execute(
             user_id=user_id,
@@ -623,9 +628,15 @@ def verify_two_factor(
     user_id: UUID,
     request: VerifyTwoFactorRequest,
     use_case: VerifyTwoFactor = Depends(get_verify_two_factor_use_case),
-    current_user=Depends(require_role("ADMIN")),
-    tenant_context=Depends(get_tenant_context),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    tenant_context: TenantContext = Depends(get_tenant_context),
 ):
+    if current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Vous ne pouvez valider que votre propre 2FA.",
+        )
+
     try:
         verified = use_case.execute(
             user_id=user_id,
