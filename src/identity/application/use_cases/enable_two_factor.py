@@ -47,6 +47,11 @@ class EnableTwoFactor:
         if user is None:
             raise ValueError("Utilisateur introuvable.")
 
+        if user.two_factor_enabled:
+            raise ValueError(
+                "Le 2FA est deja active. Une procedure de reinitialisation securisee est requise."
+            )
+
         secret = self._two_factor_service.generate_secret()
 
         provisioning_uri = (
