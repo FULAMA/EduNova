@@ -91,6 +91,6 @@ def test_enable_two_factor_http_unknown_user():
         },
     )
 
-    assert response.status_code == 404
+    assert response.status_code == 403
 
 
