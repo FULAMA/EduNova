@@ -119,7 +119,18 @@ def test_verify_two_factor_http_unknown_user():
         },
     )
 
-    assert response.status_code == 404
+    assert response.status_code == 403
+
+
+def test_verify_two_factor_http_cannot_verify_another_users_2fa():
+    client, user, secret = create_test_environment()
+    token = create_admin_token(user)
+    response = client.post(
+        f"/auth/2fa/verify/{uuid4()}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"code": pyotp.TOTP(secret).now()},
+    )
+    assert response.status_code == 403
 
 
 def test_verify_two_factor_http_requires_authentication():
