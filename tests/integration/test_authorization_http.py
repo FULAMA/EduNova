@@ -44,7 +44,7 @@ def create_user(container, role):
     return user
 
 
-def test_teacher_cannot_access_admin_2fa_setup():
+def test_teacher_can_setup_own_2fa():
     client, container = create_test_client()
 
     user = create_user(container, "TEACHER")
@@ -55,11 +55,12 @@ def test_teacher_cannot_access_admin_2fa_setup():
         headers={"Authorization": f"Bearer {token}"},
     )
 
-    assert response.status_code == 403
-    assert response.json()["detail"] == "Acces interdit."
+    assert response.status_code == 200
+    assert response.json()["secret"]
+    assert response.json()["provisioning_uri"].startswith("otpauth://")
 
 
-def test_student_cannot_access_admin_2fa_setup():
+def test_student_can_setup_own_2fa():
     client, container = create_test_client()
 
     user = create_user(container, "STUDENT")
@@ -70,8 +71,9 @@ def test_student_cannot_access_admin_2fa_setup():
         headers={"Authorization": f"Bearer {token}"},
     )
 
-    assert response.status_code == 403
-    assert response.json()["detail"] == "Acces interdit."
+    assert response.status_code == 200
+    assert response.json()["secret"]
+    assert response.json()["provisioning_uri"].startswith("otpauth://")
 
 
 def test_admin_can_access_2fa_setup():
@@ -88,6 +90,21 @@ def test_admin_can_access_2fa_setup():
     assert response.status_code == 200
     assert "secret" in response.json()
     assert "provisioning_uri" in response.json()
+
+
+def test_admin_cannot_setup_2fa_for_another_user():
+    client, container = create_test_client()
+    admin = create_user(container, "ADMIN")
+    target = create_user(container, "TEACHER")
+    token = create_token(admin.id, admin.role)
+
+    response = client.post(
+        f"/auth/2fa/setup/{target.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Vous ne pouvez configurer que votre propre 2FA."
 
 
 def test_unauthenticated_user_cannot_access_admin_2fa_setup():
