@@ -107,6 +107,33 @@ def test_enable_two_factor_generates_secret_and_uri():
     assert user_repository.saved_user.two_factor_enabled is False
 
 
+def test_enable_two_factor_does_not_replace_an_already_enabled_secret():
+    user = User(
+        id=uuid4(),
+        email="protected@edunova.com",
+        password_hash="hashed-password",
+        role="ADMIN",
+        two_factor_enabled=True,
+        two_factor_secret="EXISTINGSECRET",
+    )
+    tenant_id = uuid4()
+    user_repository = FakeUserRepository(user)
+    membership_repository = FakeMembershipRepository(
+        make_membership(user.id, tenant_id)
+    )
+    use_case = EnableTwoFactor(
+        user_repository=user_repository,
+        membership_repository=membership_repository,
+        two_factor_service=FakeTwoFactorService(),
+    )
+
+    with pytest.raises(ValueError, match="2FA est deja active"):
+        use_case.execute(user_id=user.id, tenant_id=tenant_id)
+
+    assert user_repository.saved_user is None
+    assert user.two_factor_secret == "EXISTINGSECRET"
+
+
 def test_enable_two_factor_fails_for_unknown_user():
     user_repository = FakeUserRepository()
     membership_repository = FakeMembershipRepository()
